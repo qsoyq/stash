@@ -1,0 +1,22 @@
+name: 分流拒绝
+desc: |-
+category: ruleset
+icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Reject.png
+
+rules:
+    - RULE-SET,domain.reject.drop,REJECT-DROP,no-resolve
+    - RULE-SET,domain.reject,REJECT,no-resolve
+
+rule-providers:
+    domain.reject.drop:
+        behavior: domain
+        format: yaml
+        interval: 86400
+        type: http
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/ruleset/domain.reject.drop.yaml
+    domain.reject:
+        behavior: domain
+        format: yaml
+        interval: 86400
+        type: http
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/ruleset/domain.reject.yaml

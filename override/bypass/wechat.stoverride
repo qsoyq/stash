@@ -1,0 +1,23 @@
+name: 微信分流直连
+desc: |-
+category: ruleset
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/wechat.png
+
+rule-providers:
+    domain.wechat:
+        behavior: domain
+        format: yaml
+        interval: 86400
+        type: http
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/ruleset/domain.wechat.yaml
+
+    ip.wechat:
+        behavior: ipcidr
+        format: yaml
+        interval: 86400
+        type: http
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/ruleset/ip.wechat.yaml
+
+rules:
+    - RULE-SET,ip.wechat,DIRECT,no-resolve
+    - RULE-SET,domain.wechat,DIRECT,no-resolve

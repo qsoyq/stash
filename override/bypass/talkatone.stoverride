@@ -1,0 +1,24 @@
+name: Talkatone分流代理
+desc: |-
+    分流策略组 -> Talkatone
+category: ruleset
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/talkatone.png
+
+rules:
+    - RULE-SET,domain.talkatone,Talkatone,no-resolve
+    - RULE-SET,ip.talkatone,Talkatone,no-resolve
+
+rule-providers:
+    domain.talkatone:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/ruleset/domain.talkatone.yaml
+        type: http
+        format: yaml
+        interval: 86400
+        behavior: domain
+
+    ip.talkatone:
+        behavior: ipcidr
+        format: yaml
+        interval: 86400
+        type: http
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/ruleset/ip.talkatone.yaml
