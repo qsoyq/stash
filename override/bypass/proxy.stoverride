@@ -1,0 +1,16 @@
+name: 分流代理
+desc: |-
+
+category: ruleset
+icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Proxy.png
+
+rules:
+    - RULE-SET,domain.proxy,PROXY,no-resolve
+
+rule-providers:
+    domain.direct:
+        behavior: domain
+        format: yaml
+        interval: 86400
+        type: http
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/ruleset/domain.proxy.yaml
