@@ -1,0 +1,249 @@
+allow-lan: true
+mode: rule
+log-level: warning
+dns:
+    default-nameserver:
+        - https://223.6.6.6/dns-query
+    nameserver:
+        - https://dns.alidns.com/dns-query
+proxy-groups:
+    - name: PROXY
+      icon: "https://github.com/shindgewongxj/WHATSINStash/raw/main/icon/select.png"
+      type: select
+      proxies:
+          - DIRECT
+          - 自动选择
+          - 手动选择
+      lazy: true
+    - name: 漏网之鱼🐟
+      icon: "https://github.com/shindgewongxj/WHATSINStash/raw/main/icon/select.png"
+      type: select
+      proxies:
+          - DIRECT
+          - PROXY
+    - name: Telegram
+      icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Telegram.png
+      interval: 300
+      lazy: true
+      type: select
+      proxies:
+          - PROXY
+    - name: Apple
+      icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Apple.png
+      interval: 300
+      lazy: true
+      type: select
+      proxies:
+          - DIRECT
+          - PROXY
+    - name: AppleUpdate
+      icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Apple.png
+      interval: 300
+      lazy: true
+      type: select
+      proxies:
+          - DIRECT
+          - PROXY
+    - name: Media
+      icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/YouTube.png
+      interval: 300
+      lazy: true
+      type: select
+      proxies:
+          - PROXY
+    - name: Google
+      icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Google.png
+      interval: 300
+      lazy: true
+      type: select
+      proxies:
+          - PROXY
+    - name: X
+      icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/X.png
+      interval: 300
+      lazy: true
+      type: select
+      proxies:
+          - PROXY
+    - name: Imgur
+      icon: https://imgur.com/favicon.ico
+      interval: 300
+      lazy: true
+      type: select
+      proxies:
+          - PROXY
+          - 手动选择
+    - name: Docker
+      icon: https://www.docker.com/favicon.ico
+      interval: 300
+      lazy: true
+      type: select
+      proxies:
+          - PROXY
+          - 手动选择
+    - name: APTV
+      icon: https://raw.githubusercontent.com/YanG-1989/m3u/main/APTV.png
+      interval: 300
+      lazy: true
+      type: select
+      proxies:
+          - DIRECT
+          - PROXY
+    - name: 动画疯
+      icon: https://ani.gamer.com.tw/favicon.ico
+      interval: 300
+      lazy: true
+      type: select
+      proxies:
+          - 港澳台
+          - PROXY
+    - name: Tiktok
+      icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/TikTok.png
+      interval: 300
+      lazy: true
+      type: select
+      tolerance: 15
+      proxies:
+          - PROXY
+          - JP
+    - name: Steam
+      icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Steam.png
+      interval: 300
+      lazy: true
+      type: select
+      proxies:
+          - DIRECT
+          - PROXY
+    - name: Riot
+      icon: https://www.riotgames.com/assets/img/meta/6e86ac3d497a87330d381e3ee6e193c3/favicon.ico
+      interval: 300
+      lazy: true
+      type: select
+      proxies:
+          - DIRECT
+          - PROXY
+    - name: Talkatone
+      icon: https://www.talkatone.com/favicon.ico
+      interval: 300
+      lazy: true
+      type: select
+      proxies:
+          - DIRECT
+          - PROXY
+          - US
+    - name: OpenAI
+      icon: "https://cdn.oaistatic.com/_next/static/media/favicon-32x32.be48395e.png"
+      filter: ^(?!.*(?:中国|香港)).*().*
+      type: select
+      include-all: true
+    - name: Gemini
+      icon: https://www.gstatic.com/lamda/images/gemini_favicon_f069958c85030456e93de685481c559f160ea06b.png
+      type: select
+      include-all: true
+    - name: MetaAI
+      icon: https://static.xx.fbcdn.net/rsrc.php/v3/y4/r/WUJbsVI4ruF.png
+      lazy: true
+      type: select
+      include-all: true
+    - name: PayPal
+      icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/PayPal.png
+      type: select
+      proxies:
+          - US
+          - UK
+          - 港澳台
+          - PROXY
+    - name: US
+      icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/US.png
+      type: select
+      filter: "美国|US|us|🇺🇸"
+      include-all: true
+      lazy: true
+    - name: JP
+      icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/JP.png
+      type: select
+      filter: "JP|日本|🇯🇵"
+      include-all: true
+      lazy: true
+    - name: UK
+      icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/United_Kingdom.png
+      type: select
+      filter: "英国|🇬🇧|UK|uk"
+      include-all: true
+    - name: 港澳台
+      icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Hong_Kong.png
+      type: select
+      lazy: true
+      filter: "🇭🇰|🇲🇴|香港|澳门|台湾"
+      include-all: true
+    - name: 自动选择
+      icon: "https://github.com/shindgewongxj/WHATSINStash/raw/main/icon/urltest.png"
+      interval: 600
+      lazy: true
+      type: url-test
+      include-all: true
+      filter: "^(?!.*(?:套餐到期|剩余流量|stashlink|mac))"
+    - name: 手动选择
+      icon: "https://github.com/shindgewongxj/WHATSINStash/raw/main/icon/select.png"
+      interval: 600
+      type: select
+      include-all: true
+      filter: "^(?!.*(?:套餐到期|剩余流量|stashlink|mac))"
+rules:
+    # 个人分流策略组
+    - DOMAIN,iosapps.itunes.apple.com,AppleUpdate # iOS应用更新
+    - DOMAIN-SUFFIX,apple-relay.apple.com,OpenAI
+    - DOMAIN-SUFFIX,apple-relay.cloudflare.com,OpenAI
+    - DOMAIN-SUFFIX,apple-relay,OpenAI
+    - DOMAIN-SUFFIX,gamer.com.tw,动画疯
+
+    # 分流
+    - GEOSITE,apple-update,AppleUpdate # Apple 系统更新
+    - GEOSITE,imgur,Imgur
+    - GEOSITE,x,X
+    - GEOSITE,docker,Docker
+    - GEOSITE,google-gemini,Gemini
+    - GEOSITE,riot,Riot
+    - GEOSITE,youtube,Media
+    - GEOSITE,twitch,Media
+    - GEOSITE,netflix,Media
+    - GEOSITE,paypal,PayPal
+    - GEOSITE,apple,Apple
+    - GEOSITE,tiktok,Tiktok
+    - GEOSITE,openai,OpenAI
+    - GEOSITE,steam,Steam
+    - GEOSITE,steam@cn,Steam
+    - GEOSITE,google,Google
+
+    # 代理
+    - GEOSITE,disney,PROXY
+    - GEOSITE,quora,PROXY
+    - GEOSITE,gitlab,PROXY
+    - GEOSITE,discord,PROXY
+    - GEOSITE,whatsapp,PROXY
+    - GEOSITE,duckduckgo,PROXY
+    - GEOSITE,github,PROXY
+    - GEOSITE,pikpak,PROXY
+    - GEOSITE,instagram,PROXY
+    - GEOSITE,reddit,PROXY
+    - GEOSITE,speedtest,PROXY
+    - GEOSITE,nvidia,PROXY
+    - GEOSITE,cloudflare,PROXY
+
+    - RULE-SET,domain.proxy,PROXY,no-resolve
+
+    # 直连
+    - IP-CIDR,0.0.0.0/24,REJECT # DNS拦截后返回空 IP
+    - GEOSITE,cn,DIRECT
+    - GEOIP,cn,DIRECT,no-resolve
+
+    # 漏网之鱼
+    - MATCH,漏网之鱼🐟
+
+rule-providers:
+    domain.proxy:
+        behavior: domain
+        format: yaml
+        interval: 86400
+        type: http
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/ruleset/domain.proxy.yaml
