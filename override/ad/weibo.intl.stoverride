@@ -1,0 +1,11 @@
+name: 微博
+desc: |-
+    - 微博国际版首页和帖子内广告
+category: ad
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/weibointl.png
+
+http:
+    mitm:
+        - api.weibo.cn
+    url-rewrite:
+        - ^https://api.weibo.cn/2/ad/weibointl - reject
