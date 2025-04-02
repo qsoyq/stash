@@ -1,0 +1,11 @@
+payload:
+    - "+.wushuangai.com"
+    - "+.lcdn-locator.apple.com"
+    - "+.lcdn-registration.apple.com"
+    - "+.aihubmix.com"
+    - "+.www.ojrq.net"
+    - "+.knit.bid"
+
+    # QQ网页端快捷登陆
+    - "localhost.ptlogin2.qq.com"
+    - "localhost.sec.qq.com"

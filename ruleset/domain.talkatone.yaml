@@ -1,0 +1,12 @@
+# https://github.com/blackmatrix7/ios_rule_script/discussions/1128
+payload:
+  - "+.mobilefuse.com"
+  - "+.inmobi.com"
+  - "+.crashlytics.com"
+  - "+.talkatone.com"
+  - "+.kochava.com"
+  - "+.tktn.be"
+  - "+.cohere.com"
+  - "+.ip-api.com"
+  - "+.agkn.com"
+  - "+.tktn.at"

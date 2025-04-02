@@ -1,0 +1,6 @@
+# https://github.com/blackmatrix7/ios_rule_script/discussions/1128
+payload:
+  - "50.117.27.0/24"
+  - "69.46.75.0/24"
+  - "205.164.56.0/24"
+  - "63.251.124.0/24"
