@@ -1,7 +1,7 @@
 name: 微博
 desc: |-
     - 访问网页版微博时，发送通知, 点击通知跳转到微博国际版
-category: notify
+category: enhance
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/weibointl.png
 
 http:
