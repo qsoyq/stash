@@ -1,0 +1,42 @@
+name: 叮咚买菜
+desc: |-
+    - 开屏广告
+    - 首页弹窗
+    - 首页上方通知广告
+    - 首页分类高亮
+    - 首页悬浮
+    - 顶部右上角签到
+    - 底部导航栏移除高亮提示文字
+    - 底部导航栏移除分类
+    - 底部导航栏移除榜单
+    - 我的优惠券 ｜ 邀请有礼
+
+category: qsoyq
+icon: https://wx.m.ddxq.mobi/favicon.ico
+dns:
+    fake-ip-filter:
+        - maicai.api.ddxq.mobi
+http:
+    force-http-engine:
+        - maicai.api.ddxq.mobi
+    mitm:
+        # 叮咚买菜
+        - maicai.api.ddxq.mobi
+    body-rewrite:
+        - https://maicai.api.ddxq.mobi/advert/getAd response-jq .data={}
+        - https://maicai.api.ddxq.mobi/advert/startUpScreen response-jq .data={} # 开屏
+        - https://maicai.api.ddxq.mobi/advert/getPreloadAd response-jq .data={}
+        - https://maicai.api.ddxq.mobi/advert/startUpScreen response-jq .data={} # 开屏
+        - https://maicai.api.ddxq.mobi/advert/getPreloadAd response-jq .data={}
+        - https://maicai.api.ddxq.mobi/homeApi/getAdvertTagInfo response-jq .data={} # 首页分类高亮
+        - https://maicai.api.ddxq.mobi/homeApi/getHomeAdPop response-jq .data={} # 弹窗
+        - https://maicai.api.ddxq.mobi/vip/getVipAd response-jq .data={}
+        - https://maicai.api.ddxq.mobi/homeApi/newDetails response-jq .data.suspension=[] # 首页悬浮
+        - https://maicai.api.ddxq.mobi/homeApi/newDetails response-jq .data.top_advert_data=[] # 顶部右上角签到
+
+        - https://maicai.api.ddxq.mobi/homeApi/bottomNavi response-jq .data.adId=null # 广告?
+        - https://maicai.api.ddxq.mobi/homeApi/bottomNavi response-jq .data.bottom_list[].badgePopText="" # 底部导航栏移除高亮提示文字
+        - https://maicai.api.ddxq.mobi/homeApi/bottomNavi response-jq .data.bottom_list|=map(select(.name!="分类")) # 底部导航栏移除分类
+        - https://maicai.api.ddxq.mobi/homeApi/bottomNavi response-jq .data.bottom_list|=map(select(.name!="榜单")) # 底部导航栏移除榜单
+
+        - https://maicai.api.ddxq.mobi/coupon/unused response-jq .data.ad_info={} # 我的优惠券 ｜ 邀请有礼
