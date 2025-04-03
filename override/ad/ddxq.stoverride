@@ -11,7 +11,7 @@ desc: |-
     - 底部导航栏移除榜单
     - 我的优惠券 ｜ 邀请有礼
 
-category: qsoyq
+category: ad
 icon: https://wx.m.ddxq.mobi/favicon.ico
 dns:
     fake-ip-filter:
