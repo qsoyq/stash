@@ -1,0 +1,14 @@
+name: 可莉资源浏览器访问
+desc: |-
+    - https://t.me/ibilibili
+    - 绕过浏览器访问 WAF 拦截
+category: debug
+icon: https://cdn5.cdn-telegram.org/file/dnOSp8bAvU9oBBZAQzz3HcfkphhtdTlDCRkQTPus2AC5BZmpr-bHlUVnJO8Mg23K-D4Y0aNFFFQqxT--93z8-lz5Qbp7LXP1PYtpbFwAHE9DyMN_2TIpKNYbLt57_wKCJ7zY9jNzwtECCR1_PNtB1zPckymPt7GjJElmuwwaedPjKwcOW85IXTZZ1KgiiY2SjLwbDUlexIOGCRkCYcsxKiNKmadlgGcVH65guAzaiFXEK0sENB0a3OWKLpXrDSu-r85vCCUo0zG9i8-RGnVBZS9ZsxHAy-uNHG4uRwSVBozOTsc_QhHQ4vIHt2WvyicTjkPReJ6_g7OSjrthE_cxYg.jpg
+http:
+    mitm:
+        - "kelee.one"
+    header-rewrite:
+        # 允许访问可莉插件
+        - ^https?://kelee.one request-replace User-Agent StashCore/2.7.1 Stash/2.7.1 Clash/1.11.0
+        - ^https?://kelee.one response-add Content-Disposition inline
+        - ^https?://kelee.one response-replace Content-Type text/plain;charset=utf-8
