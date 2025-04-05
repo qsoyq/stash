@@ -1,0 +1,10 @@
+name: 雷神加速器
+desc: |-
+    - iOS App 手游加速页弹窗
+category: ad
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/leigod.png
+http:
+    mitm:
+        - "opapi.xxghh.biz"
+    body-rewrite:
+        - https://opapi.xxghh.biz/nn-assist/banner/list response-jq .retData|=map(select(.bannerType!=3))
