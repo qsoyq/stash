@@ -1,0 +1,10 @@
+name: 大众点评
+desc: |-
+    - 开屏广告
+category: ad
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/dianping.png
+http:
+    mitm:
+        - img.meituan.net
+    url-rewrite:
+        - ^https://img.meituan.net/goodsawardpic/.* - reject
