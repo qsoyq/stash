@@ -1,0 +1,21 @@
+name: 谷歌搜索
+desc: |-
+    - 移除搜索结果赞助商广告
+category: ad
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/google.png
+http:
+    mitm:
+        - www.google.com
+    script:
+        - match: ^https?://www.google.com/search\?q=.*$
+          name: google-search-rewrite
+          type: response
+          require-body: true
+          max-size: -1
+          timeout: 5
+          debug: false
+
+script-providers:
+    google-search-rewrite:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/google-search-rewrite.js
+        interval: 86400
