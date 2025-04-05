@@ -1,0 +1,40 @@
+name: HTTP抓包
+category: debug
+desc: |-
+    - 部分请求不允许 mitm, 启用抓包会导致网络错误
+icon: https://raw.githubusercontent.com/qsoyq/shell/main/assets/icon/debug.png
+script-providers:
+    http-capture-all:
+        url: https://raw.githubusercontent.com/qsoyq/shell/main/config/stash/script/debug/http-capture.js
+        interval: 86400
+http:
+    mitm:
+        - "*.com"
+        - "*.net"
+        - "*.org"
+        - "*.info"
+        - "*.biz"
+        - "*.xyz"
+        - "*.online"
+        - "*.site"
+        - "*.tech"
+        - "*.store"
+        - "*.cn"
+        - "*.us"
+        - "*.uk"
+        - "*.de"
+        - "*.jp"
+        - "*.fr"
+        - "*.in"
+        - "*.au"
+        - "*.br"
+        - "*.ru"
+    script:
+        - match: ^https?://.*
+          name: http-capture-all
+          type: response
+          require-body: true
+          timeout: 20
+          argument: ""
+          binary-mode: false
+          max-size: 2097152 # 2MB
