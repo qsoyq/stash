@@ -1,0 +1,26 @@
+name: 塔斯汀签到
+category: sign
+icon: https://www.tasiting.com/templates/tastien/image/29440_16868769529842.ico
+desc: |-
+    - 需要手动在塔斯汀小程序上进行一次签到获取请求信息
+    - 签到会根据活动周期失效，失效后需要重新在小程序上执行签到
+
+http:
+    mitm:
+        - sss-web.tastientech.com
+    script:
+        - match: https://sss-web.tastientech.com/api/sign/member/signV2
+          name: tastien.sign
+          type: request
+          require-body: true
+cron:
+    script:
+        - name: tastien.sign
+          cron: "35 */1 * * *"
+          timeout: 5
+          argument: >-
+
+script-providers:
+    tastien.sign:
+        url: https://raw.githubusercontent.com/qsoyq/shell/main/config/stash/script/tastien/sign.js
+        interval: 86400
