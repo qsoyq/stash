@@ -1,0 +1,11 @@
+name: 阿里云 oss 图床预览
+desc: |-
+    - 将浏览器访问下载更改为在线预览
+category: enhance
+icon: https://img.alicdn.com/tfs/TB1_ZXuNcfpK1RjSZFOXXa6nFXa-32-32.ico
+http:
+    mitm:
+        - "*.aliyuncs.com"
+    header-rewrite:
+        # 阿里云图床预览
+        - ^https://(.*)\.?oss-cn-\w+.aliyuncs.com response-replace Content-Disposition inline
