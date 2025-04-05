@@ -2,7 +2,7 @@ name: 京东
 desc: |-
     - 开屏广告
     - 秒送主页活动弹窗
-category: dev
+category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/jd.png
 dns:
     fake-ip-filter:
