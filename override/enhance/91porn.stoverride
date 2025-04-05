@@ -1,0 +1,31 @@
+name: 91porn
+desc: |-
+    - 视频播放页播放时支持方向键左右前进/退后
+category: enhance
+icon: https://91porn.com/favicon.ico
+http:
+    mitm:
+        - "91porn.com"
+    script:
+        - name: 91porn
+          binary-mode: false
+          match: https://91porn.com/view_video.php
+          max-size: 1048576
+          require-body: true
+          timeout: 20
+          type: response
+          argument: |-
+              {\
+                "documentEvalCodes": [\
+                    "console.log(\'123\')",\
+                    "context.ele=context.document.createElement(\'script\')",\
+                    "context.ele.src=\\\"https://raw.githubusercontent.com/qsoyq/shell/main/tampermonkey/91/shortcuts.js\\\"",\
+                    "context.document.body.appendChild(context.ele)",\
+                    "console.log(\'234\')"\
+                ]\
+              }
+
+script-providers:
+    91porn:
+        url: https://raw.githubusercontent.com/qsoyq/shell/main/config/stash/script/debug/HttpRewrite.js
+        interval: 86400
