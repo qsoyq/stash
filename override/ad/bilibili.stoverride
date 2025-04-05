@@ -1,0 +1,51 @@
+name: 哔哩哔哩
+desc: |-
+    - 白哔 | Bilibili HD 开屏广告
+    - Bilibili HD 首页 banner 轮播
+    - Bilibili HD 首页推荐广告
+    - Bilibili HD 后台切前台闪屏广告
+    - 直播右下角横幅小组件 | 航海粉丝日 | 团战燃魂赛
+    - 直播间推荐购买商品悬浮窗 | 大家都在买
+    - 直播间一对一教学推荐
+    - 直播间 banner
+    - 直播间更多解说
+    - 直播间人气榜打榜提醒弹窗
+
+category: ads
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/bilibili-intl.png
+http:
+    mitm:
+        - app.bilibili.com
+        - api.live.bilibili.com
+    url-rewrite:
+        # 哔哩哔哩开屏广告
+        - https?://app.bilibili.com/x/v2/splash/show - reject
+
+        # 直播间一对一教学推荐
+        - https://api.live.bilibili.com/xlive/app-ucenter/v2/playTogether/GetPlayTogetherUserAnchorInfoV2 - reject
+        - https://api.live.bilibili.com/xlive/app-ucenter/v2/playTogether/PlayTogetherServiceCardDetail - reject
+
+    body-rewrite:
+        # Bilibili HD 首页 banner 轮播
+        - ^https?://app.bilibili.com/x/v2/feed/index.*$ response-jq if .data.items!=null then .data.items |= map(select(.card_type!="banner_ipad_v8")) end
+
+        # Bilibili HD 首页推荐广告
+        - ^https?://app.bilibili.com/x/v2/feed/index.*$ response-jq if .data.items!=null then .data.items |= map(select(.card_goto!="ad_web_s")) end
+
+        # Bilibili HD 后台切前台闪屏广告
+        - https?://app.bilibili.com/x/v2/splash/list response-jq .data={}
+
+        # 直播右下角横幅小组件
+        - https://api.live.bilibili.com/xlive/play-interface/widgetService/GetWidgetBannerList response-jq .data={}
+
+        # 直播间推荐购买商品悬浮窗 | 大家都在买
+        - https://api.live.bilibili.com/xlive/e-commerce-interface/v1/ecommerce-user/get_shopping_info response-jq .data.recommend_card_detail=[]
+
+        # 直播间 banner
+        - https://api.live.bilibili.com/xlive/app-room/v1/index/getInfoByRoom response-jq .data.activity_banner_info={}
+
+        # 直播间更多解说
+        - https://api.live.bilibili.com/xlive/app-room/v1/index/getInfoByRoom response-jq .data.multi_view_info={}
+
+        # 直播间人气榜打榜提醒弹窗
+        - https://api.live.bilibili.com/xlive/app-room/v1/index/getInfoByUser response-jq .data.popular_rank_guide_card={}
