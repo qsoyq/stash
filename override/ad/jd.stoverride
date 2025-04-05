@@ -19,5 +19,3 @@ http:
         - https://api.m.jd.com/client.action\?functionId=welcomeHome response-jq .floorList=[]
         - https://api.m.jd.com/client.action\?functionId=queryPagePopWindow response-jq .activityId=""
         - https://api.m.jd.com/client.action\?functionId=queryPagePopWindow response-jq .channelPoint=[]
-        # https://api.m.jd.com/client.action?functionId=newBabelAwardCollection # 外卖麦当劳券
-    script:
