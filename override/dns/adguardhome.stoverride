@@ -1,0 +1,11 @@
+name: dns
+category: qsoyq
+icon: https://st.agrd.eu/favicons/adguard/favicon.ico
+desc: AdguardHome
+dns:
+    default-nameserver: #!replace
+        - https://223.6.6.6/dns-query
+    nameserver: #!replace
+        - https://ahd.19940731.xyz/dns-query/
+    udp-nameserver: #!replace
+        - 223.6.6.6:53
