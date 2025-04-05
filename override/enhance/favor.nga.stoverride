@@ -1,0 +1,10 @@
+name: NGA 收藏帖
+desc: |-
+    - 移除收藏列表中已过期或权限不足的帖子
+category: enhance
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/nga.png
+http:
+    mitm:
+        - "ngabbs.com"
+    body-rewrite:
+        - ^https?://ngabbs.com/app_api.php\?__lib=favor&__act=all response-jq .result.data|=map(select(.postdate!=0))
