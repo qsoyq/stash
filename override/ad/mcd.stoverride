@@ -1,0 +1,15 @@
+name: 麦当劳
+desc: |-
+    - 开屏广告
+    - 弹窗广告
+    - 首页热门活动
+category: ad
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/mcd.png
+
+http:
+    mitm:
+        - api.mcd.cn
+    url-rewrite:
+        - ^https://api.mcd.cn/bff/portal/home/splash - reject # 开屏广告
+        - ^https://api.mcd.cn/bff/portal/richpop - reject # 弹窗广告
+        - ^https://api.mcd.cn/bff/portal/home/hotActivity - reject # 首页热门活动
