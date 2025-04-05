@@ -15,5 +15,5 @@ tiles:
 
 script-providers:
     MediaUnlockChecker:
-        url: https://raw.githubusercontent.com/qsoyq/shell/main/config/stash/script/tiles/MediaUnlockChecker.js
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/tile/media-unlock-checker.js
         interval: 86400
