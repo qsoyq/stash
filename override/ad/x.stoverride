@@ -1,0 +1,63 @@
+name: x
+desc: |-
+    移动端不兼容
+    - 首页时间线广告
+    - 首页时间线新推文通知浮动窗口 | NewTweets | TimelineShowAlert
+    - 首页时间线 | Pinned by people you follow
+    - 首页时间线 | Discover new Communities    
+    - 首页时间线 | Creators for you | suggest_who_to_subscribe
+    - 首页时间线 | Who to follow | suggest_who_to_follow
+    - 首页时间线 | Go ad-free with Premium+ | premium-plus-upsell-prompt
+    - 详情页评论广告
+    - 删除 CSP 策略，允许在网页上执行
+category: ad
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/x.png
+
+http:
+    mitm:
+        # 推特
+        - x.com
+
+    body-rewrite:
+        # 首页时间线广告
+        - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq if .data.home.home_timeline_urt.instructions[0].entries != null then .data.home.home_timeline_urt.instructions[0].entries|=map(select(.content?.itemContent?.promotedMetadata==null)) end
+
+        # 首页时间线新推文通知浮动窗口 | NewTweets | TimelineShowAlert
+        - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq .data.home.home_timeline_urt.instructions|=map(select(.alertType!="NewTweets"))
+
+        # 首页时间线 | Pinned by people you follow
+        - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq if .data.home.home_timeline_urt.instructions[0].entries != null then .data.home.home_timeline_urt.instructions[0].entries|=map(select(.content?.clientEventInfo?.component!="for_you_pinned")) end
+
+        # 首页时间线 | Discover new Communities
+        - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq if .data.home.home_timeline_urt.instructions[0].entries != null then .data.home.home_timeline_urt.instructions[0].entries|=map(select(.content?.clientEventInfo?.component!="community_to_join")) end
+
+        # 首页时间线 | Creators for you | suggest_who_to_subscribe
+        - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq if .data.home.home_timeline_urt.instructions[0].entries != null then .data.home.home_timeline_urt.instructions[0].entries|=map(select(.content?.clientEventInfo?.component!="suggest_who_to_subscribe")) end
+
+        # 首页时间线 | Who to follow | suggest_who_to_follow
+        - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq if .data.home.home_timeline_urt.instructions[0].entries != null then .data.home.home_timeline_urt.instructions[0].entries|=map(select(.content?.clientEventInfo?.component!="suggest_who_to_follow")) end
+
+        # 首页时间线 | Go ad-free with Premium+ | premium-plus-upsell-prompt
+        - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq if .data.home.home_timeline_urt.instructions[0].entries != null then .data.home.home_timeline_urt.instructions[0].entries|=map(select(.content?.clientEventInfo?.component!="premium-plus-upsell-prompt")) end
+
+        # 详情页评论广告
+        - https?://x.com/i/api/graphql/.+/TweetDetail.*$ response-jq if .data.threaded_conversation_with_injections_v2.instructions[0].entries!=null then .data.threaded_conversation_with_injections_v2.instructions[0].entries|=map(select(.content?.items[0]?.item?.itemContent?.promotedMetadata==null)) end
+    header-rewrite:
+        # - https://x.com/home response-replace "Content-Security-Policy:default-src 'self'; script-src 'self' 'unsafe-inline';"
+        - https://x.com/home response-del content-security-policy
+
+    script:
+        - name: x.home
+          binary-mode: false
+          match: https://x.com/home
+          max-size: 1048576
+          require-body: true
+          timeout: 20
+          type: response
+          debug: true
+          argument: |-
+
+script-providers:
+    x.home:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/debug/http-rewrite.js
+        interval: 86400
