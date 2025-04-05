@@ -1,0 +1,23 @@
+name: 什么值得买
+desc: |-
+    - 启动页广告
+    - 首页弹窗
+    - 首页推荐广告
+    - 好价 ｜ banner
+category: qsoyq
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/smzdm.png
+http:
+    mitm:
+        - homepage-api.smzdm.com
+        - app-api.smzdm.com
+        - haojia-api.smzdm.com
+        - adx-api.zdmimg.com
+    url-rewrite:
+        - https://app-api.smzdm.com/util/loading - reject # 开屏广告
+        - https://app-api.smzdm.com/util/update - reject # 弹窗广告 + (热更新?)
+    body-rewrite:
+        # 首页推荐广告
+        - https://homepage-api.smzdm.com/v3/home response-jq if .data.component[4].zz_content != null then .data.component[4].zz_content|=map(select(.tag!="广告")) end
+
+        # 好价 ｜ banner
+        - https://haojia-api.smzdm.com/home/list response-jq .data.banner_v2|=map(select(.cell_type!="23003"))
