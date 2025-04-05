@@ -1,0 +1,23 @@
+name: 盒马
+desc: |-
+    - 开屏广告
+    - 首页底部常驻广告
+    - 首页右下角浮动窗口
+    - 首页弹窗推荐活动
+category: ad
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/freshippo.png
+http:
+    mitm:
+        - acs-m.freshippo.com
+    body-rewrite:
+        # 开屏广告
+        - https?://acs-m.freshippo.com/gw/mtop.wdk.render.querysinglepage response-jq .data.scenes|=map(select(.bizCode!="poweron_ad"))
+
+        # 首页弹窗推荐活动
+        - https?://acs-m.freshippo.com/gw/mtop.wdk.render.querysinglepage response-jq .data.scenes|=map(select(.bizCode!="explosion_screen"))
+
+        # 首页底部常驻广告
+        - https?://acs-m.freshippo.com/gw/mtop.wdk.render.queryindexpage response-jq .data.scenes|=map(select(.bizCode!="bottom_bar"))
+
+        # 首页右下角浮动窗口
+        - https?://acs-m.freshippo.com/gw/mtop.wdk.render.queryindexpage response-jq .data.scenes|=map(select(.bizCode!="float_channel"))
