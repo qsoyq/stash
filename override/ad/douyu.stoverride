@@ -1,0 +1,10 @@
+name: 斗鱼
+desc: |-
+    - 开屏广告
+category: ad
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/douyu.png
+http:
+    mitm:
+        - capi.douyucdn.cn
+    url-rewrite:
+        - ^https?://capi.douyucdn.cn/api/v1/getStartSend - reject
