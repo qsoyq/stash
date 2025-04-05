@@ -1,5 +1,5 @@
 name: adguardhome
-category: qsoyq
+category: dns
 icon: https://st.agrd.eu/favicons/adguard/favicon.ico
 desc: AdguardHome
 dns:
