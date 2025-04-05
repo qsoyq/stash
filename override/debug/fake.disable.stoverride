@@ -1,0 +1,8 @@
+name: 禁用fake-ip
+category: debug
+icon: https://raw.githubusercontent.com/qsoyq/shell/main/assets/icon/debug.png
+desc: |-
+    本地 dns 查询返回 real-ip
+dns:
+    fake-ip-filter:
+        - "+.*"
