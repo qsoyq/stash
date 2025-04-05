@@ -1,0 +1,14 @@
+name: 美团域名重定向
+desc: |-
+    https://www.blueskyxn.com/202311/6919.html
+
+category: enhance
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/waimai.meituan.png
+
+http:
+    mitm:
+        - "route-stats.d.meituan.net"
+        - "maplocatesdksnapshot.d.meituan.net"
+        - "metrics-picture.d.meituan.net"
+    rewrite:
+        - ^http(s)?://(route-stats|maplocatesdksnapshot|metrics-picture)\.d.meituan.net http$1://$2.dreport.meituan.net 307
