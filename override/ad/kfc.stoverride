@@ -1,0 +1,14 @@
+name: 肯德基
+desc: |-
+    - 开屏广告
+    - 首页弹窗
+category: ad
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/kfc.png
+http:
+    mitm:
+        - res.kfc.com.cn
+        - dynamicad.kfc.com.cn
+    url-rewrite:
+        - ^https?://res.kfc.com.cn/advertisement/ - reject
+        - ^https?://res.kfc.com.cn/CRM/kfcad/apphome6/\w+.json\? - reject-dict
+        - ^https?://dynamicad.kfc.com.cn/api/app5/homepage/ai/popup - reject
