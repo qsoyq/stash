@@ -1,0 +1,26 @@
+name: 下载狗
+desc: |-
+    - 移除网页弹窗
+category: ad
+icon: https://www.xiazaitool.com/wp-content/uploads/2024/01/2024012405575119.png
+http:
+    mitm:
+        - www.xiazaitool.com
+    header-rewrite:
+        - ^https?://www.xiazaitool.com/parseVideo/js/master.js.*$ response-replace Cache-Control no-store
+
+    script:
+        - match: ^https?://www.xiazaitool.com/parseVideo/js/master.js.*$
+          name: xiazaitool
+          type: response
+          require-body: true
+          max-size: -1
+          timeout: 60
+          debug: false
+          argument: >-
+              {"rewriteHttpResponseBodyRegexps":[{"search":"alert","replace":"console.log"}]}
+
+script-providers:
+    xiazaitool:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/debug/http-rewrite.js
+        interval: 86400
