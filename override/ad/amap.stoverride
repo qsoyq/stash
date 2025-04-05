@@ -1,0 +1,16 @@
+name: 高德地图
+desc: |-
+    - 首页下方卡片
+    - 首页顶部提醒
+category: ad
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/amap.png
+http:
+    mitm:
+        - m5.amap.com
+
+    body-rewrite:
+        # 首页卡片
+        - https://m5.amap.com/ws/faas/amap-navigation/main-page response-jq .data.cardList=[]
+
+        # 首页顶部提醒
+        - https://m5.amap.com/ws/faas/amap-navigation/main-page-assets response-jq .data.pull3={}
