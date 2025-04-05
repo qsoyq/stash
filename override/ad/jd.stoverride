@@ -1,0 +1,23 @@
+name: 京东
+desc: |-
+    - 开屏广告
+    - 秒送主页活动弹窗
+category: dev
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/jd.png
+dns:
+    fake-ip-filter:
+        - api.m.jd.com
+http:
+    force-http-engine:
+        - api.m.jd.com
+    mitm:
+        - "*.360buyimg.com"
+        - api.m.jd.com
+    body-rewrite:
+        - https://api.m.jd.com/client.action\?functionId=start response-jq .images=[]
+        - https://api.m.jd.com/client.action\?functionId=xview2Config response-jq .data.targets=[]
+        - https://api.m.jd.com/client.action\?functionId=welcomeHome response-jq .floorList=[]
+        - https://api.m.jd.com/client.action\?functionId=queryPagePopWindow response-jq .activityId=""
+        - https://api.m.jd.com/client.action\?functionId=queryPagePopWindow response-jq .channelPoint=[]
+        # https://api.m.jd.com/client.action?functionId=newBabelAwardCollection # 外卖麦当劳券
+    script:
