@@ -1,0 +1,10 @@
+name: "📍 Location US"
+category: enhance
+icon: https://images.macrumors.com/article-new/2019/07/ios_location_services-250x250.jpg
+
+http:
+    mitm:
+        - "gspe1-ssl.ls.apple.com"
+
+    url-rewrite:
+        - ^https?://gspe1-ssl.ls.apple.com/pep/gcc https://p.19940731.xyz/api/apple/location/US 307
