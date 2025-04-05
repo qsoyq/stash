@@ -1,0 +1,11 @@
+name: AiHubMix
+desc: |-
+    - 重定向 OpenAI 接口请求到AiHubMix
+category: enhance
+icon: https://aihubmix.com/favicon.ico
+http:
+    mitm:
+        - "api.openai.com"
+    url-rewrite:
+        - https://api.openai.com/v1/chat/completions https://aihubmix.com transparent # OpenAI重定向
+
