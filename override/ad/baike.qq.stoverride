@@ -1,0 +1,10 @@
+name: 腾讯医典
+desc: |-
+    - 小程序首页弹窗
+category: ad
+icon: https://baike.qq.com/favicon.ico
+http:
+    mitm:
+        - "wechat.wecity.qq.com"
+    body-rewrite:
+        - https?://wechat.wecity.qq.com/trpcapi/ActivityManageService1/getAdsByBannerId response-jq rep.data.activityList=[] # 小程序首页弹窗
