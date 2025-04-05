@@ -1,0 +1,28 @@
+name: 小黑盒
+desc: |-
+    - 开屏广告
+    - 首页推荐推广
+    - 首页下方推荐条数提醒 | 已推荐 10 条内容
+    - 签到弹窗
+    - 底部弹窗 | 来看看你的游戏库能折现多少？
+category: ad
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/xiaoheihe.png
+http:
+    mitm:
+        - api.xiaoheihe.cn
+    body-rewrite:
+        # 小黑盒去开屏广告
+        - https?://api.xiaoheihe.cn/account/get_ads_info_v2.* response-jq .result.open_screen=[]
+        - https?://api.xiaoheihe.cn/account/get_ads_info_v2.* response-jq .result.inner_ads=[]
+
+        # 小黑盒去首页推荐推广
+        - https?://api.xiaoheihe.cn/bbs/app/feeds\?.* response-jq if .links!=null then .links|=map(select(.ad_report==null)) end
+
+        # 首页下方推荐条数提醒 | 已推荐 10 条内容
+        - https?://api.xiaoheihe.cn/bbs/app/feeds response-jq .result.notify_msg=null
+
+        # 签到弹窗
+        - https?://api.xiaoheihe.cn/task/sign_v3/get_sign_state response-jq .result={}
+
+        # 首页底部弹窗
+        - https://api.xiaoheihe.cn/account/ad/get_overall_ad_info response-jq .result={}
