@@ -1,0 +1,38 @@
+name: 饿了么
+desc: |-
+    - 待修复
+category: ad
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/eleme.png
+# - 首页推荐 | 30元超级吃货卡 | 仅限爆红包商家可用
+# - 首页推荐 | 横幅 | 爆款好价天天有
+# - 首页推荐 | 附近热门趋势
+# - 首页推荐 | 浏览体验评价
+# - 首页推荐 | 精选限时抢
+# - 首页推荐 | 智能零售平台 | 便利店商品推荐
+dns:
+    fake-ip-filter:
+        - waimai-guide.ele.me
+http:
+    force-http-engine:
+        - waimai-guide.ele.me
+    mitm:
+        - waimai-guide.ele.me
+    body-rewrite:
+        - https://waimai-guide.ele.me/gw/mtop.alsc.eleme.trigger.respond.v2 response-jq .data.data={} # 开屏红包弹窗
+
+        - https://waimai-guide.ele.me/gw/mtop.alsc.eleme.homepagev1 response-jq .data.data.shop_list_recommend_magex3_tab.fields.items|=map(select(.bizCode!="smart_cloud_theme_coupon_card")) # 30元超级吃货卡 | 仅限爆红包商家可用
+        - https://waimai-guide.ele.me/gw/mtop.alsc.eleme.homepagev1 response-jq .data.data.shop_list_recommend_magex3_tab.fields.items|=map(select(.bizCode!="banner")) # 横幅
+        - https://waimai-guide.ele.me/gw/mtop.alsc.eleme.homepagev1 response-jq .data.data.shop_list_recommend_magex3_tab.fields.items|=map(select(.bizCode!="smart_cloud_search_trends_weex")) # 附近热门趋势
+        - https://waimai-guide.ele.me/gw/mtop.alsc.eleme.homepagev1 response-jq .data.data.shop_list_recommend_magex3_tab.fields.items|=map(select(.bizCode!="experience_survey_v2")) # 浏览体验评价
+        - https://waimai-guide.ele.me/gw/mtop.alsc.eleme.homepagev1 response-jq .data.data.shop_list_recommend_magex3_tab.fields.items|=map(select(.bizCode!="smart_cloud_theme_v3")) # 精选限时抢
+        - https://waimai-guide.ele.me/gw/mtop.alsc.eleme.homepagev1 response-jq .data.data.shop_list_recommend_magex3_tab.fields.items|=map(select(.bizCode!="smart_retail_platform_entrance")) # 精选限时抢
+
+        - https://waimai-guide.ele.me/gw/mtop.alsc.eleme.collection.homepagev2 response-jq .data.data.shop_list_recommend_magex3_tab.fields.items|=map(select(.bizCode!="smart_cloud_theme_coupon_card")) # 30元超级吃货卡 | 仅限爆红包商家可用
+        - https://waimai-guide.ele.me/gw/mtop.alsc.eleme.collection.homepagev2 response-jq .data.data.shop_list_recommend_magex3_tab.fields.items|=map(select(.bizCode!="banner")) # 横幅
+        - https://waimai-guide.ele.me/gw/mtop.alsc.eleme.collection.homepagev2 response-jq .data.data.shop_list_recommend_magex3_tab.fields.items|=map(select(.bizCode!="smart_cloud_search_trends_weex")) # 附近热门趋势
+        - https://waimai-guide.ele.me/gw/mtop.alsc.eleme.collection.homepagev2 response-jq .data.data.shop_list_recommend_magex3_tab.fields.items|=map(select(.bizCode!="experience_survey_v2")) # 浏览体验评价
+        - https://waimai-guide.ele.me/gw/mtop.alsc.eleme.collection.homepagev2 response-jq .data.data.shop_list_recommend_magex3_tab.fields.items|=map(select(.bizCode!="smart_cloud_theme_v3")) # 精选限时抢
+        - https://waimai-guide.ele.me/gw/mtop.alsc.eleme.collection.homepagev2 response-jq .data.data.shop_list_recommend_magex3_tab.fields.items|=map(select(.bizCode!="smart_retail_platform_entrance")) # 精选限时抢
+
+
+        # waimai-guide.ele.me/gw/mtop.alsc.eleme.bootup.screen.data.get
