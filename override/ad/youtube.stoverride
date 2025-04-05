@@ -1,0 +1,34 @@
+name: 可莉油管去广告
+desc: |-
+    https://kelee.one/Tool/Loon/Plugin/YouTube_remove_ads.plugin
+    #!date=2025-03-21 23:17:16
+icon: https://raw.githubusercontent.com/luestr/IconResource/main/App_icon/120px/YouTube.png
+category: ad
+http:
+    force-http-engine:
+        - "youtubei.googleapis.com"
+        - "*.googlevideo.com"
+    mitm:
+        - "*.googlevideo.com"
+        - youtubei.googleapis.com
+
+    url-rewrite:
+        - ^https?:\/\/[\w-]+\.googlevideo\.com\/initplayback.+&oad - reject
+
+    script:
+        - name: 油管去广告
+          match: ^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/(browse|next|player|search|reel\/reel_watch_sequence|guide|account\/get_setting|get_watch)
+          type: response
+          require-body: true
+          binary-mode: true
+          timeout: 10
+          argument: >-
+
+script-providers:
+    "油管去广告":
+        url: https://kelee.one/Resource/Script/YouTube/YouTube_remove_ads/YouTube_remove_ads_response.js
+        interval: 86400
+
+rules:
+    - AND,((PROTOCOL,QUIC),(DOMAIN,youtubei.googleapis.com)),REJECT
+    - AND,((PROTOCOL,QUIC),(DOMAIN-SUFFIX,googlevideo.com)),REJECT
