@@ -4,7 +4,7 @@ desc: |-
     - 首页弹窗
     - 首页推荐广告
     - 好价 ｜ banner
-category: qsoyq
+category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/smzdm.png
 http:
     mitm:

@@ -7,7 +7,7 @@ desc: |-
     - 订单页弹窗
     - 首页弹窗
     - 支付界面超值换购弹窗
-category: qsoyq
+category: ad
 icon: https://www.tasiting.com/templates/tastien/image/29440_16868769529842.ico
 http:
     mitm:
