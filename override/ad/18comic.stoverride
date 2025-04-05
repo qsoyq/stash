@@ -1,0 +1,135 @@
+name: 禁漫天堂
+desc: |-
+    - 首页轮播图
+    - 首页｜列表页｜详情页｜搜索页 浮动签到
+    - 首页｜列表页｜详情页｜搜索页 浮动人偶
+    - 首页单行本上方广告｜页面底部广告
+    - 列表页右侧广告
+    - 列表页中间广告
+    - 列表页底部广告
+    - 详情页顶部广告
+    - 详情页顶部广告
+    - 详情页底部广告
+    - 阅读页顶部广告
+    - 阅读页中间插入广告
+    - 阅读页底部广告
+    - 阅读页支持方向键翻页
+    - 搜索页底部广告
+    - 搜索页右侧列表广告
+category: ad
+icon: https://raw.githubusercontent.com/qsoyq/shell/main/assets/icon/18comic.ico
+http:
+    mitm:
+        - "18comic.vip"
+    script:
+        # 首页
+        - name: 18comic.vip
+          binary-mode: false
+          match: https?://18comic.vip/$
+          max-size: 1048576
+          require-body: true
+          timeout: 20
+          type: response
+          argument: |-
+              {\
+                "documentEvalCodes": [\
+                    "console.log(\'123\')",\
+                    "let node=context.document.querySelector(\'div[class=\\\"div-bf-pv\\\"]\');if(node){node.remove()}",\
+                    "let node=context.document.querySelector(\'img[src=\\\"/templates/frontend/airav/img/daily/index_sign_in.png?v=\\\"]\');if(node){node.remove()}",\
+                    "let node=context.document.querySelector(\'img[src=\\\"/templates/frontend/airav/img/float-right-close.png?v=\\\"]\');if(node){node.remove()}",\
+                    "Array.from(context.document.querySelectorAll(\'div[class=\\\"col-lg-3 col-md-3 col-sm-3 col-xs-6\\\"]\')).forEach(e=>{e.remove()})",\
+                    "console.log(\'234\')"\
+                ]\
+              }
+
+        # 列表页
+        - name: 18comic.vip
+          binary-mode: false
+          match: https?://18comic.vip/albums
+          max-size: 1048576
+          require-body: true
+          timeout: 20
+          type: response
+          argument: |-
+              {\
+                "documentEvalCodes": [\
+                    "console.log(\'123\')",\
+                    "let node=context.document.querySelector(\'div[class=\\\"div-bf-pv\\\"]\');if(node){node.remove()}",\
+                    "let node=context.document.querySelector(\'img[src=\\\"/templates/frontend/airav/img/daily/index_sign_in.png?v=\\\"]\');if(node){node.remove()}",\
+                    "let node=context.document.querySelector(\'img[src=\\\"/templates/frontend/airav/img/float-right-close.png?v=\\\"]\');if(node){node.remove()}",\
+                    "Array.from(context.document.querySelectorAll(\'div[class=\\\"col-lg-3 col-md-3 col-sm-3 col-xs-6\\\"]\')).forEach(e=>{e.remove()})",\
+                    "Array.from(context.document.querySelectorAll(\'div[class=\\\"col-md-3 col-sm-4 hidden-xs\\\"]\')).forEach(e=>{e.remove()})",\
+                    "Array.from(context.document.querySelectorAll(\'div[class=\\\"col-lg-3 col-md-3 col-sm-3 col-xs-6 list-col\\\"]\')).forEach(e=>{e.remove()})",\
+                    "console.log(\'234\')"\
+                ]\
+              }
+
+        # 漫画详情页
+        - name: 18comic.vip
+          binary-mode: false
+          match: https?://18comic.vip/album/\d+/
+          max-size: 1048576
+          require-body: true
+          timeout: 20
+          type: response
+          argument: |-
+              {\
+                "documentEvalCodes": [\
+                    "console.log(\'123\')",\
+                    "let node=context.document.querySelector(\'img[src=\\\"/templates/frontend/airav/img/daily/index_sign_in.png?v=\\\"]\');if(node){node.remove()}",\
+                    "let node=context.document.querySelector(\'img[src=\\\"/templates/frontend/airav/img/float-right-close.png?v=\\\"]\');if(node){node.remove()}",\
+                    "Array.from(context.document.querySelectorAll(\'div[data-group=\\\"content_page1\\\"]\')).forEach(e=>{e.remove()})",\
+                    "Array.from(context.document.querySelectorAll(\'div[data-group=\\\"content_page2\\\"]\')).forEach(e=>{e.remove()})",\
+                    "Array.from(context.document.querySelectorAll(\'div[class=\\\"col-6 col-md-6 col-sm-6\\\"]\')).forEach(e=>{e.remove()})",\
+                    "Array.from(context.document.querySelectorAll(\'div[class=\\\"col-6 col-md-6 col-sm-6 col-xs-6\\\"]\')).forEach(e=>{e.remove()})",\
+                    "Array.from(context.document.querySelectorAll(\'div[data-group=\\\"album_detail\\\"]\')).forEach(e=>{e.remove()})",\
+                    "Array.from(context.document.querySelectorAll(\'div[class=\\\"col-lg-3 col-md-3 col-sm-3 col-xs-6\\\"]\')).forEach(e=>{e.remove()})",\
+                    "console.log(\'234\')"\
+                ]\
+              }
+        # 漫画阅读页
+        - name: 18comic.vip
+          binary-mode: false
+          match: https://18comic.vip/photo/\d+
+          max-size: 1048576
+          require-body: true
+          timeout: 20
+          type: response
+          argument: |-
+              {\
+                "documentEvalCodes": [\
+                    "console.log(\'123\')",\
+                    "Array.from(context.document.querySelectorAll(\'div[style=\\\"text-align:center;width: 844px;margin: 0 auto;max-width: 100%;\\\"]\')).forEach(e=>{e.remove()})",\
+                    "Array.from(context.document.querySelectorAll(\'div[data-group=\\\"photo_center_games_1\\\"]\')).forEach(e=>{e.remove()})",\
+                    "Array.from(context.document.querySelectorAll(\'div[class=\\\"col-lg-3 col-md-3 col-sm-3 col-xs-6\\\"]\')).forEach(e=>{e.remove()})",\
+                    "context.ele=context.document.createElement(\'script\')",\
+                    "context.ele.src=\\\"https://raw.githubusercontent.com/qsoyq/shell/main/tampermonkey/18comic/go-to-page.js\\\"",\
+                    "context.document.body.appendChild(context.ele)",\
+                    "console.log(\'345\')"\
+                ]\
+              }
+        # 搜索页
+        - name: 18comic.vip
+          binary-mode: false
+          match: https://18comic.vip/search/photos
+          max-size: 1048576
+          require-body: true
+          timeout: 20
+          type: response
+          argument: |-
+              {\
+                "documentEvalCodes": [\
+                    "console.log(\'123\')",\
+                    "let node=context.document.querySelector(\'img[src=\\\"/templates/frontend/airav/img/daily/index_sign_in.png?v=\\\"]\');if(node){node.remove()}",\
+                    "let node=context.document.querySelector(\'img[src=\\\"/templates/frontend/airav/img/float-right-close.png?v=\\\"]\');if(node){node.remove()}",\
+                    "Array.from(context.document.querySelectorAll(\'div[data-group=\\\"skyscraper_1\\\"]\')).forEach(e=>{e.remove()})",\
+                    "Array.from(context.document.querySelectorAll(\'div[class=\\\"col-lg-3 col-md-3 col-sm-3 col-xs-6 list-col\\\"]\')).forEach(e=>{e.remove()})",\
+                    "Array.from(context.document.querySelectorAll(\'div[class=\\\"footer\\\"]\')).forEach(e=>{e.remove()})",\
+                    "Array.from(context.document.querySelectorAll(\'div[class=\\\"top-nav\\\"]\')).forEach(e=>{e.remove()})",\
+                    "console.log(\'345\')"\
+                ]\
+              }
+script-providers:
+    18comic.vip:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/debug/http-rewrite.js
+        interval: 86400
