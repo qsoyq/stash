@@ -1,0 +1,7 @@
+name: QUIC 屏蔽
+desc: |-
+category: debug
+icon: https://stash.wiki/favicon.ico
+
+rules:
+    - PROTOCOL,QUIC,REJECT
