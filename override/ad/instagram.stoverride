@@ -1,0 +1,27 @@
+name: instagram
+desc: |-
+    - 网页端首页时间线广告
+category: ad
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/instagram.png
+http:
+    mitm:
+        - "www.instagram.com"
+    body-rewrite:
+        - https://www.instagram.com/graphql/query response-jq if .data.xdt_api__v1__feed__timeline__connection.edges!=null then .data.xdt_api__v1__feed__timeline__connection.edges|=map(select(.node.ad==null)) end
+        - https://www.instagram.com/graphql/query response-jq if .data.xdt_api__v1__feed__timeline__connection.edges!=null then .data.xdt_api__v1__feed__timeline__connection.edges|=map(select(.node?.ad?.label|tostring!="赞助内容")) end
+
+    script:
+        - name: instagram
+          binary-mode: false
+          match: https://www.instagram.com/(\?.*)?$
+          max-size: 2097152
+          require-body: true
+          timeout: 20
+          type: response
+          debug: false
+          argument: |-
+
+script-providers:
+    instagram:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/instagram.js
+        interval: 86400

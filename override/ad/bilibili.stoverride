@@ -11,7 +11,7 @@ desc: |-
     - 直播间更多解说
     - 直播间人气榜打榜提醒弹窗
 
-category: ads
+category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/bilibili-intl.png
 http:
     mitm:
