@@ -1,0 +1,17 @@
+name: 当前汇率
+desc: |-
+    - 覆写来源: https://whatshub.top/stoverride/rates.stoverride
+    - 脚本来源: https://raw.githubusercontent.com/deezertidal/Surge_Module/master/files/rates.js
+    - 数据源API: https://api.exchangerate-api.com/v4/latest/CNY
+category: tile
+icon: https://api.exchangerate-api.com/favicon.ico
+tiles:
+    - name: currency-exchange-rate
+      argument: |-
+          {"icon":"theatermasks.circle.fill", "color":"#D4AF37"}
+      backgroundColor: "#D4AF37"
+      interval: 3600
+script-providers:
+    currency-exchange-rate:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/tile/currency-exchange-rate.js
+        interval: 86400
