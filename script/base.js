@@ -196,6 +196,7 @@ function randomChar(num) {
 
 /**
  * 将指定日期对象转为相应的日期时间字符串
+ * 默认为当前日期时间
  * @param {Date|null} [date=null] 
  * @returns {string} 表示当前时间的字符串
  */
@@ -203,29 +204,16 @@ function getLocalDateString(date = null) {
     if (!date) {
         date = new Date()
     }
+
     const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    const seconds = date.getSeconds()
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // 月份从0开始，所以加1
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
-/**
- * 将指定日期对象转为相应的日期字符串
- * @param {Date|null} [date=null] 
- * @returns {string} 表示当前时间的字符串
- */
-function getLocalTodayString(date = null) {
-    if (!date) {
-        date = new Date()
-    }
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    return `${year}-${month}-${day}`
-}
 
 /**
  * 遍历并输出对象字面值
