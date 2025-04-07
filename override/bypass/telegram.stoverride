@@ -5,6 +5,7 @@ category: ruleset
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/telegram.png
 
 rules:
+    - DOMAIN-SUFFIX,iturrit.com,Telegram
     - RULE-SET,ip.telegram,Telegram,no-resolve
     - geosite,telegram,Telegram
     - IP-ASN,62041,Telegram,no-resolve # Telegram
