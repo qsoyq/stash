@@ -4,12 +4,18 @@ category: ruleset
 icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Direct.png
 
 rules:
-    - RULE-SET,domain.direct,DIRECT,no-resolve
+    # QQ网页端快捷登陆
+    - DOMAIN,localhost.ptlogin2.qq.com,DIRECT
+    - DOMAIN,localhost.sec.qq.com,DIRECT
 
-rule-providers:
-    domain.direct:
-        behavior: domain
-        format: yaml
-        interval: 86400
-        type: http
-        url: https://raw.githubusercontent.com/qsoyq/stash/main/ruleset/domain.direct.yaml
+    - DOMAIN-SUFFIX,lcdn-locator.apple.com,DIRECT
+    - DOMAIN-SUFFIX,lcdn-registration.apple.com,DIRECT
+    - DOMAIN-SUFFIX,aihubmix.com,DIRECT
+    - DOMAIN-SUFFIX,knit.bid,DIRECT # 爱妹子
+    - DOMAIN-SUFFIX,ddxq.mobi,DIRECT # 叮咚买菜
+    - DOMAIN-SUFFIX,tastientech.com,DIRECT # 塔斯汀
+    - DOMAIN-SUFFIX,wushuangai.com,DIRECT
+
+    - DOMAIN-SUFFIX,jk.com,DIRECT # 幂健康
+    - DOMAIN-SUFFIX,yuwell.com,DIRECT # 鱼跃
+    - DOMAIN-SUFFIX,novocare.com.cn,DIRECT # 诺和关怀
