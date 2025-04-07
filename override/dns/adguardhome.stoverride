@@ -7,5 +7,10 @@ dns:
         - https://223.6.6.6/dns-query
     nameserver: #!replace
         - https://ahd.19940731.xyz/dns-query/
+    fallback:
+        - https://dns.alidns.com/dns-query
     udp-nameserver: #!replace
         - 223.6.6.6:53
+
+rules:
+    - IP-CIDR,0.0.0.0/24,REJECT # DNS屏蔽
