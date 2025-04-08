@@ -1,9 +1,9 @@
-name: 可莉资源浏览器访问
+name: 可莉资源预览
 desc: |-
     - https://t.me/ibilibili
     - 绕过浏览器访问 WAF 拦截
 category: debug
-icon: https://cdn5.cdn-telegram.org/file/dnOSp8bAvU9oBBZAQzz3HcfkphhtdTlDCRkQTPus2AC5BZmpr-bHlUVnJO8Mg23K-D4Y0aNFFFQqxT--93z8-lz5Qbp7LXP1PYtpbFwAHE9DyMN_2TIpKNYbLt57_wKCJ7zY9jNzwtECCR1_PNtB1zPckymPt7GjJElmuwwaedPjKwcOW85IXTZZ1KgiiY2SjLwbDUlexIOGCRkCYcsxKiNKmadlgGcVH65guAzaiFXEK0sENB0a3OWKLpXrDSu-r85vCCUo0zG9i8-RGnVBZS9ZsxHAy-uNHG4uRwSVBozOTsc_QhHQ4vIHt2WvyicTjkPReJ6_g7OSjrthE_cxYg.jpg
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/ibilibili.kelee.png
 http:
     mitm:
         - "kelee.one"
