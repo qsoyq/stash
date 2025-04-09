@@ -664,11 +664,11 @@ async function parseYoutubePremium() {
 async function main() {
     echo("Starting the parallel execution...");
     let contents = await Promise.all([
-        // parseBilibiliHKMCTW(),
-        // getChatGPTCountryCode(),
-        // parseChatGPTiOS(),
-        // parseChatGPTWeb(),
-        // parseGemini(),
+        parseBilibiliHKMCTW(),
+        getChatGPTCountryCode(),
+        parseChatGPTiOS(),
+        parseChatGPTWeb(),
+        parseGemini(),
         parseYoutubePremium()
     ]);
 
