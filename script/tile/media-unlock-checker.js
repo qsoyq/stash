@@ -635,7 +635,7 @@ async function parseYoutubePremium() {
                 return ele.textContent.trim()
             }
         } catch (error) {
-            console.log(`parseCountryCode error: ${error}`)
+            echo(`parseCountryCode error: ${error}`)
         }
     }
     let url = 'https://www.youtube.com/premium'
@@ -651,7 +651,11 @@ async function parseYoutubePremium() {
     } else if (res.data.toLowerCase().includes("ad-free")) {
         let countryCode = parseYoutubePremiumCountryCode(res.data)
         // @ts-ignore
-        let region = `, Region: ${countryCodeToEmoji(countryCode)}${countryCode}` ? countryCode : ``
+        echo(`parseYoutubePremium countrycode: ${countryCode}`)
+        let region = ''
+        if (countryCode) {
+            region = `, Region: ${countryCodeToEmoji(countryCode)}${countryCode}`
+        }
         return `Youtube Premium: Yes${region}`
     }
     return 'Youtube Premium: Failed'
@@ -660,11 +664,11 @@ async function parseYoutubePremium() {
 async function main() {
     echo("Starting the parallel execution...");
     let contents = await Promise.all([
-        parseBilibiliHKMCTW(),
-        getChatGPTCountryCode(),
-        parseChatGPTiOS(),
-        parseChatGPTWeb(),
-        parseGemini(),
+        // parseBilibiliHKMCTW(),
+        // getChatGPTCountryCode(),
+        // parseChatGPTiOS(),
+        // parseChatGPTWeb(),
+        // parseGemini(),
         parseYoutubePremium()
     ]);
 
