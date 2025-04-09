@@ -19,3 +19,5 @@ rules:
     - DOMAIN-SUFFIX,jk.com,DIRECT # 幂健康
     - DOMAIN-SUFFIX,yuwell.com,DIRECT # 鱼跃
     - DOMAIN-SUFFIX,novocare.com.cn,DIRECT # 诺和关怀
+
+    - DOMAIN,time.is,DIRECT
