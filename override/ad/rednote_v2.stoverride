@@ -1,0 +1,110 @@
+name: |-
+    小红书去广告
+desc: |-
+    过滤信息流推广，移除图片及视频水印，如有异常，请先清除缓存再尝试。
+author: |-
+    RuCu6[https://github.com/RuCu6],fmz200[https://github.com/fmz200]
+icon: |-
+    https://raw.githubusercontent.com/luestr/IconResource/main/App_icon/120px/RedPaper.png
+category: |-
+    iKeLee
+openUrl: |-
+    https://apps.apple.com/app/id741292507
+tag: |-
+    去广告
+loon_version: |-
+    3.2.4(787)
+homepage: |-
+    https://github.com/luestr/ProxyResource/blob/main/README.md
+date: |-
+    2025-02-28 19:49:27
+
+http:
+    mitm:
+        - "edith.xiaohongshu.com"
+        - "rec.xiaohongshu.com"
+        - "www.xiaohongshu.com"
+
+    url-rewrite:
+        - >-
+            ^https:\/\/edith\.xiaohongshu\.com\/api\/sns\/v1\/surprisebox\/(?:get_style|open|submit_action) - reject-dict
+        - >-
+            ^https:\/\/www\.xiaohongshu\.com\/api\/marketing\/box\/trigger\? - reject-dict
+        - >-
+            ^https:\/\/edith\.xiaohongshu\.com\/api\/sns\/(?:v2\/guide\/user_banner|v3\/note\/guide) - reject-dict
+        - >-
+            ^https:\/\/www\.xiaohongshu\.com\/api\/sns\/(?:v1\/ads\/resource|v2\/hey\/\w+\/hey_gallery) - reject-dict
+
+    body-rewrite:
+        - >-
+            ^https:\/\/edith\.xiaohongshu\.com\/api\/sns\/v1\/search\/banner_list$ response-json-replace data {}
+        - >-
+            ^https:\/\/edith\.xiaohongshu\.com\/api\/sns\/v1\/search\/hot_list$ response-json-replace data.items []
+        - >-
+            ^https:\/\/edith\.xiaohongshu\.com\/api\/sns\/v4\/search\/hint response-json-replace data.hint_words []
+        - >-
+            ^https:\/\/edith\.xiaohongshu\.com\/api\/sns\/v4\/search\/trending\? response-json-replace data.queries [] data.hint_word {}
+
+    script:
+        - match: ^https:\/\/edith\.xiaohongshu\.com\/api\/sns\/v1\/note\/(?:imagefeed|live_photo\/save)
+          name: "移除图片和实况照片水印_26"
+          type: response
+          require-body: true
+
+        - match: ^https:\/\/edith\.xiaohongshu\.com\/api\/sns\/v1\/system\/service\/ui\/config\?
+          name: "移除图片和实况照片水印_26"
+          type: response
+          require-body: true
+
+        - match: ^https:\/\/edith\.xiaohongshu\.com\/api\/sns\/v1\/system_service\/config\?
+          name: "移除图片和实况照片水印_26"
+          type: response
+          require-body: true
+
+        - match: ^https:\/\/edith\.xiaohongshu\.com\/api\/sns\/v2\/system_service\/splash_config
+          name: "移除图片和实况照片水印_26"
+          type: response
+          require-body: true
+
+        - match: ^https:\/\/edith\.xiaohongshu\.com\/api\/sns\/v2\/(?:note\/widgets|user\/followings\/followfeed)
+          name: "移除图片和实况照片水印_26"
+          type: response
+          require-body: true
+
+        - match: ^https:\/\/edith\.xiaohongshu\.com\/api\/sns\/v4\/followfeed\?
+          name: "移除图片和实况照片水印_26"
+          type: response
+          require-body: true
+
+        - match: ^https:\/\/edith\.xiaohongshu\.com\/api\/sns\/v5\/recommend\/user\/follow_recommend\?
+          name: "移除图片和实况照片水印_26"
+          type: response
+          require-body: true
+
+        - match: ^https:\/\/(?:edith|rec)\.xiaohongshu\.com\/api\/sns\/v6\/homefeed\?
+          name: "移除图片和实况照片水印_26"
+          type: response
+          require-body: true
+
+        - match: ^https:\/\/edith\.xiaohongshu\.com\/api\/sns\/v10\/search\/notes\?
+          name: "移除图片和实况照片水印_26"
+          type: response
+          require-body: true
+
+        - match: ^https:\/\/edith\.xiaohongshu\.com\/api\/sns\/(?:v2\/note\/feed|v3\/note\/videofeed)
+          name: "移除图片和实况照片水印_26"
+          type: response
+          require-body: true
+
+        - match: ^https:\/\/(?:edith|rec|www)\.xiaohongshu\.com\/api\/sns\/(?:v4\/note\/videofeed|v10\/note\/video\/save)
+          name: "移除图片和实况照片水印_26"
+          type: response
+          require-body: true
+
+script-providers:
+    "移除图片和实况照片水印_26":
+        url: https://kelee.one/Resource/Script/RedPaper/RedPaper_remove_ads.js
+        interval: 86400
+
+rules:
+    - AND,((PROTOCOL,QUIC),(DOMAIN-SUFFIX,xiaohongshu.com)),REJECT
