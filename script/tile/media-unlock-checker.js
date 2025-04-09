@@ -312,6 +312,9 @@ function getScriptType() {
  * @returns 
  */
 function countryCodeToEmoji(countryCode) {
+    if (!countryCode) {
+        return ""
+    }
     // 将代码转为大写
     countryCode = countryCode.toUpperCase();
 
@@ -540,7 +543,6 @@ async function getChatGPTCountryCode() {
     let url = 'https://chat.openai.com/cdn-cgi/trace'
     let res = await get(url)
     let map = {}
-    let loc = ""
     if (res.error || res.response.status >= 400) {
         echo(`getChatGPTCountryCode error: ${res.error}, ${res.response.status}, ${res.data}`)
         return 'ChatGPT: Unknown country code'
@@ -551,8 +553,10 @@ async function getChatGPTCountryCode() {
                 let value = element.split('=')[1]
                 map[key] = value
             })
-            if (map['loc']) {
-                return `ChatGPT: ${countryCodeToEmoji(map['loc'])}${map['loc']}`
+            let loc = map["loc"]
+            if (loc) {
+                let emoji = countryCodeToEmoji(loc)
+                return `ChatGPT: ${emoji}${loc}`
             }
         }
 
@@ -661,7 +665,7 @@ async function main() {
         parseChatGPTiOS(),
         parseChatGPTWeb(),
         parseGemini(),
-        parseYoutubePremium(),
+        parseYoutubePremium()
     ]);
 
     echo("All promises resolved.");
