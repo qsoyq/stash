@@ -1,6 +1,6 @@
 name: adguardhome
 category: dns
-icon: https://st.agrd.eu/favicons/adguard/favicon.ico
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/adguard.png
 desc: AdguardHome
 dns:
     default-nameserver: #!replace
@@ -13,4 +13,4 @@ dns:
         - 223.6.6.6:53
 
 rules:
-    - IP-CIDR,0.0.0.0/24,REJECT # DNS屏蔽
+    - IP-CIDR,0.0.0.0/24,REJECT # DNS去广告屏蔽
