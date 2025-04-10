@@ -48,7 +48,7 @@ async function request(method, params) {
         const httpMethod = $httpClient[method.toLowerCase()]; // 通过 HTTP 方法选择对应的请求函数
         httpMethod(params, (error, response, data) => {
             if (error) {
-                console.log(`Error: ${error}, Response: ${JSON.stringify(response)}, Data: ${data}`);
+                echo(`[Request] Error: ${error}, Response: ${JSON.stringify(response)}, Data: ${data}`);
                 reject({ error, response, data }); // 请求失败，拒绝 Promise
             } else {
                 resolve({ error, response, data }); // 请求成功，解析 Promise
@@ -671,7 +671,6 @@ async function main() {
         parseGemini(),
         parseYoutubePremium()
     ]);
-
     echo("All promises resolved.");
 
     let content = contents.join('\n');
@@ -693,6 +692,9 @@ async function main() {
     main().then(_ => {
 
     }).catch(error => {
+        if (typeof error === 'object') {
+            error = JSON.stringify(error)
+        }
         echo(`[Error]: ${error?.message || error}`)
         $done({})
     })
