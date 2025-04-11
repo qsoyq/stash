@@ -1,0 +1,16 @@
+name: 中国移动
+desc: |-
+    - 开屏广告
+    - 首页右下角可展开工具栏 左上角登陆按钮
+    - 首页顶部消息通知弹窗
+category: ad
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/cmcc.png
+http:
+    force-http-engine:
+        - client.app.coc.10086.cn
+    mitm:
+        - client.app.coc.10086.cn
+    url-rewrite:
+        - https://client.app.coc.10086.cn/biz-orange/DN/init/startInit - reject # 开屏广告
+        - https://client.app.coc.10086.cn/biz-orange/DN/multipleInterfaces/aggregationData - reject # 首页右下角可展开工具栏 左上角登陆按钮
+        - https://client.app.coc.10086.cn/biz-orange/DN/toast/august/sortToast - reject # 首页顶部消息通知弹窗
