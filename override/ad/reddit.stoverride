@@ -1,8 +1,9 @@
 name: reddit
 desc: |-
-    - 详情页评论广告
-    - 社区主页列表广告
     - 首页列表广告
+    - 社区主页列表广告    
+    - 详情页评论广告
+    - 详情页主题下方广告
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/reddit.png
 http:
@@ -11,10 +12,13 @@ http:
     body-rewrite:
         # Reddit
         # 首页列表和详情页评论广告
-        - ^https://gql-fed.reddit.com/ response-jq .data.postInfoById.commentsPageAds=[]
+        - https://gql-fed.reddit.com/ response-jq .data.postInfoById.commentsPageAds=[]
+
+        # 详情页主题下方广告
+        - https://gql-fed.reddit.com/ response-jq .data.postInfoById.pdpCommentsAds=null
 
         # 社区主页列表广告
-        - ^https://gql-fed.reddit.com/ response-jq if .data.subredditV3.elements.edges != null then .data.subredditV3.elements.edges |= map(select(.node.cells[0].__typename!="AdMetadataCell")) end
+        - https://gql-fed.reddit.com/ response-jq if .data.subredditV3.elements.edges != null then .data.subredditV3.elements.edges |= map(select(.node.cells[0].__typename!="AdMetadataCell")) end
 
         # 首页列表广告
-        - ^https://gql-fed.reddit.com/ response-jq if .data.homeV3.elements.edges != null then .data.homeV3.elements.edges |= map(select(.node.cells[0].__typename!="AdMetadataCell")) end
+        - https://gql-fed.reddit.com/ response-jq if .data.homeV3.elements.edges != null then .data.homeV3.elements.edges |= map(select(.node.cells[0].__typename!="AdMetadataCell")) end
