@@ -1,10 +1,21 @@
 name: 斗鱼
 desc: |-
     - 开屏广告
+    - 直播页 App 推荐
+    - 直播页悬挂活动
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/douyu.png
 http:
+    force-http-engine:
+        - capi.douyucdn.cn
+        - rtbapi.douyucdn.cn
+        - apiv2.douyucdn.cn
     mitm:
         - capi.douyucdn.cn
+        - rtbapi.douyucdn.cn
+        - apiv2.douyucdn.cn
     url-rewrite:
-        - ^https?://capi.douyucdn.cn/api/v1/getStartSend - reject
+        - https://capi.douyucdn.cn/api/v1/getStartSend - reject # 开屏广告
+    body-rewrite:
+        - https://rtbapi.douyucdn.cn/japi/dyadx/gateway/app/getinfo response-jq .data={} # 直播页 视频下方 app 推荐
+        - https://apiv2.douyucdn.cn/japi/entrance/roomRes/nc/m/list response-jq .data.pendant_a=[] # 直播页右下角悬挂活动
