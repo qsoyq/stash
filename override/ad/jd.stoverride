@@ -1,7 +1,7 @@
 name: 京东
 desc: |-
     - 开屏广告
-    - 秒送主页活动弹窗
+    - 秒送活动弹窗
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/jd.png
 dns:
@@ -19,3 +19,4 @@ http:
         - https://api.m.jd.com/client.action\?functionId=welcomeHome response-jq .floorList=[]
         - https://api.m.jd.com/client.action\?functionId=queryPagePopWindow response-jq .activityId=""
         - https://api.m.jd.com/client.action\?functionId=queryPagePopWindow response-jq .channelPoint=[]
+        - https://api.m.jd.com/client.action\?functionId=hours_home response-jq .result.config.startPopupFloor.data=[] # 秒送活动弹窗
