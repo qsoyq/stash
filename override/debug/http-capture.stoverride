@@ -2,6 +2,7 @@ name: HTTP抓包
 category: debug
 desc: |-
     - 部分请求不允许 mitm, 启用抓包会导致网络错误
+
 icon: https://raw.githubusercontent.com/qsoyq/shell/main/assets/icon/debug.png
 script-providers:
     http-capture-all:
@@ -9,6 +10,22 @@ script-providers:
         interval: 86400
 http:
     mitm:
+        # include before exclude
+        - "gspe1-ssl.ls.apple.com"
+
+        # exclude
+        - "-*.douyinvod.com"
+        - "-*.douyinpic.com"
+        - "-*.amemv.com"
+
+        - "-*.itunes.apple.com"
+        - "-*.iadsdk.apple.com"
+        - "-*.apple.com"
+
+        - "-*.icloud-content.com"
+        - "-*.icloud.com"
+
+        # include
         - "*.com"
         - "*.net"
         - "*.org"
