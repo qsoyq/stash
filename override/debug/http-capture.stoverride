@@ -4,10 +4,7 @@ desc: |-
     - 部分请求不允许 mitm, 启用抓包会导致网络错误
 
 icon: https://raw.githubusercontent.com/qsoyq/shell/main/assets/icon/debug.png
-script-providers:
-    http-capture-all:
-        url: https://raw.githubusercontent.com/qsoyq/shell/main/config/stash/script/debug/http-capture.js
-        interval: 86400
+
 http:
     mitm:
         # include before exclude
@@ -54,12 +51,19 @@ http:
         - "*.au"
         - "*.br"
         - "*.ru"
+
     script:
         - match: ^https?://.*
           name: http-capture-all
           type: response
           require-body: true
-          timeout: 60
+          timeout: 10
           argument: ""
-          binary-mode: false
+          binary-mode: true
           max-size: 2097152 # 2MB
+          debug: false
+
+script-providers:
+    http-capture-all:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/debug/http-capture.js
+        interval: 86400
