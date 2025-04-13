@@ -1,6 +1,7 @@
 name: 谷歌搜索
 desc: |-
     - 移除搜索结果赞助商广告
+    - 手机浏览器里访问会导致地点相关结果样式布局异常
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/google.png
 http:
