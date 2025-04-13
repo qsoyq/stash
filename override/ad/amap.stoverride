@@ -2,6 +2,7 @@ name: 高德地图
 desc: |-
     - 首页下方卡片
     - 首页顶部提醒
+    - 查找推荐关键词
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/amap.png
 http:
@@ -14,3 +15,7 @@ http:
 
         # 首页顶部提醒
         - https://m5.amap.com/ws/faas/amap-navigation/main-page-assets response-jq .data.pull3={}
+
+        # 查找推荐关键词
+        - https://m5.amap.com/ws/shield/scene/recommend response-jq .data.wordInbox.words=[]
+        - https://m5.amap.com/ws/shield/scene/recommend response-jq .data.wordInbox.discovery_words=[]
