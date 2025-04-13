@@ -35,6 +35,7 @@ http:
         - "*.ws"
         - "*.tv"
         - "*.cc"
+        - "*.sb"
         - "*.mobi"
         - "*.info"
         - "*.biz"
@@ -58,7 +59,7 @@ http:
           name: http-capture-all
           type: response
           require-body: true
-          timeout: 20
+          timeout: 60
           argument: ""
           binary-mode: false
           max-size: 2097152 # 2MB
