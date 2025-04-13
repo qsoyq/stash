@@ -12,7 +12,7 @@ desc: |-
     - 我的优惠券 ｜ 邀请有礼
 
 category: ad
-icon: https://wx.m.ddxq.mobi/favicon.ico
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/ddxq.png
 dns:
     fake-ip-filter:
         - maicai.api.ddxq.mobi
