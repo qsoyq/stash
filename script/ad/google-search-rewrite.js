@@ -1,14 +1,14 @@
-/** @namespace google.search.rewrite */
+/** @namespace rewrite.search.google */
 
 /**
- * @typedef {Object} google.search.rewrite.HTTPResponse
+ * @typedef {Object} rewrite.search.google.HTTPResponse
  * @property {string|null} error - 错误信息，如果没有错误则为 null
  * @property {object} response - HTTP 响应对象
  * @property {string|null} data - 返回的数据，如果没有数据则为 null
  */
 
 /**
- * @typedef {function(Error|string|null, Object, string|null): void} google.search.rewrite.HTTPCallback
+ * @typedef {function(Error|string|null, Object, string|null): void} rewrite.search.google.HTTPCallback
  * 回调函数类型，接受错误、响应和数据作为参数。
  * @param {Error|string|null} error - 错误信息，可以是 Error 对象、字符串或者 null
  * @param {Object} response - HTTP 响应对象
@@ -16,18 +16,18 @@
  */
 
 /**
- * @typedef {function(Object, google.search.rewrite.HTTPCallback): google.search.rewrite.HTTPResponse} google.search.rewrite.HTTPMethod
+ * @typedef {function(Object, rewrite.search.google.HTTPCallback): rewrite.search.google.HTTPResponse} rewrite.search.google.HTTPMethod
  */
 
 /**
- * @typedef {Object} google.search.rewrite.HttpClient
- * @property {google.search.rewrite.HTTPMethod} get - 发送 GET 请求
- * @property {google.search.rewrite.HTTPMethod} post - 发送 POST 请求
- * @property {google.search.rewrite.HTTPMethod} put - 发送 PUT 请求
- * @property {google.search.rewrite.HTTPMethod} delete - 发送 DELETE 请求
+ * @typedef {Object} rewrite.search.google.HttpClient
+ * @property {rewrite.search.google.HTTPMethod} get - 发送 GET 请求
+ * @property {rewrite.search.google.HTTPMethod} post - 发送 POST 请求
+ * @property {rewrite.search.google.HTTPMethod} put - 发送 PUT 请求
+ * @property {rewrite.search.google.HTTPMethod} delete - 发送 DELETE 请求
  */
 
-/** @type {google.search.rewrite.HttpClient} */
+/** @type {rewrite.search.google.HttpClient} */
 var $httpClient;
 
 var $request, $response, $notification, $argument, $persistentStore, $script
@@ -39,16 +39,16 @@ var $done
  * 对异步回调的 HTTP 调用包装成 async 函数
  * @param {'GET'|'POST'|'PUT'|'DELETE'} method - HTTP 方法类型，支持 GET、POST、PUT 和 DELETE
  * @param {Object} params - 请求参数对象，包含请求所需的各类信息
- * @returns {Promise<google.search.rewrite.HTTPResponse>} 返回一个 Promise，解析为包含 error、response 和 data 的对象
+ * @returns {Promise<rewrite.search.google.HTTPResponse>} 返回一个 Promise，解析为包含 error、response 和 data 的对象
  * @throws {Error} 如果请求失败，Promise 会被拒绝并返回错误信息
  */
 async function request(method, params) {
     return new Promise((resolve, reject) => {
-        /** @type {google.search.rewrite.HTTPMethod} */
+        /** @type {rewrite.search.google.HTTPMethod} */
         const httpMethod = $httpClient[method.toLowerCase()]; // 通过 HTTP 方法选择对应的请求函数
         httpMethod(params, (error, response, data) => {
             if (error) {
-                console.log(`Error: ${error}, Response: ${JSON.stringify(response)}, Data: ${data}`);
+                echo(`[Request] Error: ${error}, Response: ${JSON.stringify(response)}, Data: ${data}`);
                 reject({ error, response, data }); // 请求失败，拒绝 Promise
             } else {
                 resolve({ error, response, data }); // 请求成功，解析 Promise
@@ -60,7 +60,7 @@ async function request(method, params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<google.search.rewrite.HTTPResponse>}
+ * @returns {Promise<rewrite.search.google.HTTPResponse>}
  */
 async function get(params) {
     return request('GET', params);
@@ -69,7 +69,7 @@ async function get(params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<google.search.rewrite.HTTPResponse>}
+ * @returns {Promise<rewrite.search.google.HTTPResponse>}
  */
 async function post(params) {
     return request('POST', params);
@@ -78,7 +78,7 @@ async function post(params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<google.search.rewrite.HTTPResponse>}
+ * @returns {Promise<rewrite.search.google.HTTPResponse>}
  */
 async function put(params) {
     return request('PUT', params);
@@ -87,7 +87,7 @@ async function put(params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<google.search.rewrite.HTTPResponse>}
+ * @returns {Promise<rewrite.search.google.HTTPResponse>}
  */
 async function delete_(params) {
     return request('DELETE', params);
@@ -196,6 +196,7 @@ function randomChar(num) {
 
 /**
  * 将指定日期对象转为相应的日期时间字符串
+ * 默认为当前日期时间
  * @param {Date|null} [date=null] 
  * @returns {string} 表示当前时间的字符串
  */
@@ -203,26 +204,17 @@ function getLocalDateString(date = null) {
     if (!date) {
         date = new Date()
     }
+
     const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    const seconds = date.getSeconds()
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // 月份从0开始，所以加1
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}.${month}.${day} ${hours}:${minutes}:${seconds}`;
 }
-function getLocalDateString(date) {
-    if (typeof date === 'undefined') {
-        date = new Date()
-    }
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    const seconds = date.getSeconds()
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
-}
+
+
 /**
  * 遍历并输出对象字面值
  * @param {object} body 
@@ -308,7 +300,7 @@ function getPersistentArgument(key) {
 
 /**
  * 返回当前的脚本类型
-* @returns {'request' | 'response' | 'tile' | 'cron'}
+* @returns {'request' | 'response' | 'tile' | 'cron' | 'undefined'}
  */
 function getScriptType() {
     return typeof $script !== 'undefined' ? $script.type : 'undefined'
@@ -485,15 +477,37 @@ async function pushMessage(message) {
     return res
 }
 
+/**
+ * @param {...any} args - Arguments to log
+ */
+function echo(...args) {
+    let date = getLocalDateString()
+    let logMessage = `${args.join(' ')}`
+    logMessage = `[${date}] ${logMessage}`
+    console.log(logMessage)
+}
+
+/**
+ * 在指定作用域中执行代码
+ * @param {*} code 执行代码
+ * @param {*} context 上下文作用域
+ * @returns 
+ */
+function safeEval(code, context) {
+    const func = new Function(...Object.keys(context), code);
+    return func(...Object.values(context));
+}
+
+function parseDocument(body) {
+    let domParser = new DOMParser();
+    return domParser.parseFromString(body, 'text/html');
+}
+
 function removeAds(document) {
-    for (const span of document.querySelectorAll('span')) {
-        if (span.textContent === '赞助商广告') {
-            let parent = span.parentNode
-            if (parent) {
-                parent.remove()
-            }
-        }
-    }
+    document.getElementById("taw").remove()
+    document.getElementById("bottomads").remove()
+    echo("移除广告成功")
+
 }
 
 
@@ -503,7 +517,7 @@ async function main() {
         case "response":
             let body = getScriptResponseBody()
             if (body) {
-                const document = new DOMParser().parseFromString(body, 'text/html');
+                const document = new DOMParser().parseFromString(body, 'text/html')
                 removeAds(document)
                 $done({ body: document.documentElement.outerHTML })
                 break
@@ -517,7 +531,10 @@ async function main() {
     main().then(_ => {
 
     }).catch(error => {
-        console.log(`[Error]: ${error?.message || error}`)
+        if (typeof error === 'object') {
+            error = JSON.stringify(error)
+        }
+        echo(`[Error]: ${error?.message || error}`)
         $done({})
     })
 })();
