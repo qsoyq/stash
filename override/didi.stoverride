@@ -1,0 +1,25 @@
+name: 滴滴打车
+desc: |-
+    - 邀好友助力领券
+category: ad
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/didi.png
+http:
+    force-http-engine:
+        - prod.didi.cn
+    mitm:
+        - prod.didi.cn
+    script:
+        - name: integrated.marketing.didi
+          binary-mode: false
+          match: https://prod.didi.cn/integrated-marketing
+          max-size: 1048576
+          require-body: true
+          timeout: 20
+          type: response
+          argument: ""
+          debug: false
+
+script-providers:
+    integrated.marketing.didi:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/marketing.integrated.didi.js
+        interval: 86400
