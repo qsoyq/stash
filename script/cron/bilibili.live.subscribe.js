@@ -515,74 +515,106 @@ function parseDocument(body) {
     return domParser.parseFromString(body, 'text/html');
 }
 
+
+function removeHtmlTags(text) {
+    // 定义一个正则表达式，用于匹配 HTML 标签
+    const htmlTagsRe = /<[^>]+>/g;
+    // 使用 replace 方法替换 HTML 标签，保留 title 里的字符串
+    return text.replace(htmlTagsRe, (match) => {
+        const title = match.match(/title\s*=\s*"(.*?)"/);
+        return title ? title[1] : "";
+    });
+}
+
+function unescapeHtml(text) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(text, "text/html");
+    return doc.body.textContent;
+}
+
+
 async function main() {
     echo(`[Argument] ${$argument}`)
-    echo(`[Argument] [JSON] ${parseJsonBody($argument)}`)
-    let rooms = getScriptArgument("rooms")
-    let force = getScriptArgument("force") || false // 是否强制推送
-    let current = (new Date()).getTime
-    for (const roomid of rooms) {
+    let rooms = getScriptArgument("rooms") || []
+    if (!rooms) {
+        return
+    }
+    let force = getScriptArgument("force") || false
+    let bark = getScriptArgument("bark") || null
+    let messages = []
+    let qs = rooms.map(roomId => encodeURIComponent("rooms") + '=' + encodeURIComponent(roomId)).join('&');
+    let url = `https://p.19940731.xyz/api/bilibili/live/room/list?${qs}`
+    let resp = await get(url)
+    if (resp.error || resp.response.status >= 400) {
+        echo(`[Request Error] ${resp.error}, ${resp.response.status}, ${resp.data}`)
+        return
+    }
+    let body = parseJsonBody(resp.data)
+    let roomList = body.list
+    for (const room of roomList) {
+        let roomid = room.roomInfo.room_id
         let cacheKey = `live.bilibili.${roomid}`
         let cache = getPersistentArgument(cacheKey)
-        // 请求房间信息
-        let url = `https://p.19940731.xyz/api/bilibili/live/room/${roomid}`
-        let resp = await get(url)
-        if (resp.error || resp.response.status >= 400) {
-            echo(`[Error] ${resp.error}, ${resp.response.status}`)
+
+
+        if (!room.isAlive) {
+            echo(`[DEBUG] ${room.userInfo.uname} 直播间未开播, roomId: ${roomid}`)
             continue
         }
-
-        let body = parseJsonBody(resp.data)
-
-        if (!body.isAlive) {
-            echo(`[DEBUG] ${body.userInfo.uname} 直播间未开播, roomId: ${roomid}`)
-            continue
-        }
-        let liveTime = new Date(body.roomInfo.live_time).getTime()
+        let liveTime = Math.round(new Date(room.roomInfo.live_time).getTime() / 1000)
         if (!force && cache) {
             let lastLiveTime = Number(cache)
             if (lastLiveTime >= liveTime) {
-                echo(`[DEBUG] ${body.userInfo.uname} 直播间已推送过, roomId: ${roomid}`)
+                echo(`[DEBUG] ${room.userInfo.uname} 直播间已推送过, roomId: ${roomid}, lastLiveTime: ${new Date(lastLiveTime * 1000)}`)
                 continue
             }
         }
-        // let body = JSON.parse(data)
-        // let roomInfo = body.roomInfo
-        // let anchor = {
-        //     uid: body.userInfo.uid,
-        //     uname: body.userInfo.uname,
-        //     face: body.userInfo.face
-        // }
-        // let isAlive = body.isAlive
 
-        // // 判断直播状态和上次推送时间
-        // let liveTime = new Date(roomInfo.live_time).getTime()
-
-        // if (!isAlive) {
-        //     ctx.resolve(`${anchor.uname}的直播间${roomId}未开播`)
-        //     return
-        // }
-
-        // let current = new Date().getTime()
-        // let lastPub = $persistentStore.read(lastPubKey)
-
-        // if (lastPub) {
-        //     lastPub = Number(lastPub)
-        //     if (isDebug) {
-        //         console.log(`${anchor.uname} - lastPub: ${new Date(lastPub)}, liveTime: ${new Date(liveTime)}, current: ${new Date(current)}`)
-        //     }
-        //     if (lastPub >= liveTime && !isAlwaysPub) {
-        //         ctx.resolve(`${anchor.uname}的直播间已在 ${new Date(lastPub)} 推送过`)
-        //         return
-        //     }
-        // }        
+        if (bark) {
+            let description = removeHtmlTags(unescapeHtml(room.roomInfo.description))
+            let openUrl = `bilibili://live/${roomid}`
+            let body = `${room.roomInfo.title}\n${room.roomInfo.live_time}\n${description}`
+            body = body.substring(0, 1024)
+            let message = {
+                bark: {
+                    device_key: bark.device_key,
+                    title: `${room.userInfo.uname}`,
+                    body: body,
+                    url: openUrl,
+                    group: bark.group || "bilibili.live",
+                    level: bark.level || "passive",
+                    icon: room.userInfo.face
+                }
+            }
+            messages.push(message)
+        }
     }
+    if (messages) {
+        url = `https://p.19940731.xyz/api/notifications/push/v3`
+        let payload = JSON.stringify({ messages })
+        resp = await post({ url: url, body: payload, headers: { "content-type": "application/json" } })
+    }
+
+    if (resp.error || resp.response.status >= 400) {
+        echo(`[Request Error] ${resp.error}, ${resp.response.status}, ${resp.data}`)
+        return
+    }
+    for (const room of roomList) {
+        let roomid = room.roomInfo.room_id
+        let cacheKey = `live.bilibili.${roomid}`
+        writePersistentArgument(cacheKey, String(Math.round(new Date().getTime() / 1000)))
+    }
+    echo("写入缓存结束")
+
 }
 
 (async () => {
     main().then(_ => {
         $done({})
     }).catch(error => {
+        if (typeof error === 'object') {
+            error = JSON.stringify(error)
+        }
         console.log(`[Error]: ${error?.message || error}`)
         $done({})
     })
