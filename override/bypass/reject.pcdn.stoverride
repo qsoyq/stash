@@ -1,0 +1,16 @@
+name: pcdn 拒绝
+desc: |-
+    - https://www.v2ex.com/t/1127079
+category: ruleset
+icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Reject.png
+
+rules:
+    - DOMAIN,v1d.szbdyd.com,REJECT
+    - DOMAIN,mcdn.bilivideo.cn,REJECT
+    - DOMAIN,tp2p.kg.qq.com,REJECT
+    - DOMAIN,twns.p2ptun.qq.com,REJECT    
+    - DOMAIN,sd-gl.xinqiucc.com,REJECT
+    - DOMAIN,xyp-n.kuiniuca.com,REJECT
+    - DOMAIN,sdk1xyajs.data.kuiniuca.com,REJECT
+    - DOMAIN,ac.dun.163.com,REJECT
+    - DOMAIN,fp-upload.dun.163.com,REJECT
