@@ -31,7 +31,7 @@ http:
         - https://api.live.bilibili.com/xlive/app-ucenter/v2/playTogether/PlayTogetherServiceCardDetail - reject
 
         # 视频｜云视听小电视
-        - https://i1.hdslb.com/bfs/activity-plat/static/9bdd988aed64a23976d6d5494533a450/vBISHozSu0.png@660w_160h_1e_100p.png - reject
+        - https://i1.hdslb.com/bfs/activity-plat/static/9bdd988aed64a23976d6d5494533a450/vBISHozSu0.png - reject
 
     body-rewrite:
         # Bilibili HD 首页 banner 轮播
@@ -57,7 +57,7 @@ http:
         - https://api.live.bilibili.com/xlive/e-commerce-interface/v1/ecommerce-user/get_shopping_cart_list response-jq .data.goods_list=[]
         - https://api.live.bilibili.com/xlive/e-commerce-interface/v1/ecommerce-user/get_shopping_cart_list response-jq .data.has_next_page=false
         - https://api.live.bilibili.com/xlive/e-commerce-interface/v1/ecommerce-user/get_shopping_cart_list response-jq .data.introduce_goods=null
-        
+
         # 直播间 ｜ banner
         - https://api.live.bilibili.com/xlive/app-room/v1/index/getInfoByRoom response-jq .data.activity_banner_info={}
 
