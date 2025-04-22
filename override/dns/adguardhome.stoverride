@@ -16,4 +16,4 @@ dns:
         - 223.6.6.6:53
 
 rules:
-    - IP-CIDR,0.0.0.0/24,REJECT # DNS去广告屏蔽
+    - IP-CIDR,0.0.0.0/24,REJECT,no-resolve # DNS去广告屏蔽
