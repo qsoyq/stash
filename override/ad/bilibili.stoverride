@@ -22,6 +22,7 @@ http:
         - app.bilibili.com
         - api.live.bilibili.com
         - i1.hdslb.com
+        - i2.hdslb.com
     url-rewrite:
         # 哔哩哔哩开屏广告
         - https?://app.bilibili.com/x/v2/splash/show - reject
@@ -32,6 +33,7 @@ http:
 
         # 视频｜云视听小电视
         - https://i1.hdslb.com/bfs/activity-plat/static/9bdd988aed64a23976d6d5494533a450/vBISHozSu0.png - reject
+        - https://i2.hdslb.com/bfs/activity-plat/static/9bdd988aed64a23976d6d5494533a450/vBISHozSu0.png - reject
 
     body-rewrite:
         # Bilibili HD 首页 banner 轮播
