@@ -1,0 +1,18 @@
+name: AD分流拒绝
+desc: |-
+category: ruleset
+icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Reject.png
+
+http:
+
+
+rules:
+    - RULE-SET,anti-AD,REJECT,no-resolve
+
+rule-providers:
+    anti-AD:
+        behavior: domain
+        format: yaml
+        interval: 86400
+        type: http
+        url: https://raw.githubusercontent.com/privacy-protection-tools/anti-AD/master/anti-ad-clash.yaml
