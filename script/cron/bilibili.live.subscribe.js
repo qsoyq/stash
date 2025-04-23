@@ -550,8 +550,7 @@ async function main() {
         return
     }
     let body = parseJsonBody(resp.data)
-    let roomList = body.list
-    roomList = roomList.filter((room) => {
+    let roomList = body.list.filter((room) => {
         if (!room.isAlive) {
             echo(`[DEBUG] ${room.userInfo.uname} 直播间未开播, roomId: ${room.roomInfo.roomid}`)
         }
