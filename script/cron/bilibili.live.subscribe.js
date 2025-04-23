@@ -551,16 +551,16 @@ async function main() {
     }
     let body = parseJsonBody(resp.data)
     let roomList = body.list
+    roomList = roomList.filter((room) => {
+        if (!room.isAlive) {
+            echo(`[DEBUG] ${room.userInfo.uname} 直播间未开播, roomId: ${room.roomInfo.roomid}`)
+        }
+        return room.isAlive
+    })
     for (const room of roomList) {
         let roomid = room.roomInfo.room_id
         let cacheKey = `live.bilibili.${roomid}`
         let cache = getPersistentArgument(cacheKey)
-
-
-        if (!room.isAlive) {
-            echo(`[DEBUG] ${room.userInfo.uname} 直播间未开播, roomId: ${roomid}`)
-            continue
-        }
         let liveTime = Math.round(new Date(room.roomInfo.live_time).getTime() / 1000)
         if (!force && cache) {
             let lastLiveTime = Number(cache)
