@@ -6,22 +6,34 @@ icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Reject.png
 http:
     mitm:
         - api.bilibili.com
+        - redirector.googlevideo.com
+        - b.clarity.ms
+        - www.google-analytics.com
+        - analytics.google.com
+        - stats.g.doubleclick.net
+        - h.trace.qq.com
+
     url-rewrite:
-        # 哔哩哔哩
         - https://api.bilibili.com/x/push/report - reject
         - https://api.bilibili.com/x/report/click/ios - reject
         - https://api.bilibili.com/x/report/heartbeat/mobile - reject
         - https://api.bilibili.com/x/v2/history/report - reject
         - https://api.bilibili.com/x/v2/history/report_list - reject
 
-        # YouTube?
         - https://redirector.googlevideo.com/report_mapping - reject
+        - https://www.google-analytics.com/\w+/collect - reject
+        - https://analytics.google.com/\w+/collect - reject
+        - https://stats.g.doubleclick.net/\w+/collect - reject
+        
+        - https://b.clarity.ms/collect - reject
+
+        - https?://h.trace.qq.com/kv - reject
 
 rules:
     # 哔哩哔哩
     - AND,((DOMAIN,stun.chat.bilibili.com),(DST-PORT,3478)),REJECT
     - AND,((DOMAIN,stun6.chat.bilibili.com),(DST-PORT,3479)),REJECT
-
+    - DOMAIN,www.google-analytics.com,REJECT
     - RULE-SET,domain.reject.drop,REJECT-DROP,no-resolve
     - RULE-SET,domain.reject,REJECT,no-resolve
 
