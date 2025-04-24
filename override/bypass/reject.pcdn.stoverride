@@ -15,6 +15,9 @@ rules:
     - DOMAIN-SUFFIX,v1d.szbdyd.com,REJECT
     - DOMAIN-SUFFIX,mcdn.bilivideo.cn,REJECT
     - RULE-SET,anti-AD.pcdn,REJECT,no-resolve
+    - RULE-SET,PCDNFilter,REJECT,no-resolve
+    - RULE-SET,Block-pcdn-domains,REJECT,no-resolve
+
 rule-providers:
     anti-AD.pcdn:
         behavior: domain
@@ -22,3 +25,19 @@ rule-providers:
         interval: 86400
         type: http
         url: https://raw.githubusercontent.com/privacy-protection-tools/anti-AD/master/discretion/pcdn.txt
+
+    # https://cdn.jsdelivr.net/gh/susetao/PCDNFilter-CHN-@main/PCDNFilter.txt
+    PCDNFilter:
+        behavior: domain
+        format: yaml
+        interval: 86400
+        type: http
+        url: https://p.19940731.xyz/api/stash/ruleset/adblock?url=https%3A%2F%2Fcdn.jsdelivr.net%2Fgh%2Fsusetao%2FPCDNFilter-CHN-%40main%2FPCDNFilter.txt
+
+    # https://thhbdd.github.io/Block-pcdn-domains/ban.txt
+    Block-pcdn-domains:
+        behavior: domain
+        format: txt
+        interval: 86400
+        type: http
+        url: https://p.19940731.xyz/api/stash/ruleset/adblock?url=https%3A%2F%2Fthhbdd.github.io%2FBlock-pcdn-domains%2Fban.txt
