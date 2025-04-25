@@ -5,7 +5,10 @@ category: enhance
 icon: https://91porn.com/favicon.ico
 http:
     mitm:
-        - "91porn.com"
+        - 91porn.com
+        - vthumb.killcovid2021.com
+    url-rewrite:
+        - https://vthumb.killcovid2021.com/300vip_and_yqm.mp4 - reject
     script:
         - name: 91porn
           binary-mode: false
