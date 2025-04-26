@@ -1,13 +1,14 @@
 name: 起点读书
 desc: |-
-    - 启动页广告
-    - 首页上方好评弹窗
-    - 首页上方养书提醒弹窗
-    - 首页推书弹窗
-    - 首页右下角活动浮窗 | 
-    - 阅读页面新闻 | 书友xxxx成为了本作品长老
-    - 首页消息推送 | 夜冭殇支持《二手穿越：大耳贼刘备》白银宝箱,成为本作品的白银大盟
-    - 阅读页上方工具栏通知弹窗｜上月订阅满1000点，获得3张月票
+    - 启动页｜广告
+    - 首页｜上方好评弹窗
+    - 首页｜上方养书提醒弹窗
+    - 首页｜推书弹窗
+    - 首页｜右下角活动浮窗 | 
+    - 首页｜消息推送 | 夜冭殇支持《二手穿越：大耳贼刘备》白银宝箱,成为本作品的白银大盟
+    - 阅读页｜新闻 | 书友xxxx成为了本作品长老
+    - 阅读页｜上方工具栏通知弹窗｜上月订阅满1000点，获得3张月票
+    - 阅读页｜追更排名前 100 提示
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/qidian.png
 
@@ -28,3 +29,5 @@ http:
         - https://magev6.if.qidian.com/argus/api/v1/message/getpushedmessagelist response-jq .Data.MsgList=[] # 推送消息 | 夜冭殇支持《二手穿越：大耳贼刘备》白银宝箱,成为本作品的白银大盟
 
         - https://magev6.if.qidian.com/argus/api/v1/assembly/toolbar response-jq .Data.Getfrontactivity={} # 阅读页上方工具栏通知弹窗｜上月订阅满1000点，获得3张月票
+
+        - https://magev6.if.qidian.com/argus/api/v1/bookLastPage/chaseChapterUpdate response-jq .Data.ChaseChapterUpdateRank=-1 # 阅读页｜追更排名前 100 提示
