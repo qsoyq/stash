@@ -1,3 +1,4 @@
+#SUBSCRIBED https://raw.githubusercontent.com/qsoyq/stash/main/override/bypass/reject.pcdn.stoverride
 name: pcdn 拒绝
 desc: |-
     - https://www.v2ex.com/t/1127079
@@ -5,15 +6,15 @@ category: ruleset
 icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Reject.png
 
 rules:
-    - DOMAIN,tp2p.kg.qq.com,REJECTno-track
-    - DOMAIN,twns.p2ptun.qq.com,REJECTno-track
-    - DOMAIN,sd-gl.xinqiucc.com,REJECTno-track
-    - DOMAIN,xyp-n.kuiniuca.com,REJECTno-track
-    - DOMAIN,sdk1xyajs.data.kuiniuca.com,REJECTno-track
-    - DOMAIN,ac.dun.163.com,REJECTno-track
-    - DOMAIN,fp-upload.dun.163.com,REJECTno-track
-    - DOMAIN-SUFFIX,v1d.szbdyd.com,REJECTno-track
-    - DOMAIN-SUFFIX,mcdn.bilivideo.cn,REJECTno-track
+    - DOMAIN,tp2p.kg.qq.com,REJECT,no-track
+    - DOMAIN,twns.p2ptun.qq.com,REJECT,no-track
+    - DOMAIN,sd-gl.xinqiucc.com,REJECT,no-track
+    - DOMAIN,xyp-n.kuiniuca.com,REJECT,no-track
+    - DOMAIN,sdk1xyajs.data.kuiniuca.com,REJECT,no-track
+    - DOMAIN,ac.dun.163.com,REJECT,no-track
+    - DOMAIN,fp-upload.dun.163.com,REJECT,no-track
+    - DOMAIN-SUFFIX,v1d.szbdyd.com,REJECT,no-track
+    - DOMAIN-SUFFIX,mcdn.bilivideo.cn,REJECT,no-track
     - RULE-SET,anti-AD.pcdn,REJECT,no-resolve,no-track
     - RULE-SET,PCDNFilter,REJECT,no-resolve,no-track
     - RULE-SET,Block-pcdn-domains,REJECT,no-resolve,no-track
