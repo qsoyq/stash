@@ -1,4 +1,3 @@
-#SUBSCRIBED https://raw.githubusercontent.com/qsoyq/stash/main/override/bypass/reject.pcdn.stoverride
 name: pcdn 拒绝
 desc: |-
     - https://www.v2ex.com/t/1127079
