@@ -12,6 +12,8 @@ http:
         - analytics.google.com
         - stats.g.doubleclick.net
         - h.trace.qq.com
+        # 喜大普奔
+        - image.spdbccc.com
 
     url-rewrite:
         - https://api.bilibili.com/x/push/report - reject
@@ -24,18 +26,21 @@ http:
         - https://www.google-analytics.com/\w+/collect - reject
         - https://analytics.google.com/\w+/collect - reject
         - https://stats.g.doubleclick.net/\w+/collect - reject
-        
+
         - https://b.clarity.ms/collect - reject
 
         - https?://h.trace.qq.com/kv - reject
 
+        # 喜大普奔
+        - ^https?:\/\/image\.spdbccc\.com\.cn\/group\d\/M00\/[A-Z0-9]{2}\/[A-Z0-9]{2}\/.+(yg285|Qk562|Ac840|bM519|cE569|SQ969|0A304) - reject
+
 rules:
     # 哔哩哔哩
-    - AND,((DOMAIN,stun.chat.bilibili.com),(DST-PORT,3478)),REJECT
-    - AND,((DOMAIN,stun6.chat.bilibili.com),(DST-PORT,3479)),REJECT
-    - DOMAIN,www.google-analytics.com,REJECT
-    - RULE-SET,domain.reject.drop,REJECT-DROP,no-resolve
-    - RULE-SET,domain.reject,REJECT,no-resolve
+    - AND,((DOMAIN,stun.chat.bilibili.com),(DST-PORT,3478)),REJECT,no-track
+    - AND,((DOMAIN,stun6.chat.bilibili.com),(DST-PORT,3479)),REJECT,no-track
+    - DOMAIN,www.google-analytics.com,REJECT,no-track
+    - RULE-SET,domain.reject.drop,REJECT-DROP,no-resolve,no-track
+    - RULE-SET,domain.reject,REJECT,no-resolve,no-track
 
 rule-providers:
     domain.reject.drop:

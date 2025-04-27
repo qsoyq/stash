@@ -1,12 +1,15 @@
 name: AD分流拒绝
 desc: |-
-    - anti-AD
 category: ruleset
 icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Reject.png
 
+http:
+
 
 rules:
-    - RULE-SET,anti-AD,REJECT,no-resolve
+    - GEOSITE,category-ads,REJECT,no-track
+    - RULE-SET,anti-AD,REJECT,no-resolve,no-track
+    
 
 rule-providers:
     anti-AD:
