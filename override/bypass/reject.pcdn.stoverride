@@ -21,10 +21,10 @@ rules:
 rule-providers:
     anti-AD.pcdn:
         behavior: domain
-        format: txt
+        format: text
         interval: 86400
         type: http
-        url: https://raw.githubusercontent.com/privacy-protection-tools/anti-AD/master/discretion/pcdn.txt
+        url: https://raw.githubusercontent.com/privacy-protection-tools/anti-AD/master/discretion/pcdn.text
 
     # https://cdn.jsdelivr.net/gh/susetao/PCDNFilter-CHN-@main/PCDNFilter.txt
     PCDNFilter:
@@ -37,7 +37,7 @@ rule-providers:
     # https://thhbdd.github.io/Block-pcdn-domains/ban.txt
     Block-pcdn-domains:
         behavior: domain
-        format: txt
+        format: text
         interval: 86400
         type: http
         url: https://p.19940731.xyz/api/stash/ruleset/adblock?url=https%3A%2F%2Fthhbdd.github.io%2FBlock-pcdn-domains%2Fban.txt
