@@ -24,7 +24,7 @@ rule-providers:
         format: text
         interval: 86400
         type: http
-        url: https://raw.githubusercontent.com/privacy-protection-tools/anti-AD/master/discretion/pcdn.text
+        url: https://raw.githubusercontent.com/privacy-protection-tools/anti-AD/master/discretion/pcdn.txt
 
     # https://cdn.jsdelivr.net/gh/susetao/PCDNFilter-CHN-@main/PCDNFilter.txt
     PCDNFilter:
