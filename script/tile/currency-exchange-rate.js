@@ -544,14 +544,14 @@ async function main() {
     const current = getLocalDateString()
     const content = `
     数据源更新时间: ${timeLastUpdated}
-    🇺🇸1美元兑换 ${usdToCny}🇨🇳人民币
-    🇪🇺1欧元兑换 ${eurToCny}🇨🇳人民币
-    🇬🇧1英镑兑换 ${gbpToCny}🇨🇳人民币    
-    🇲🇾1马来西亚令吉兑换 ${myrToCny}🇨🇳人民币
-    🇹🇷1土耳其里拉 ${tryToCny}🇨🇳人民币
-    🇨🇳1人民币兑换 ${cnyToHkd}🇭🇰港币
-    🇨🇳1人民币兑换 ${cnyToJpy}🇯🇵日元
-    🇨🇳1人民币兑换 ${cnyToKrw}🇰🇷韩元
+    🇺🇸1美元＄ -> ${usdToCny}🇨🇳人民币￥
+    🇪🇺1欧元EUR  -> ${eurToCny}🇨🇳人民币￥
+    🇬🇧1英镑￡ -> ${gbpToCny}🇨🇳人民币￥
+    🇲🇾1令吉MYR -> ${myrToCny}🇨🇳人民币￥
+    🇹🇷1土耳其里拉TRL -> ${tryToCny}🇨🇳人民币￥
+    🇨🇳1人民币￥ -> ${cnyToHkd}🇭🇰港币＄
+    🇨🇳1人民币￥ -> ${cnyToJpy}🇯🇵日元￥
+    🇨🇳1人民币￥ -> ${cnyToKrw}🇰🇷韩元₩
       `;
 
     const panel = {
