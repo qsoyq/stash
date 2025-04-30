@@ -5,6 +5,7 @@ category: ruleset
 icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Reject.png
 
 rules:
+    - DST-PORT,4483,REJECT,no-track
     - DOMAIN,tp2p.kg.qq.com,REJECT,no-track
     - DOMAIN,twns.p2ptun.qq.com,REJECT,no-track
     - DOMAIN,sd-gl.xinqiucc.com,REJECT,no-track
