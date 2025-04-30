@@ -19,6 +19,5 @@ rule-providers:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/ruleset/ip.wechat.yaml
 
 rules:
-    - DOMAIN,wetype.weixin.qq.com,DIRECT,no-track
-    - RULE-SET,ip.wechat,DIRECT,no-resolve
-    - RULE-SET,domain.wechat,DIRECT,no-resolve
+    - RULE-SET,ip.wechat,DIRECT,no-resolve,no-track
+    - RULE-SET,domain.wechat,DIRECT,no-resolve,no-track
