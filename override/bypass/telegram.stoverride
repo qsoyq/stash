@@ -1,14 +1,24 @@
 name: 电报分流代理
 desc: |-
+    未设定的策略组默认使用 PROXY 代替
     分流策略组 -> Telegram
+    分流策略组 -> TelegramDC1
+    分流策略组 -> TelegramDC2
+    分流策略组 -> TelegramDC3
+    分流策略组 -> TelegramDC4
+    分流策略组 -> TelegramDC5
 category: ruleset
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/telegram.png
 
 rules:
+    - IP-ASN,59930,TelgramDC1,no-resolve
+    - IP-ASN,44907,TelgramDC2,no-resolve
+    - IP-ASN,211157,TelgramDC3,no-resolve
+    - IP-ASN,62041,TelegramDC4,no-resolve
+    - IP-ASN,62014,TelegramDC5,no-resolve
     - DOMAIN-SUFFIX,iturrit.com,Telegram,no-track
     - RULE-SET,ip.telegram,Telegram,no-resolve,no-track
     - geosite,telegram,Telegram,no-track
-    - IP-ASN,62041,Telegram,no-resolve,no-track # Telegram
 
 rule-providers:
     ip.telegram:
