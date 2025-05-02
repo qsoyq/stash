@@ -17,7 +17,8 @@ desc: |-
     - 搜索页底部广告
     - 搜索页右侧列表广告
 category: ad
-icon: https://raw.githubusercontent.com/qsoyq/shell/main/assets/icon/18comic.ico
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/18comic.png
+
 http:
     mitm:
         - "18comic.vip"
@@ -102,6 +103,7 @@ http:
                     "Array.from(context.document.querySelectorAll(\'div[style=\\\"text-align:center;width: 844px;margin: 0 auto;max-width: 100%;\\\"]\')).forEach(e=>{e.remove()})",\
                     "Array.from(context.document.querySelectorAll(\'div[data-group=\\\"photo_center_games_1\\\"]\')).forEach(e=>{e.remove()})",\
                     "Array.from(context.document.querySelectorAll(\'div[class=\\\"col-lg-3 col-md-3 col-sm-3 col-xs-6\\\"]\')).forEach(e=>{e.remove()})",\
+                    "Array.from(context.document.querySelectorAll(\'div[class=\\\"pi_wcm\\\"]\')).forEach(e=>{e.remove()})",\
                     "context.ele=context.document.createElement(\'script\')",\
                     "context.ele.src=\\\"https://raw.githubusercontent.com/qsoyq/shell/main/tampermonkey/18comic/go-to-page.js\\\"",\
                     "context.document.body.appendChild(context.ele)",\
