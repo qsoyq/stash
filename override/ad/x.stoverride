@@ -10,6 +10,8 @@ desc: |-
     - 首页时间线 | Go ad-free with Premium+ | premium-plus-upsell-prompt
     - 详情页评论广告
     - 删除 CSP 策略，允许在网页上执行
+    - 用户| 推文标签页 | Who to follow | suggest_who_to_follow
+    - 用户| 回复标签页 | Who to follow | suggest_who_to_follow
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/x.png
 
@@ -42,22 +44,12 @@ http:
 
         # 详情页评论广告
         - https?://x.com/i/api/graphql/.+/TweetDetail.*$ response-jq if .data.threaded_conversation_with_injections_v2.instructions[0].entries!=null then .data.threaded_conversation_with_injections_v2.instructions[0].entries|=map(select(.content?.items[0]?.item?.itemContent?.promotedMetadata==null)) end
+
+        # 用户| 推文标签页 | Who to follow | suggest_who_to_follow
+        - https://x.com/i/api/graphql/.+/UserTweets response-jq walk(if type == "object" and has("entries") then .entries |=map(select(.content?.clientEventInfo?.component!="suggest_who_to_follow")) else . end)
+
+        # 用户| 回复标签页 | Who to follow | suggest_who_to_follow
+        - https://x.com/i/api/graphql/.+/UserTweetsAndReplies response-jq walk(if type == "object" and has("entries") then .entries |=map(select(.content?.clientEventInfo?.component!="suggest_who_to_follow")) else . end)
     header-rewrite:
         # - https://x.com/home response-replace "Content-Security-Policy:default-src 'self'; script-src 'self' 'unsafe-inline';"
         - https://x.com/home response-del content-security-policy
-
-    script:
-        - name: x.home
-          binary-mode: false
-          match: https://x.com/home
-          max-size: 1048576
-          require-body: true
-          timeout: 20
-          type: response
-          debug: true
-          argument: |-
-
-script-providers:
-    x.home:
-        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/debug/http-rewrite.js
-        interval: 86400
