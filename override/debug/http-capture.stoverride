@@ -18,6 +18,7 @@ http:
         - "-*.itunes.apple.com"
         - "-*.iadsdk.apple.com"
         - "-*.apple.com"
+        - "-*.mzstatic.com"
 
         - "-*.icloud-content.com"
         - "-*.icloud.com"
@@ -59,7 +60,7 @@ http:
           require-body: true
           timeout: 10
           argument: ""
-          binary-mode: true
+          binary-mode: false
           max-size: 2097152 # 2MB
           debug: false
 
