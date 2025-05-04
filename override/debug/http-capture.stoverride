@@ -15,6 +15,9 @@ http:
         - "-*.douyinpic.com"
         - "-*.amemv.com"
 
+        # 番茄小说段落评论
+        - "-api5-normal-sinfonlineb.fqnovel.com"
+
         - "-*.itunes.apple.com"
         - "-*.iadsdk.apple.com"
         - "-*.apple.com"
@@ -52,19 +55,3 @@ http:
         - "*.au"
         - "*.br"
         - "*.ru"
-
-    script:
-        - match: ^https?://.*
-          name: http-capture-all
-          type: response
-          require-body: true
-          timeout: 10
-          argument: ""
-          binary-mode: false
-          max-size: 2097152 # 2MB
-          debug: false
-
-script-providers:
-    http-capture-all:
-        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/debug/http-capture.js
-        interval: 86400
