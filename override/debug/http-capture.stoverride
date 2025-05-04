@@ -16,7 +16,9 @@ http:
         - "-*.amemv.com"
 
         # 番茄小说段落评论
-        - "-api5-normal-sinfonlineb.fqnovel.com"
+        - "-*api5-normal-sinfonlineb.fqnovel.com"
+        # 番茄小说书籍封面图片
+        - "-*fqnovelpic.com"
 
         - "-*.itunes.apple.com"
         - "-*.iadsdk.apple.com"
