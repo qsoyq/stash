@@ -28,6 +28,8 @@ http:
         - "-*.icloud-content.com"
         - "-*.icloud.com"
 
+        - "-wxapp.tc.qq.com"
+
         # include
         - "*.com"
         - "*.net"
