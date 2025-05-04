@@ -30,6 +30,9 @@ http:
 
         - "-wxapp.tc.qq.com"
 
+        - "-*.tiktokv.*"
+        - "-*.tiktokcdn-*.com"
+
         # include
         - "*.com"
         - "*.net"
