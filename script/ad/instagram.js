@@ -516,7 +516,7 @@ function parseDocument(body) {
 }
 
 async function main() {
-    echo(`[Argument] ${$argument}`)
+    echo("start")
     if (getScriptType() === "response") {
         let body = getScriptResponseBody()
         let document = parseDocument(body)
@@ -550,9 +550,10 @@ async function main() {
 
 (async () => {
     main().then(_ => {
-
+        echo("done")
     }).catch(error => {
         console.log(`[Error]: ${error?.message || error}`)
         $done({})
     })
+
 })();
