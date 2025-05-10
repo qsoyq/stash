@@ -6,8 +6,6 @@ category: ad
 http:
     force-http-engine:
         - "www.youtube.com"
-    url-rewrite:
-        - https://www.youtube.com/youtubei/v1/log_event - reject
     body-rewrite:
         - https://www.youtube.com/youtubei/v1/search response-jq walk(if type == "object" and has("ads") then .ads = [] else . end)
         - https://www.youtube.com/youtubei/v1/search response-jq walk(if type == "object" and has("adSlotRenderer") then .adSlotRenderer = {} else . end)
