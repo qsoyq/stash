@@ -1,0 +1,31 @@
+name: YouTube
+desc: |-
+    - Web 端搜索结果去赞助商广告
+icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/youtube.png
+category: ad
+http:
+    force-http-engine:
+        - "www.youtube.com"
+    url-rewrite:
+        - https://www.youtube.com/youtubei/v1/log_event - reject
+    body-rewrite:
+        - https://www.youtube.com/youtubei/v1/search response-jq walk(if type == "object" and has("ads") then .ads = [] else . end)
+        - https://www.youtube.com/youtubei/v1/search response-jq walk(if type == "object" and has("adSlotRenderer") then .adSlotRenderer = {} else . end)
+
+    mitm:
+        - "www.youtube.com"
+    script:
+        - name: result.youtube
+          binary-mode: false
+          match: https://www.youtube.com/results.*
+          max-size: 2097152
+          require-body: true
+          timeout: 10
+          argument: ""
+          type: response
+          debug: false
+
+script-providers:
+    "result.youtube":
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/result.youtube.js
+        interval: 86400
