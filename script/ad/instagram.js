@@ -521,23 +521,31 @@ async function main() {
         let body = getScriptResponseBody()
         let document = parseDocument(body)
         let flag = false
-        Array.from(document.querySelectorAll("script[type='application/json']")).forEach(e => {
-            if (e.textContent?.indexOf("xdt_api__v1__feed__timeline__connection") !== -1) {
-                // .require.[0].[3].[0].__bbox.require.[0].[3].[1].__bbox.result.data.xdt_api__v1__feed__timeline__connection.edges
-                // .data.xdt_api__v1__feed__timeline__connection.edges|=map(select(.node.ad==null))
-                // .data.xdt_api__v1__feed__timeline__connection.edges|=map(select(.node?.ad?.label|tostring!="赞助内容"))
-                let detail = parseJsonBody(e.textContent)
-                if (detail) {
-                    let edges = detail?.require?.[0]?.[3]?.[0]?.__bbox?.require?.[0]?.[3]?.[1]?.__bbox?.result?.data?.xdt_api__v1__feed__timeline__connection?.edges
-                    if (edges) {
-                        detail.require[0][3][0].__bbox.require[0][3][1].__bbox.result.data.xdt_api__v1__feed__timeline__connection.edges = edges.filter(e => {
-                            return e?.node?.ad === null
-                        })
+        Array.from(document.querySelectorAll('script[type="application/json"][data-sjs]')).forEach(e => {
+            let json = parseJsonBody(e.textContent)
+            if (json) {
+                let edges = json?.require?.[0]?.[3]?.[0]?.__bbox?.require?.[0]?.[3]?.[1]?.__bbox?.result?.data?.xdt_api__v1__feed__timeline__connection?.edges
+                if (edges) {
+                    console.log(e)
+                    console.log(e.textContent?.length)
+                    for (const edge of edges) {
+                        if (edge?.node?.media) {
+                            console.log(`${edge?.node?.media?.user?.username}\t${edge?.node?.media?.user?.full_name}`)
+                        }
+                        if (edge?.node?.ad) {
+                            console.log(`ad title: ${edge.node.ad.ad_title}`)
+                        }
                     }
-                    e.textContent = JSON.stringify(detail)
-                    flag = true
-                    echo("移除赞助内容成功")
+
+                    edges = edges.filter(edge => {
+                        return edge?.node?.ad === null || edge?.node?.ad === undefined
+                    })
+                    json.require[0][3][0].__bbox.require[0][3][1].__bbox.result.data.xdt_api__v1__feed__timeline__connection.edges = edges
+                    e.textContent = JSON.stringify(json)
+                    // @ts-ignore
+                    e.setAttribute("data-content-len", e.textContent.length)
                 }
+                flag = true
             }
         })
         if (flag) {
