@@ -9,4 +9,4 @@ rule-providers:
         url: https://raw.githubusercontent.com/zhiqiang02/rules_and_scripts/refs/heads/master/rules/Prevent_DNS_Leaks.list
         interval: 86400
 rules:
-    - RULE-SET,prevent-dns-lakes,Proxy
+    - RULE-SET,prevent-dns-lakes,PROXY
