@@ -1,0 +1,12 @@
+name: 专为小白设计的防止DNS泄漏规则
+category: ruleset
+icon: https://stash.wiki/favicon.ico
+rule-providers:
+    prevent-dns-lakes:
+        behavior: classical
+        format: text
+        type: http
+        url: https://raw.githubusercontent.com/zhiqiang02/rules_and_scripts/refs/heads/master/rules/Prevent_DNS_Leaks.list
+        interval: 86400
+rules:
+    - RULE-SET,prevent-dns-lakes,PROXY
