@@ -38,7 +38,6 @@ http:
         - https://maicai.api.ddxq.mobi/homeApi/bottomNavi response-jq .data.adId=null # 广告?
         - https://maicai.api.ddxq.mobi/homeApi/bottomNavi response-jq .data.bottom_list[].badgePopText="" # 底部导航栏移除高亮提示文字
         - https://maicai.api.ddxq.mobi/homeApi/bottomNavi response-jq .data.bottom_list|=map(select(.name!="分类")) # 底部导航栏移除分类
-        - https://maicai.api.ddxq.mobi/homeApi/bottomNavi response-jq .data.bottom_list|=map(select(.name!="AI")) # 底部导航栏移除AI
-        - https://maicai.api.ddxq.mobi/homeApi/bottomNavi response-jq .data.bottom_list|=map(select(.name!="榜单")) # 底部导航栏移除榜单
+        - https://maicai.api.ddxq.mobi/homeApi/bottomNavi response-jq .data.bottom_list|=map(select(.name!="吃什么")) # 底部导航栏移除AI
 
         - https://maicai.api.ddxq.mobi/coupon/unused response-jq .data.ad_info={} # 我的优惠券 ｜ 邀请有礼
