@@ -11,14 +11,14 @@ category: ruleset
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/telegram.png
 
 rules:
-    - IP-ASN,59930,TelgramDC1,no-resolve,no-track
-    - IP-ASN,44907,TelgramDC2,no-resolve,no-track
-    - IP-ASN,211157,TelgramDC3,no-resolve,no-track
-    - IP-ASN,62041,TelegramDC4,no-resolve,no-track
-    - IP-ASN,62014,TelegramDC5,no-resolve,no-track
-    - DOMAIN-SUFFIX,iturrit.com,Telegram,no-track
-    - RULE-SET,ip.telegram,Telegram,no-resolve,no-track
-    - geosite,telegram,Telegram,no-track
+    - IP-ASN,59930,TelegramDC1,no-resolve
+    - IP-ASN,44907,TelegramDC2,no-resolve
+    - IP-ASN,211157,TelegramDC3,no-resolve
+    - IP-ASN,62041,TelegramDC4,no-resolve
+    - IP-ASN,62014,TelegramDC5,no-resolve
+    - DOMAIN-SUFFIX,iturrit.com,Telegram
+    - RULE-SET,ip.telegram,Telegram,no-resolve
+    - geosite,telegram,Telegram
 
 rule-providers:
     ip.telegram:
