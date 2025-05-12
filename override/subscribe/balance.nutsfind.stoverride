@@ -15,7 +15,7 @@ http:
           name: balance.nutsfind
           type: request
           require-body: true
-          debug: true
+          debug: false
           argument: >-
               {}
 cron:
@@ -23,7 +23,7 @@ cron:
         - name: balance.nutsfind
           cron: "*/3 * * * *"
           timeout: 5
-          debug: true
+          debug: false
           argument: >-
               {"decreaseAmountTrigger": 300}
 
