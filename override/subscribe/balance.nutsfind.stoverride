@@ -1,0 +1,33 @@
+name: Nutsfind余额订阅
+category: Subscribe
+icon: https://nutsfind.com/theme/Vuetify/loading_logo.png
+desc: |-
+    - 需要在网站上登陆一次
+    - 会定时检查余额，并在余额变动达到阈值后发送通知
+    - 默认余额变动每 3 元通知一次
+
+http:
+    mitm:
+        - nutsfind.com
+        - www.nutsfind.com
+    script:
+        - match: https://(www\.)?nutsfind.com/api/v1/user/getSubscribe
+          name: balance.nutsfind
+          type: request
+          require-body: true
+          debug: true
+          argument: >-
+              {}
+cron:
+    script:
+        - name: balance.nutsfind
+          cron: "*/3 * * * *"
+          timeout: 5
+          debug: true
+          argument: >-
+              {"decreaseAmountTrigger": 300}
+
+script-providers:
+    balance.nutsfind:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/cron/balance.nutsfind.js
+        interval: 86400
