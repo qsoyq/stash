@@ -3,6 +3,7 @@ category: Subscribe
 icon: https://nutsfind.com/theme/Vuetify/loading_logo.png
 desc: |-
     - 需要在网站上登陆一次
+    - 登陆网站域名: <https://nutsfind.com>
     - 会定时检查余额，并在余额变动达到阈值后发送通知
     - 默认余额变动每 3 元通知一次
 
