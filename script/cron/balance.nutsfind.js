@@ -570,6 +570,8 @@ async function balanceCron() {
                 echo(msg)
                 notificationPost("Nutsfind", "Balance", msg)
                 updateBalanceCache(balance, current)
+            } else {
+                echo(`¥${lastBalance / 100} -> ¥${balance / 100}, 余额变化未到到通知阈值`)
             }
         }
     }
