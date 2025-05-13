@@ -529,6 +529,7 @@ async function balanceCron() {
         return
     }
 
+    echo(`lastBalance: ${lastBalance}, lastBalanceTimestamp: ${lastBalanceTimestamp}`)
     let url = 'https://nutsfind.com/api/v1/user/info'
     let headers = { "Authorization": authorization, }
     let res = await get({ url, headers })
