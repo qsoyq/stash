@@ -1,14 +1,14 @@
-/** @namespace base */
+/** @namespace thread.nga */
 
 /**
- * @typedef {Object} base.HTTPResponse
+ * @typedef {Object} thread.nga.HTTPResponse
  * @property {string|null} error - 错误信息，如果没有错误则为 null
  * @property {object} response - HTTP 响应对象
  * @property {string|null} data - 返回的数据，如果没有数据则为 null
  */
 
 /**
- * @typedef {function(Error|string|null, Object, string|null): void} base.HTTPCallback
+ * @typedef {function(Error|string|null, Object, string|null): void} thread.nga.HTTPCallback
  * 回调函数类型，接受错误、响应和数据作为参数。
  * @param {Error|string|null} error - 错误信息，可以是 Error 对象、字符串或者 null
  * @param {Object} response - HTTP 响应对象
@@ -16,18 +16,18 @@
  */
 
 /**
- * @typedef {function(Object, base.HTTPCallback): base.HTTPResponse} base.HTTPMethod
+ * @typedef {function(Object, thread.nga.HTTPCallback): thread.nga.HTTPResponse} thread.nga.HTTPMethod
  */
 
 /**
- * @typedef {Object} base.HttpClient
- * @property {base.HTTPMethod} get - 发送 GET 请求
- * @property {base.HTTPMethod} post - 发送 POST 请求
- * @property {base.HTTPMethod} put - 发送 PUT 请求
- * @property {base.HTTPMethod} delete - 发送 DELETE 请求
+ * @typedef {Object} thread.nga.HttpClient
+ * @property {thread.nga.HTTPMethod} get - 发送 GET 请求
+ * @property {thread.nga.HTTPMethod} post - 发送 POST 请求
+ * @property {thread.nga.HTTPMethod} put - 发送 PUT 请求
+ * @property {thread.nga.HTTPMethod} delete - 发送 DELETE 请求
  */
 
-/** @type {base.HttpClient} */
+/** @type {thread.nga.HttpClient} */
 var $httpClient;
 
 var $request, $response, $notification, $argument, $persistentStore, $script
@@ -39,12 +39,12 @@ var $done
  * 对异步回调的 HTTP 调用包装成 async 函数
  * @param {'GET'|'POST'|'PUT'|'DELETE'} method - HTTP 方法类型，支持 GET、POST、PUT 和 DELETE
  * @param {Object} params - 请求参数对象，包含请求所需的各类信息
- * @returns {Promise<base.HTTPResponse>} 返回一个 Promise，解析为包含 error、response 和 data 的对象
+ * @returns {Promise<thread.nga.HTTPResponse>} 返回一个 Promise，解析为包含 error、response 和 data 的对象
  * @throws {Error} 如果请求失败，Promise 会被拒绝并返回错误信息
  */
 async function request(method, params) {
     return new Promise((resolve, reject) => {
-        /** @type {base.HTTPMethod} */
+        /** @type {thread.nga.HTTPMethod} */
         const httpMethod = $httpClient[method.toLowerCase()]; // 通过 HTTP 方法选择对应的请求函数
         httpMethod(params, (error, response, data) => {
             if (error) {
@@ -60,7 +60,7 @@ async function request(method, params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<base.HTTPResponse>}
+ * @returns {Promise<thread.nga.HTTPResponse>}
  */
 async function get(params) {
     return request('GET', params);
@@ -69,7 +69,7 @@ async function get(params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<base.HTTPResponse>}
+ * @returns {Promise<thread.nga.HTTPResponse>}
  */
 async function post(params) {
     return request('POST', params);
@@ -78,7 +78,7 @@ async function post(params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<base.HTTPResponse>}
+ * @returns {Promise<thread.nga.HTTPResponse>}
  */
 async function put(params) {
     return request('PUT', params);
@@ -87,7 +87,7 @@ async function put(params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<base.HTTPResponse>}
+ * @returns {Promise<thread.nga.HTTPResponse>}
  */
 async function delete_(params) {
     return request('DELETE', params);
@@ -503,10 +503,225 @@ function parseDocument(body) {
     return domParser.parseFromString(body, 'text/html');
 }
 
-async function main() {
-    echo(`[Argument] ${$argument}`)
-    echo(`[Argument] [JSON] ${parseJsonBody($argument)}`)
+/**
+ * 生成推送消息格式
+ * https://p.19940731.xyz/redoc#tag/notifications.push/operation/push_v3_api_notifications_push_v3_post
+ * @param {*} title 
+ * @param {*} body 
+ * @param {*} url 
+ * @param {*} group 
+ * @param {*} icon 
+ * @param {*} level 
+ * @returns 
+ */
+function makePushMessage(title, body, url = null, group = null, icon = null, level = null) {
+    let payload = {}
+
+    let APNs = getScriptArgument("APNs")
+    let bark = getScriptArgument("bark")
+    group = getScriptArgument("group") || group || "Default"
+    level = getScriptArgument("level") || level || "passive"
+    icon = icon || getScriptArgument("icon")
+    if (APNs) {
+        payload.apple = {
+            group: group,
+            url: url,
+            icon: icon,
+            device_token: APNs.device_token,
+            aps: {
+                "thread-id": group,
+                "interruption-level": level,
+                alert: {
+                    title: title,
+                    body: body
+                }
+            }
+        }
+    }
+    if (bark) {
+        payload.bark = {
+            device_key: bark.device_key,
+            title: title,
+            body: body,
+            level: level,
+            icon: icon,
+            group: group,
+            url: url,
+            endpoint: bark?.endpoint || "https://api.day.app/push"
+
+        }
+    }
+    return payload
 }
+
+/**
+ * 推送消息
+ * https://p.19940731.xyz/redoc#tag/notifications.push/operation/push_v3_api_notifications_push_v3_post
+ * @param {*} message 
+ * @returns 
+ */
+async function pushMessage(message) {
+    let url = 'https://p.19940731.xyz/api/notifications/push/v3'
+    let res = await post({ url, body: JSON.stringify({ messages: [message] }), headers: { "content-type": "application/json" } })
+    let now = getLocalDateString()
+    if (res.error || res.response.status >= 400) {
+        throw `${now} [Error] push messages error: ${res.error}, ${res.response.status}, ${res.data}`
+    }
+    return res
+}
+
+/**
+ * @param {...any} args - Arguments to log
+ */
+function echo(...args) {
+    let date = getLocalDateString()
+    let logMessage = `${args.join(' ')}`
+    logMessage = `[${date}] ${logMessage}`
+    console.log(logMessage)
+}
+
+/**
+ * 在指定作用域中执行代码
+ * @param {*} code 执行代码
+ * @param {*} context 上下文作用域
+ * @returns 
+ */
+function safeEval(code, context) {
+    const func = new Function(...Object.keys(context), code);
+    return func(...Object.values(context));
+}
+
+function parseDocument(body) {
+    let domParser = new DOMParser();
+    return domParser.parseFromString(body, 'text/html');
+}
+
+/**
+ * @param {{ [x: string]: any; tid: any; subject: any; ios_app_scheme_url: string | number | boolean; postdateStr: any; lastpostStr: any; url: any; }} thread
+ */
+async function push(thread) {
+    let force = getScriptArgument("force")
+    let debug = getScriptArgument('debug')
+    let telegram = getScriptArgument("telegram")
+    let APNs = getScriptArgument('APNs')
+
+    let keyname = `nga-threads-${thread.tid}`
+    let cache = getPersistentArgument(keyname)
+
+    if (debug) {
+        echo(`[Cache] 读取缓存成功， title: ${thread.subject}, ${cache}`)
+    }
+
+    if (cache && !force) {
+        echo(`[Cache] skip, title: ${thread.subject}`)
+        return
+    }
+
+    let messages = []
+
+    if (telegram) {
+        let redirectUrl = `https://p.19940731.xyz/api/network/url/redirect?url=${encodeURIComponent(thread.ios_app_scheme_url)}`
+        let title = telegramEscapeMarkdownV2(`NGA ${thread["fname"]} 有新帖子`)
+        let subject = telegramEscapeMarkdownV2(thread.subject)
+        title = `${title}\n[${subject}](${thread.url})\n\n[跳转到 App](${redirectUrl})`
+        let content = telegramEscapeMarkdownV2(`创建时间:${thread.postdateStr}\n回复时间:${thread.lastpostStr}`)
+        let payload = {
+            bot_id: telegram.bot_id,
+            chat_id: telegram.chat_id,
+            message: {
+                text: `${title}\n\n${content}`,
+                parse_mode: "MarkdownV2"
+            }
+        }
+        messages.push({ telegram: payload })
+    }
+
+    if (APNs) {
+        let group = APNs?.group || "nga-threads"
+        let payload = {
+            "group": group,
+            "url": thread.url,
+            "device_token": APNs.device_token,
+            "aps": {
+                "alert": {
+                    "title": `NGA ${thread["fname"]} 有新帖子`,
+                    "body": `${thread.subject}`
+                },
+                "thread-id": group
+            }
+        }
+        if (thread.icon.startsWith("http")) {
+            payload.icon = thread.icon
+        }
+        messages.push({ apple: payload })
+    }
+
+    if (messages) {
+        let url = 'https://p.19940731.xyz/api/notifications/push/v3'
+        let res = await post({ url: url, body: JSON.stringify({ messages: messages }), headers: { "content-type": "application/json" } })
+        if (debug) {
+            echo(`[Request] push body: ${JSON.stringify({ messages: messages })}`)
+            echo(`[Response] push body: ${res.data}`)
+        }
+        if (res.error || res.response.status >= 400) {
+            throw `[Push] notifications error: ${res.data}`
+        }
+    }
+
+
+    writePersistentArgument(keyname, keyname)
+    if (debug) {
+        echo(`[Cache] 写入缓存成功， title: ${thread.subject}, ${keyname}`)
+    }
+
+
+}
+
+async function main() {
+    let fidList = getScriptArgument("fidList") || []
+    let uid = getScriptArgument("uid") || ""
+    let cid = getScriptArgument("cid") || ""
+    let debug = getScriptArgument("debug") || false
+    let onceMax = getScriptArgument("onceMax")
+    let from = getScriptArgument("from") || 1
+    let to = getScriptArgument("to") || 1
+    for (const page of generateArray(from, to)) {
+        let querystringArray = Array.from(fidList.map((/** @type {any} */ fid) => {
+            return `fid=${fid}`
+        }))
+        querystringArray.push(`order_by=lastpostdesc`)
+        querystringArray.push(`page=${page}`)
+        let qs = querystringArray.join("&")
+        if (debug) {
+            echo(`[Request] threads querystringArray: ${qs}`)
+        }
+        let url = `https://p.19940731.xyz/api/nga/threads/v2?${qs}`
+        let res = await get({ url: url, headers: { "content-type": "application/json", "uid": uid, "cid": cid } })
+        if (res.error || res.response.status >= 400) {
+            throw `request nga threads error: ${res.data}`
+        }
+        let body = parseJsonBody(res.data)
+        if (debug) {
+            echo(`[Response] threads response body: ${res.data}`)
+        }
+        for (const item of body.data) {
+            /** @type {any[]} */
+            let threads = item?.threads || []
+            if (onceMax) {
+                threads = threads.slice(0, onceMax)
+            }
+            threads = threads.filter((ele) => {
+                // 帖子发布或回复时间超过限制
+                return ele.postdate
+            })
+            for (const thread of threads) {
+                await push(thread)
+            }
+        }
+    }
+}
+
+
 
 (async () => {
     main().then(_ => {
