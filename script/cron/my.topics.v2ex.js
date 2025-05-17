@@ -517,7 +517,12 @@ async function main() {
         let res = await get({ url: url, headers: { "content-type": "application/json", "A2": sessionKey } })
 
         if (res.error || res.response.status >= 400) {
-            throw `[Error] fetch topics error: ${res.error}, ${res.response.status}, ${res.data}`
+            if (res.response.status === 500) {
+                notificationPost("V2ex", "My Topics", "fetch topics error, please check session key")
+
+            }
+            echo(`[Error] fetch topics error: ${res.error}, ${res.response.status}, ${res.data}`)
+            throw `fetch topics error`
         }
         let data = parseJsonBody(res.data)
         if (debug) {
