@@ -1,11 +1,10 @@
-name: Nutsfind余额订阅
+name: Nutsfind流量使用订阅
 category: Subscribe
 icon: https://nutsfind.com/theme/Vuetify/loading_logo.png
 desc: |-
     - 需要在网站上登陆一次
-    - 登陆网站域名: <https://nutsfind.com>
-    - 会定时检查余额，并在余额变动达到阈值后发送通知
-    - 默认余额变动每 3 元通知一次
+    - 会定时检查已使用流量，默认 3 分钟一次，并在流量变动达到阈值后发送通知
+    - 默认流量通知阈值为 10 GB
 
 http:
     mitm:
@@ -13,7 +12,7 @@ http:
         - www.nutsfind.com
     script:
         - match: https://(www\.)?nutsfind.com/api/v1/user/getSubscribe
-          name: balance.nutsfind
+          name: traffic.nutsfind
           type: request
           require-body: true
           debug: false
@@ -21,14 +20,14 @@ http:
               {}
 cron:
     script:
-        - name: balance.nutsfind
+        - name: traffic.nutsfind
           cron: "*/3 * * * *"
-          timeout: 5
+          timeout: 10
           debug: false
           argument: >-
-              {"decreaseAmountTrigger": 300}
+              {"decreaseTrafficAmountTrigger": 10}
 
 script-providers:
-    balance.nutsfind:
-        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/cron/balance.nutsfind.js
+    traffic.nutsfind:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/cron/traffic.nutsfind.js
         interval: 86400
