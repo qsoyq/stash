@@ -3,6 +3,7 @@ category: dns
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/adguard.png
 desc: |-
     - 建议按如下操作打开 Fallback DNS
+    - 目前延迟较大，不建议使用
     - iOS: 设置 -> 网络设置 -> Fallback DNS
     - Mac: 控制面板 -> 设置 -> 网络 -> Fallback DNS
 dns:
