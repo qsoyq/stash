@@ -16,5 +16,4 @@ dns:
         - 223.6.6.6:53
 
 rules:
-    - DOMAIN,ahd.19940731.xyz,PROXY
     - IP-CIDR,0.0.0.0/24,REJECT,no-resolve,no-track # DNS屏蔽
