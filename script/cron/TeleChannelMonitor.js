@@ -558,24 +558,38 @@ async function getChannelMessages(channel) {
         lastMessageID = Number(lastMessageID)
         url += `?after=${lastMessageID}`
     }
-
-    try {
-        echo(`channel url: ${url}`)
-        let res = await get(url)
-        if (res.error) {
-            echo(`request ${channel} failed. error: ${res.error}`)
-        } else {
+    let totalChannelMessages = []
+    while (true) {
+        try {
+            echo(`channel url: ${url}`)
+            let res = await get(url)
+            if (res.error || res.response.status >= 400) {
+                echo(`[Error] getChannelMessages: ${res.error}, ${res.response.status}, ${res.data}`)
+                throw `[Error] getChannelMessages: ${res.error}, ${res.response.status}, ${res.data}`
+            }
             if (res.data) {
                 let document = new DOMParser().parseFromString(res.data, 'text/html');
-                let channelMessages = parseMessages(document).filter(element => !lastMessageID || element.msgid > lastMessageID).slice(0, onceMaxSize)
-                echo(`get channel ${channel} message count: ${channelMessages.length}`)
-                return channelMessages
+                let channelMessages = parseMessages(document).filter(element => !lastMessageID || element.msgid > lastMessageID)
+                echo(`${channel} channelMessages length: ${channelMessages.length}`)
+                totalChannelMessages = totalChannelMessages.concat(channelMessages)
+                if (channelMessages.length < 20) {
+                    break
+                }
+                if (totalChannelMessages.length >= onceMaxSize) {
+                    break
+                }
+                url = `https://t.me/s/${channel}`
+                lastMessageID = channelMessages.at(-1).msgid
+                url += `?after=${lastMessageID}`
             }
-
+        } catch (error) {
+            echo(`Error fetching data for channel ${channel}:`, error)
         }
-    } catch (error) {
-        echo(`Error fetching data for channel ${channel}:`, error)
     }
+    totalChannelMessages = totalChannelMessages.slice(0, onceMaxSize)
+    echo(`get channel ${channel} message count: ${totalChannelMessages.length}`)
+    return totalChannelMessages
+
 }
 
 /**
