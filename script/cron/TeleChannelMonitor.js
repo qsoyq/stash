@@ -1,18 +1,14 @@
-// 2025.05.14 更新: 移除推送正文的跳转 url
-// 2024.11.09 更新: 通过参数 `blockKeywords`, 忽略消息
-// 2024.11.19 更新: 通过参数 `icon`, 指定推送 icon
-
-/** @namespace TeleChannelMonitor */
+/** @namespace telegram.channel.monitor.*/
 
 /**
- * @typedef {Object} TeleChannelMonitor.HTTPResponse
+ * @typedef {Object} telegram.channel.monitor.HTTPResponse
  * @property {string|null} error - 错误信息，如果没有错误则为 null
  * @property {object} response - HTTP 响应对象
  * @property {string|null} data - 返回的数据，如果没有数据则为 null
  */
 
 /**
- * @typedef {function(Error|string|null, Object, string|null): void} TeleChannelMonitor.HTTPCallback
+ * @typedef {function(Error|string|null, Object, string|null): void} telegram.channel.monitor.HTTPCallback
  * 回调函数类型，接受错误、响应和数据作为参数。
  * @param {Error|string|null} error - 错误信息，可以是 Error 对象、字符串或者 null
  * @param {Object} response - HTTP 响应对象
@@ -20,21 +16,21 @@
  */
 
 /**
- * @typedef {function(Object, TeleChannelMonitor.HTTPCallback): TeleChannelMonitor.HTTPResponse} TeleChannelMonitor.HTTPMethod
+ * @typedef {function(Object, telegram.channel.monitor.HTTPCallback): telegram.channel.monitor.HTTPResponse} telegram.channel.monitor.HTTPMethod
  */
 
 /**
- * @typedef {Object} TeleChannelMonitor.HttpClient
- * @property {TeleChannelMonitor.HTTPMethod} get - 发送 GET 请求
- * @property {TeleChannelMonitor.HTTPMethod} post - 发送 POST 请求
- * @property {TeleChannelMonitor.HTTPMethod} put - 发送 PUT 请求
- * @property {TeleChannelMonitor.HTTPMethod} delete - 发送 DELETE 请求
+ * @typedef {Object} telegram.channel.monitor.HttpClient
+ * @property {telegram.channel.monitor.HTTPMethod} get - 发送 GET 请求
+ * @property {telegram.channel.monitor.HTTPMethod} post - 发送 POST 请求
+ * @property {telegram.channel.monitor.HTTPMethod} put - 发送 PUT 请求
+ * @property {telegram.channel.monitor.HTTPMethod} delete - 发送 DELETE 请求
  */
 
-/** @type {TeleChannelMonitor.HttpClient} */
+/** @type {telegram.channel.monitor.HttpClient} */
 var $httpClient;
 
-var $request, $notification, $argument, $persistentStore, $script
+var $request, $response, $notification, $argument, $persistentStore, $script
 
 /** @type {function(Object):void} */
 var $done
@@ -43,16 +39,16 @@ var $done
  * 对异步回调的 HTTP 调用包装成 async 函数
  * @param {'GET'|'POST'|'PUT'|'DELETE'} method - HTTP 方法类型，支持 GET、POST、PUT 和 DELETE
  * @param {Object} params - 请求参数对象，包含请求所需的各类信息
- * @returns {Promise<TeleChannelMonitor.HTTPResponse>} 返回一个 Promise，解析为包含 error、response 和 data 的对象
+ * @returns {Promise<telegram.channel.monitor.HTTPResponse>} 返回一个 Promise，解析为包含 error、response 和 data 的对象
  * @throws {Error} 如果请求失败，Promise 会被拒绝并返回错误信息
  */
 async function request(method, params) {
     return new Promise((resolve, reject) => {
-        /** @type {TeleChannelMonitor.HTTPMethod} */
+        /** @type {telegram.channel.monitor.HTTPMethod} */
         const httpMethod = $httpClient[method.toLowerCase()]; // 通过 HTTP 方法选择对应的请求函数
         httpMethod(params, (error, response, data) => {
             if (error) {
-                console.log(`Error: ${error}, Response: ${JSON.stringify(response)}, Data: ${data}`);
+                echo(`[Request] Error: ${error}, Response: ${JSON.stringify(response)}, Data: ${data}`);
                 reject({ error, response, data }); // 请求失败，拒绝 Promise
             } else {
                 resolve({ error, response, data }); // 请求成功，解析 Promise
@@ -64,7 +60,7 @@ async function request(method, params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<TeleChannelMonitor.HTTPResponse>}
+ * @returns {Promise<telegram.channel.monitor.HTTPResponse>}
  */
 async function get(params) {
     return request('GET', params);
@@ -73,7 +69,7 @@ async function get(params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<TeleChannelMonitor.HTTPResponse>}
+ * @returns {Promise<telegram.channel.monitor.HTTPResponse>}
  */
 async function post(params) {
     return request('POST', params);
@@ -82,7 +78,7 @@ async function post(params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<TeleChannelMonitor.HTTPResponse>}
+ * @returns {Promise<telegram.channel.monitor.HTTPResponse>}
  */
 async function put(params) {
     return request('PUT', params);
@@ -91,7 +87,7 @@ async function put(params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<TeleChannelMonitor.HTTPResponse>}
+ * @returns {Promise<telegram.channel.monitor.HTTPResponse>}
  */
 async function delete_(params) {
     return request('DELETE', params);
@@ -104,7 +100,7 @@ async function delete_(params) {
  */
 function parseCookie(cookie) {
     if (typeof (cookie) !== "string") {
-        console.log(`illegally cookie: ${cookie}`)
+        echo(`illegally cookie: ${cookie}`)
         return null
     }
     let body = {}
@@ -114,7 +110,7 @@ function parseCookie(cookie) {
             element = element.trim()
             let index = element.indexOf("=")
             if (index === -1) {
-                console.log(`illegally cookie field: ${element}`)
+                echo(`illegally cookie field: ${element}`)
                 return null
             } else {
                 let key = element.substring(0, index)
@@ -165,7 +161,7 @@ function setCookie(key, val) {
  * @param {string} title 
  * @param {string} subtitle 
  * @param {string} content 
- * @param {string|undefined} url 
+ * @param {string|undefined} [url] 
  */
 function notificationPost(title, subtitle, content, url) {
     const params = url ? { url } : {};
@@ -200,18 +196,25 @@ function randomChar(num) {
 
 /**
  * 将指定日期对象转为相应的日期时间字符串
- * @param {Date} date 
+ * 默认为当前日期时间
+ * @param {Date|null} [date=null] 
  * @returns {string} 表示当前时间的字符串
  */
-function getLocalDateString(date) {
+function getLocalDateString(date = null) {
+    if (!date) {
+        date = new Date()
+    }
+
     const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    const seconds = date.getSeconds()
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // 月份从0开始，所以加1
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}.${month}.${day} ${hours}:${minutes}:${seconds}`;
 }
+
+
 /**
  * 遍历并输出对象字面值
  * @param {object} body 
@@ -219,12 +222,12 @@ function getLocalDateString(date) {
  */
 function visitAll(body, prefix = "", visited = new WeakSet()) {
     if (typeof body !== 'object' || body === null) {
-        console.log(`Key: ${prefix}, Value: ${body}, Type: ${typeof body}`);
+        echo(`Key: ${prefix}, Value: ${body}, Type: ${typeof body}`);
         return;
     }
 
     if (visited.has(body)) {
-        console.log(`Key: ${prefix}, [Circular Reference Detected]`);
+        echo(`Key: ${prefix}, [Circular Reference Detected]`);
         return;
     }
 
@@ -235,7 +238,7 @@ function visitAll(body, prefix = "", visited = new WeakSet()) {
         if (typeof value === 'object' && value !== null) {
             visitAll(value, currentPrefix, visited);
         } else {
-            console.log(`Key: ${currentPrefix}, Value: ${value}, Type: ${typeof value}`);
+            echo(`Key: ${currentPrefix}, Value: ${value}, Type: ${typeof value}`);
         }
     }
 }
@@ -248,6 +251,7 @@ function parseJsonBody(string) {
     try {
         return JSON.parse(string)
     } catch (e) {
+        echo(`[Warn] invalid json: ${e}, json: ${string}`)
         return null
     }
 }
@@ -262,12 +266,10 @@ function getScriptArgument(key) {
         return;
     }
 
-    let body;
-    try {
-        body = JSON.parse($argument);
-    } catch (error) {
-        console.log("Invalid JSON:", error);
-        return null; // JSON 解析失败返回 null
+    let body = parseJsonBody($argument)
+    if (!body) {
+        echo(`[Warn] Invalid JSON: ${$argument}`);
+        return null; // JSON 解析失败返回 null        
     }
     return body[key]
 }
@@ -281,7 +283,7 @@ function getScriptArgument(key) {
 function mustGetScriptArgument(key) {
     let val = getScriptArgument(key)
     if (val === null || val === undefined) {
-        console.log(`can't find value for ${key}`)
+        echo(`can't find value for ${key}`)
         throw `can't find value for ${key}`
     }
     return val
@@ -298,7 +300,7 @@ function getPersistentArgument(key) {
 
 /**
  * 返回当前的脚本类型
- * @returns 
+* @returns {'request' | 'response' | 'tile' | 'cron' | 'undefined'}
  */
 function getScriptType() {
     return typeof $script !== 'undefined' ? $script.type : 'undefined'
@@ -333,6 +335,172 @@ function countryCodeToEmoji(countryCode) {
 
     // 将Unicode字符转换为emoji
     return String.fromCodePoint(...codePoints);
+}
+/**
+ * 返回从 from 到 to 递增或递减的数组，步长为 1
+ * @param {number} from 
+ * @param {number} to 
+ * @returns 
+ */
+function generateArray(from, to) {
+    const start = Math.min(from, to);
+    const end = Math.max(from, to);
+
+    // 如果 from 大于 to，生成逆序数组
+    if (from > to) {
+        return Array.from({ length: end - start + 1 }, (_, i) => end - i);
+    } else {
+        // 否则生成顺序数组
+        return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+    }
+}
+
+/**
+ * 解析响应脚本参数
+ * @returns {string | undefined}
+ */
+function getScriptResponseBody() {
+    let body = (typeof $response.body === 'object') ? (new TextDecoder('utf-8')).decode(new Uint8Array($response.body)) : $response.body;
+    return body
+}
+
+/**
+ *  处理 telegram.sendMessage MarkdownV2 格式消息体转义
+ * @param {string} text 
+ * @returns 
+ */
+function telegramEscapeMarkdownV2(text) {
+    const escapeChars = [
+        { char: '_', replacement: '\\_' },
+        { char: '*', replacement: '\\*' },
+        { char: '[', replacement: '\\[' },
+        { char: ']', replacement: '\\]' },
+        { char: '(', replacement: '\\(' },
+        { char: ')', replacement: '\\)' },
+        { char: '~', replacement: '\\~' },
+        { char: '>', replacement: '\\>' },
+        { char: '#', replacement: '\\#' },
+        { char: '+', replacement: '\\+' },
+        { char: '-', replacement: '\\-' },
+        { char: '=', replacement: '\\=' },
+        { char: '|', replacement: '\\|' },
+        { char: '{', replacement: '\\{' },
+        { char: '}', replacement: '\\}' },
+        { char: '.', replacement: '\\.' },
+        { char: '!', replacement: '\\!' },
+        { char: '`', replacement: '\\`' }
+    ];
+
+    let escapedText = text;
+
+    escapeChars.forEach(({ char, replacement }) => {
+        const regex = new RegExp(`\\${char}`, 'g');
+        escapedText = escapedText.replace(regex, replacement);
+    });
+
+    return escapedText;
+}
+
+/** 获取当前 URL 中的参数
+ * @param {any} key
+ */
+function getUrlArgument(key) {
+    const url = new URL(window.location.href);
+    const params = new URLSearchParams(url.search);
+    return params.get(key) || null
+}
+
+/**
+ * 生成推送消息格式
+ * https://p.19940731.xyz/redoc#tag/notifications.push/operation/push_v3_api_notifications_push_v3_post
+ * @param {*} title 
+ * @param {*} body 
+ * @param {*} url 
+ * @param {*} group 
+ * @param {*} icon 
+ * @param {*} level 
+ * @returns 
+ */
+function makePushMessage(title, body, url = null, group = null, icon = null, level = null) {
+    let payload = {}
+
+    let APNs = getScriptArgument("APNs")
+    let bark = getScriptArgument("bark")
+    group = getScriptArgument("group") || group || "Default"
+    level = getScriptArgument("level") || level || "passive"
+    icon = icon || getScriptArgument("icon")
+    if (APNs) {
+        payload.apple = {
+            group: group,
+            url: url,
+            icon: icon,
+            device_token: APNs.device_token,
+            aps: {
+                "thread-id": group,
+                "interruption-level": level,
+                alert: {
+                    title: title,
+                    body: body
+                }
+            }
+        }
+    }
+    if (bark) {
+        payload.bark = {
+            device_key: bark.device_key,
+            title: title,
+            body: body,
+            level: level,
+            icon: icon,
+            group: group,
+            url: url,
+            endpoint: bark?.endpoint || "https://api.day.app/push"
+
+        }
+    }
+    return payload
+}
+
+/**
+ * 推送消息
+ * https://p.19940731.xyz/redoc#tag/notifications.push/operation/push_v3_api_notifications_push_v3_post
+ * @param {*} message 
+ * @returns 
+ */
+async function pushMessage(message) {
+    let url = 'https://p.19940731.xyz/api/notifications/push/v3'
+    let res = await post({ url, body: JSON.stringify({ messages: [message] }), headers: { "content-type": "application/json" } })
+    let now = getLocalDateString()
+    if (res.error || res.response.status >= 400) {
+        throw `${now} [Error] push messages error: ${res.error}, ${res.response.status}, ${res.data}`
+    }
+    return res
+}
+
+/**
+ * @param {...any} args - Arguments to log
+ */
+function echo(...args) {
+    let date = getLocalDateString()
+    let logMessage = `${args.join(' ')}`
+    logMessage = `[${date}] ${logMessage}`
+    console.log(logMessage)
+}
+
+/**
+ * 在指定作用域中执行代码
+ * @param {*} code 执行代码
+ * @param {*} context 上下文作用域
+ * @returns 
+ */
+function safeEval(code, context) {
+    const func = new Function(...Object.keys(context), code);
+    return func(...Object.values(context));
+}
+
+function parseDocument(body) {
+    let domParser = new DOMParser();
+    return domParser.parseFromString(body, 'text/html');
 }
 
 
@@ -382,7 +550,7 @@ function parseMessages(document) {
  * @returns 
  */
 async function getChannelMessages(channel) {
-    console.log(`正在访问频道: ${channel}`)
+    echo(`正在访问频道: ${channel}`)
     let onceMaxSize = Number(getScriptArgument("onceMaxSize") || 10)
     let url = `https://t.me/s/${channel}`
     let lastMessageID = Number(getPersistentArgument(`TelegramLastMessageId-${channel}`) || 0)
@@ -392,21 +560,21 @@ async function getChannelMessages(channel) {
     }
 
     try {
-        console.log(`channel url: ${url}`)
+        echo(`channel url: ${url}`)
         let res = await get(url)
         if (res.error) {
-            console.log(`request ${channel} failed. error: ${res.error}`)
+            echo(`request ${channel} failed. error: ${res.error}`)
         } else {
             if (res.data) {
                 let document = new DOMParser().parseFromString(res.data, 'text/html');
                 let channelMessages = parseMessages(document).filter(element => !lastMessageID || element.msgid > lastMessageID).slice(0, onceMaxSize)
-                console.log(`get channel ${channel} message count: ${channelMessages.length}`)
+                echo(`get channel ${channel} message count: ${channelMessages.length}`)
                 return channelMessages
             }
 
         }
     } catch (error) {
-        console.log(`Error fetching data for channel ${channel}:`, error)
+        echo(`Error fetching data for channel ${channel}:`, error)
     }
 }
 
@@ -416,7 +584,7 @@ async function getChannelMessages(channel) {
  * @returns 
  */
 function makePushMessages(groupMessages) {
-    console.log(`make push messages`)
+    echo(`make push messages`)
     let barkToken = getScriptArgument("barkToken")
     let barkGroup = getScriptArgument("barkGroup") || "Telegram"
     let level = getScriptArgument("level") || "passive"
@@ -482,39 +650,35 @@ async function main() {
         throw `invali groupMessages: ${groupMessages}`
     }
     groupMessages = groupMessages.filter(element => typeof element !== 'undefined')
+    for (const group of groupMessages) {
+        let messages = makePushMessages([group])
+        for (const message of messages) {
 
-    let messages = makePushMessages(groupMessages)
-    if (messages.length !== 0) {
-        let body = JSON.stringify({ messages: messages }, null, 4)
-        let res
-        try {
-            res = await post({ url: 'https://p.19940731.xyz/api/notifications/push/v2', headers: { 'Content-Type': "application/json" }, body: body })
-            console.log(`push success`)
-        } catch (error) {
-            throw `push messages error: ${error}`
-        }
-
-        if (res.error) {
-            throw `push messages to bark failed. error: ${res.error}`
+            let body = JSON.stringify({ messages: [message] }, null, 4)
+            let res = await post({ url: 'https://p.19940731.xyz/api/notifications/push/v3', headers: { 'Content-Type': "application/json" }, body: body })
+            if (res.error || res.response.status >= 400) {
+                echo(`[Error] push messages error: ${res.error}, ${res.response.status}, ${res.data}`)
+                throw `[Error] push messages error: ${res.error}, ${res.response.status}, ${res.data}`
+            }
         }
 
         // 写入本地持久化    
-        console.log(`write local persistent`)
-        for (const messages of groupMessages) {
-            if (messages.length !== 0) {
-                let lastMessage = messages.at(-1)
-                console.log(`更新 ${lastMessage.username} 缓存成功.`)
-                writePersistentArgument(`TelegramLastMessageId-${lastMessage.username}`, lastMessage.msgid)
-            }
-        }
+        echo(`write local persistent`)
+        let lastMessage = group.at(-1)
+        echo(`更新 ${lastMessage.username} 缓存成功. msgid: ${lastMessage.msgid}`)
+        writePersistentArgument(`TelegramLastMessageId-${lastMessage.username}`, lastMessage.msgid)
     }
 }
+
 
 (async () => {
     main().then(_ => {
         $done({})
     }).catch(error => {
-        console.log(`[Error]: ${error?.message || error}`)
+        if (typeof error === 'object') {
+            error = JSON.stringify(error)
+        }
+        echo(`[Error]: ${error?.message || error}`)
         $done({})
     })
 })();
