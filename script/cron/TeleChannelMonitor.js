@@ -679,8 +679,8 @@ async function main() {
         // 写入本地持久化    
         echo(`write local persistent`)
         let lastMessage = group.at(-1)
-        echo(`更新 ${lastMessage.username} 缓存成功. msgid: ${lastMessage.msgid}`)
-        writePersistentArgument(`TelegramLastMessageId-${lastMessage.username}`, lastMessage.msgid)
+        echo(`更新 ${lastMessage.channelName} 缓存成功. msgid: ${lastMessage.msgid}`)
+        writePersistentArgument(`TelegramLastMessageId-${lastMessage.channelName}`, lastMessage.msgid)
     }
 }
 
