@@ -509,7 +509,7 @@ function parseDocument(body) {
  * @param {Document} document 
  * @returns 
  */
-function parseMessages(document) {
+function parseMessages(channel, document) {
     let resp = []
     let headImg = document.querySelector("body > header > div > div.tgme_header_info > a.tgme_header_link > i > img")?.attributes?.getNamedItem("src")?.textContent
     let channelName = document.querySelector("body > header > div > div.tgme_header_info > a.tgme_header_link > div.tgme_header_title_wrap > div.tgme_header_title > span")?.textContent
@@ -539,7 +539,7 @@ function parseMessages(document) {
             title = "Please open Telegram to view this post"
         }
         console.log(msgid, textTag, title)
-        resp.push({ head: headImg, channelName, username, msgid, title, text })
+        resp.push({ head: headImg, channelName, username, msgid, title, text, channel })
     })
     return resp
 }
@@ -569,7 +569,7 @@ async function getChannelMessages(channel) {
             }
             if (res.data) {
                 let document = new DOMParser().parseFromString(res.data, 'text/html');
-                let channelMessages = parseMessages(document).filter(element => !lastMessageID || element.msgid > lastMessageID)
+                let channelMessages = parseMessages(channel, document).filter(element => !lastMessageID || element.msgid > lastMessageID)
                 echo(`${channel} channelMessages length: ${channelMessages.length}`)
                 totalChannelMessages = totalChannelMessages.concat(channelMessages)
                 if (channelMessages.length < 20) {
@@ -679,8 +679,8 @@ async function main() {
         // 写入本地持久化    
         echo(`write local persistent`)
         let lastMessage = group.at(-1)
-        echo(`更新 ${lastMessage.channelName} 缓存成功. msgid: ${lastMessage.msgid}`)
-        writePersistentArgument(`TelegramLastMessageId-${lastMessage.channelName}`, lastMessage.msgid)
+        echo(`更新 ${lastMessage.channel} 缓存成功. msgid: ${lastMessage.msgid}`)
+        writePersistentArgument(`TelegramLastMessageId-${lastMessage.channel}`, lastMessage.msgid)
     }
 }
 
