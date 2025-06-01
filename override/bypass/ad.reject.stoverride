@@ -7,8 +7,8 @@ http:
 
 rules:
     - DOMAIN,imasdk.googleapis.com,Google # 拦截会导致动画疯加载失败
-    - GEOSITE,category-ads,REJECT,no-track
-    - RULE-SET,anti-AD,REJECT,no-resolve,no-track
+    - GEOSITE,category-ads,REJECT
+    - RULE-SET,anti-AD,REJECT,no-resolve
 
 rule-providers:
     anti-AD:
