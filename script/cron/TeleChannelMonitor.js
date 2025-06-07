@@ -570,7 +570,6 @@ async function getChannelMessages(channel) {
             if (res.data) {
                 let document = new DOMParser().parseFromString(res.data, 'text/html');
                 let channelMessages = parseMessages(channel, document).filter(element => !lastMessageID || element.msgid > lastMessageID)
-                echo(`${channel} channelMessages length: ${channelMessages.length}`)
                 totalChannelMessages = totalChannelMessages.concat(channelMessages)
                 if (channelMessages.length < 20) {
                     break
@@ -589,7 +588,6 @@ async function getChannelMessages(channel) {
     totalChannelMessages = totalChannelMessages.slice(0, onceMaxSize)
     echo(`get channel ${channel} message count: ${totalChannelMessages.length}`)
     return totalChannelMessages
-
 }
 
 /**
@@ -650,6 +648,7 @@ async function main() {
     if (typeof channels !== 'object') {
         throw `invalid channles: ${channels}`
     }
+
     let groupMessages = []
     // 使用 Promise.all 并行获取所有频道的消息
     try {
@@ -663,11 +662,15 @@ async function main() {
     if (!groupMessages) {
         throw `invali groupMessages: ${groupMessages}`
     }
-    groupMessages = groupMessages.filter(element => typeof element !== 'undefined')
     for (const group of groupMessages) {
+        if (group.length === 0) {
+            continue
+        }
         let messages = makePushMessages([group])
+        if (messages) {
+            echo(messages)
+        }
         for (const message of messages) {
-
             let body = JSON.stringify({ messages: [message] }, null, 4)
             let res = await post({ url: 'https://p.19940731.xyz/api/notifications/push/v3', headers: { 'Content-Type': "application/json" }, body: body })
             if (res.error || res.response.status >= 400) {
