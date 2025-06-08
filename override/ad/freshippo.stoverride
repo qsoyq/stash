@@ -4,6 +4,9 @@ desc: |-
     - 首页底部常驻广告
     - 首页右下角浮动窗口
     - 首页弹窗推荐活动
+    - 搜索｜搜索发现
+    - 搜索｜热榜精选
+    - 搜索｜猜你喜欢
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/freshippo.png
 http:
@@ -21,3 +24,7 @@ http:
 
         # 首页右下角浮动窗口
         - https?://acs-m.freshippo.com/gw/mtop.wdk.render.queryindexpage response-jq .data.scenes|=map(select(.bizCode!="float_channel"))
+
+        - https://acs-m.freshippo.com/gw/mtop.wdk.render.querysearchpage response-jq .data.scenes|=map(select(.title!="文字搜索发现"))
+        - https://acs-m.freshippo.com/gw/mtop.wdk.render.querysearchpage response-jq .data.scenes|=map(select(.title!="搜索热榜"))
+        - https://acs-m.freshippo.com/gw/mtop.wdk.render.querysearchpage response-jq .data.scenes|=map(select(.title!="为你推荐我常买"))
