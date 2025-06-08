@@ -617,7 +617,7 @@ function makePushMessages(groupMessages) {
             let payload = {
                 device_key: barkToken,
                 title: message.channelName,
-                body: `${message.text}`,
+                body: `${message.text}`.slice(0, 1024), // bark-server 或 APNs 的限制，限制在 1600 个左右的字符
                 group: barkGroup,
                 level: level,
                 icon: icon || message.head,
@@ -674,8 +674,8 @@ async function main() {
             let body = JSON.stringify({ messages: [message] }, null, 4)
             let res = await post({ url: 'https://p.19940731.xyz/api/notifications/push/v3', headers: { 'Content-Type': "application/json" }, body: body })
             if (res.error || res.response.status >= 400) {
-                echo(`[Error] push messages error: ${res.error}, ${res.response.status}, ${res.data}`)
-                throw `[Error] push messages error: ${res.error}, ${res.response.status}, ${res.data}`
+                echo(`[Error] push messages error: ${res.error}, ${res.response.status}, ${res.data}, \n${body}`)
+                throw `[Error] push messages error: ${res.error}, ${res.response.status}, ${res.data}, \n${body}`
             }
         }
 
