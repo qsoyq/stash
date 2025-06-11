@@ -1,11 +1,12 @@
 name: pcdn 拒绝
 desc: |-
     - https://www.v2ex.com/t/1127079
+    - 屏蔽 CN STUN 出站
 category: ruleset
 icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Reject.png
 
 rules:
-    - DST-PORT,4483,REJECT,no-track
+    - AND,((PROTOCOL,STUN),(GEOIP,cn,no-resolve)),REJECT,no-track
     - DOMAIN,tp2p.kg.qq.com,REJECT,no-track
     - DOMAIN,twns.p2ptun.qq.com,REJECT,no-track
     - DOMAIN,sd-gl.xinqiucc.com,REJECT,no-track
