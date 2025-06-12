@@ -10,8 +10,3 @@ http:
     body-rewrite:
         # 直播页｜置顶消息
         - https://gql.twitch.tv/gql response-jq  walk(if type == "object" and has("pinnedChatMessages") then .pinnedChatMessages.edges = [] else . end)
-
-script-providers:
-    www.twitch.tv:
-        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/debug/http-rewrite.js
-        interval: 86400
