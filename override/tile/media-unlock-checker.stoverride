@@ -12,6 +12,12 @@ tiles:
     - name: MediaUnlockChecker
       backgroundColor: "#178BD8"
       interval: 1800
+      collapsed: false
+
+    - name: MediaUnlockChecker
+      backgroundColor: "#178BD8"
+      interval: 1800
+      collapsed: true
 
 script-providers:
     MediaUnlockChecker:
