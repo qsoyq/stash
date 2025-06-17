@@ -7,6 +7,7 @@ http:
 
 rules:
     - DOMAIN,imasdk.googleapis.com,Google # 拦截会导致动画疯加载失败
+    - DOMAIN,cdn.bootcdn.net,PROXY # yunyoo 图片加载失败
     - GEOSITE,category-ads,REJECT
     - RULE-SET,anti-AD,REJECT,no-resolve
 
