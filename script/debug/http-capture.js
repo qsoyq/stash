@@ -507,6 +507,7 @@ function parseDocument(body) {
 async function main() {
     let type = getScriptType()
     let ts = Math.floor(Date.now() / 1000)
+    let forceParseAsJson = getScriptArgument("forceParseAsJson") || false
     if (["request", 'response'].includes(type)) {
         let command = `curl -X ${$request.method} "${$request.url}"`
         for (const [key, value] of Object.entries($request.headers)) {
@@ -534,26 +535,26 @@ async function main() {
             }
         }
         let ct = $response.headers['Content-Type']
-        if(ct){
-            if(ct.includes("application/json")){
+        if (ct || forceParseAsJson) {
+            if (ct.includes("application/json")) {
                 let body
-                let jsonBody 
-                if(typeof $response.body === 'object'){
+                let jsonBody
+                if (typeof $response.body === 'object') {
                     body = getScriptResponseBody()
-                }else{
+                } else {
                     body = $response.body
                 }
 
                 jsonBody = parseJsonBody(body)
-                
-                if(jsonBody){
+
+                if (jsonBody) {
                     data.response.json = jsonBody
-                }else{
+                } else {
                     data.response.body = body
                 }
             }
 
-            if(ct.includes("text/html")){
+            if (ct.includes("text/html")) {
                 data.response.body = typeof $response.body === 'object' ? getScriptResponseBody() : $response.body
             }
         }
