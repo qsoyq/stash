@@ -12,7 +12,6 @@ desc: |-
     - 秒送活动弹窗
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/jd.png
-# https://kelee.one/Resource/Script/JD/JD_remove_ads.js
 http:
     mitm:
         - api.m.jd.com

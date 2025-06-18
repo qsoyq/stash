@@ -9,3 +9,4 @@ http:
         - heic.alicdn.com
     url-rewrite:
         - ^https?://(gw|heic).alicdn.com/imgextra/i\d/\d*/?[\w!]+-\d-(octopus|tps-1125-1602).(jp|pn)g_(1\d{3}|9\d{2})x(1\d{3}|9\d{2})q[59]0 - reject # 开屏广告
+
