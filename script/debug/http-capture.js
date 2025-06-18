@@ -535,8 +535,8 @@ async function main() {
             }
         }
         let ct = $response.headers['Content-Type']
-        if (ct || forceParseAsJson) {
-            if (ct.includes("application/json")) {
+        if (ct) {
+            if (ct.includes("application/json") || forceParseAsJson) {
                 let body
                 let jsonBody
                 if (typeof $response.body === 'object') {
@@ -552,9 +552,7 @@ async function main() {
                 } else {
                     data.response.body = body
                 }
-            }
-
-            if (ct.includes("text/html")) {
+            } else if (ct.includes("text/html")) {
                 data.response.body = typeof $response.body === 'object' ? getScriptResponseBody() : $response.body
             }
         }
