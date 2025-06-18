@@ -1,22 +1,40 @@
 name: 京东
 desc: |-
     - 开屏广告
+    - 首页｜banner
+    - 首页｜活动
+    - 首页｜动态icon
+    - 首页｜右侧浮动icon
+    - 首页｜资质与规则
+    - 首页｜顶部背景图
+    - 首页｜右上角促销
+    - 首页｜顶部标签｜特价
     - 秒送活动弹窗
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/jd.png
-dns:
-    fake-ip-filter:
-        - api.m.jd.com
+# https://kelee.one/Resource/Script/JD/JD_remove_ads.js
 http:
-    force-http-engine:
-        - api.m.jd.com
     mitm:
         - api.m.jd.com
     body-rewrite:
-        - https://api.m.jd.com/client.action\?functionId=start response-jq .images=[]
-        - https://api.m.jd.com/client.action\?functionId=xview2Config response-jq .data.targets=[]
-        - https://api.m.jd.com/client.action\?functionId=welcomeHome response-jq .floorList=[]
+        - https://api.m.jd.com/client.action\?functionId=start response-jq .images=[] # 开屏广告
+        # - https://api.m.jd.com/client.action\?functionId=xview2Config response-jq .data.targets=[]
+        - https://api.m.jd.com/client.action\?functionId=welcomeHome response-jq .floorList|=map(select(.floorId!=12826)) # 首页｜banner
+        - https://api.m.jd.com/client.action\?functionId=welcomeHome response-jq .floorList|=map(select(.floorId!=12074)) # 首页｜活动
+        - https://api.m.jd.com/client.action\?functionId=welcomeHome response-jq .floorList|=map(select(.floorId!=12818)) # 首页｜活动
+        - https://api.m.jd.com/client.action\?functionId=welcomeHome response-jq .floorList|=map(select(.type!="dynamicIcon")) # 首页｜动态icon
+        - https://api.m.jd.com/client.action\?functionId=welcomeHome response-jq .floorList|=map(select(.type!="float")) # 首页｜右侧浮动icon
+        - https://api.m.jd.com/client.action\?functionId=welcomeHome response-jq .floorList|=map(select(.type!="ruleFloat")) # 首页｜资质与规则
+        - https://api.m.jd.com/client.action\?functionId=welcomeHome response-jq .futureFloorList=[]
+        - https://api.m.jd.com/client.action\?functionId=welcomeHome response-jq .topBgImgBig="" # 首页｜顶部背景图
+        - https://api.m.jd.com/client.action\?functionId=welcomeHome response-jq .promotionTabs={} # 首页｜右上角促销
+        - https://api.m.jd.com/client.action\?functionId=welcomeHome response-jq .multipleTabs.content.data|=map(select(.tabName!="特价")) # 首页｜顶部标签｜特价
+
+        - https://api.m.jd.com/client.action\?functionId=readCustomSurfaceList response-jq .nodeMap.normal.navigationAll|=map(select(.cutLabelName!="逛")) # 首页｜底部菜单｜逛
+
         - https://api.m.jd.com/client.action\?functionId=queryPagePopWindow response-jq .activityId=""
         - https://api.m.jd.com/client.action\?functionId=queryPagePopWindow response-jq .channelPoint=[]
         - https://api.m.jd.com/client.action\?functionId=hours_home response-jq .result.config.startPopupFloor.data=[] # 秒送活动弹窗
 
+
+        # personinfoBusiness
