@@ -1,0 +1,10 @@
+name: 鸡柳大人
+desc: |-
+    - 小程序首页｜模态弹窗
+category: ad
+icon: http://www.jiliudaren.cn/uploads/allimg/20230927/1-23092G12451343.png
+http:
+    mitm:
+        - rms.meituan.com
+    body-rewrite:
+        - https://rms.meituan.com/api/v1/rmsmina/c/queryPortalInfo response-jq .data.modules|=map(select(.name!="limo-modal"))
