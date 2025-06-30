@@ -1,14 +1,17 @@
 name: 91porn
 desc: |-
     - 视频播放页播放时支持方向键左右前进/退后
+    - 视频播放前置广告
 category: enhance
 icon: https://91porn.com/favicon.ico
 http:
     mitm:
         - 91porn.com
         - vthumb.killcovid2021.com
+        - mp4.blkj58.com
     url-rewrite:
         - https://vthumb.killcovid2021.com/300vip_and_yqm.mp4 - reject
+        - https://mp4.blkj58.com/fh.mp4 - reject
     script:
         - name: 91porn
           binary-mode: false
