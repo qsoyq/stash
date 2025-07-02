@@ -1,0 +1,27 @@
+name: missav
+desc: |-
+    - 播放页｜事件监听｜visibilitychange
+    - 播放页｜事件监听｜blur
+category: ad
+icon: https://missav.ai/favicon.ico
+
+http:
+    mitm:
+        - missav.ai
+    url-rewrite:
+
+    script:
+        # 播放页
+        - name: missav
+          binary-mode: false
+          match: https://missav.ai/
+          max-size: 1048576
+          require-body: true
+          timeout: 20
+          type: response
+          debug: true
+
+script-providers:
+    missav:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/missav.js
+        interval: 86400
