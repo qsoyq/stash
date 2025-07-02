@@ -27,7 +27,7 @@ http:
         - https?://acs-m.freshippo.com/gw/mtop.wdk.render.queryindexpage response-jq .data.scenes|=map(select(.bizCode!="float_channel"))
 
         # 首页｜xx回购榜
-        - https://acs-m.freshippo.com/gw/mtop.wdk.render.querytabfeedstream response-jq .data.scenes|=map(select(.content[0]?.attach==null))
+        - https://acs-m.freshippo.com/gw/mtop.wdk.render.querytabfeedstream response-jq .data.scenes|=map(select(.sceneType!="100037"))
 
         # 搜索｜搜索发现
         # 搜索｜热榜精选
