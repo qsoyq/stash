@@ -1,9 +1,10 @@
 name: 盒马
 desc: |-
     - 开屏广告
-    - 首页底部常驻广告
-    - 首页右下角浮动窗口
-    - 首页弹窗推荐活动
+    - 首页｜底部常驻广告
+    - 首页｜右下角浮动窗口
+    - 首页｜弹窗推荐活动
+    - 首页｜xx回购榜
     - 搜索｜搜索发现
     - 搜索｜热榜精选
     - 搜索｜猜你喜欢
@@ -16,15 +17,21 @@ http:
         # 开屏广告
         - https?://acs-m.freshippo.com/gw/mtop.wdk.render.querysinglepage response-jq .data.scenes|=map(select(.bizCode!="poweron_ad"))
 
-        # 首页弹窗推荐活动
+        # 首页｜弹窗推荐活动
         - https?://acs-m.freshippo.com/gw/mtop.wdk.render.querysinglepage response-jq .data.scenes|=map(select(.bizCode!="explosion_screen"))
 
-        # 首页底部常驻广告
+        # 首页｜底部常驻广告
         - https?://acs-m.freshippo.com/gw/mtop.wdk.render.queryindexpage response-jq .data.scenes|=map(select(.bizCode!="bottom_bar"))
 
-        # 首页右下角浮动窗口
+        # 首页｜右下角浮动窗口
         - https?://acs-m.freshippo.com/gw/mtop.wdk.render.queryindexpage response-jq .data.scenes|=map(select(.bizCode!="float_channel"))
 
+        # 首页｜xx回购榜
+        - https://acs-m.freshippo.com/gw/mtop.wdk.render.querytabfeedstream response-jq .data.scenes|=map(select(.content[0]?.attach==null))
+
+        # 搜索｜搜索发现
+        # 搜索｜热榜精选
+        # 搜索｜猜你喜欢
         - https://acs-m.freshippo.com/gw/mtop.wdk.render.querysearchpage response-jq .data.scenes|=map(select(.title!="文字搜索发现"))
         - https://acs-m.freshippo.com/gw/mtop.wdk.render.querysearchpage response-jq .data.scenes|=map(select(.title!="搜索热榜"))
         - https://acs-m.freshippo.com/gw/mtop.wdk.render.querysearchpage response-jq .data.scenes|=map(select(.title!="为你推荐我常买"))
