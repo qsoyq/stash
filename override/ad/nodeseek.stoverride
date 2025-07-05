@@ -5,6 +5,7 @@ desc: |-
     - 所有板块
     - 用户数目｜欢迎新用户
     - 页脚
+    - 外链自动重定向
 category: ad
 icon: https://www.nodeseek.com/static/image/favicon/favicon-32x32.png
 http:
@@ -14,6 +15,15 @@ http:
         - https://www.nodeseek.com/api/promotion/list response-jq .data=[]
 
     script:
+        - name: nodeseek
+          binary-mode: false
+          match: https://www.nodeseek.com/jump
+          max-size: 1048576
+          require-body: true
+          timeout: 20
+          type: request
+          debug: true
+
         # 详情页
         - name: nodeseek
           binary-mode: false
@@ -22,7 +32,7 @@ http:
           require-body: true
           timeout: 20
           type: response
-          debug: false
+          debug: true
 
 script-providers:
     nodeseek:

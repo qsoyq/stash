@@ -527,7 +527,19 @@ function removeAds(document) {
 
 
 async function main() {
+    echo("start")
     switch (getScriptType()) {
+        case "request":
+            let url = (new URL($request.url))
+            echo(`url: ${url}`)
+            if (url.pathname === '/jump') {
+                let to = url.searchParams.get("to")
+                if (to) {
+                    echo(`跳转url: ${to}`)
+                    $done({ "url": to })
+                    break
+                }
+            }
         case "response":
             let body = getScriptResponseBody()
             let ct = $response.headers['Content-Type']
