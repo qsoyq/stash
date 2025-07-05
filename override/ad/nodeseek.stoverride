@@ -22,7 +22,7 @@ http:
           require-body: true
           timeout: 20
           type: request
-          debug: true
+          debug: false
 
         # 详情页
         - name: nodeseek
@@ -32,7 +32,7 @@ http:
           require-body: true
           timeout: 20
           type: response
-          debug: true
+          debug: false
 
 script-providers:
     nodeseek:
