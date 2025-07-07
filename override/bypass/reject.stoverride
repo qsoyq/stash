@@ -37,7 +37,7 @@ http:
 
 rules:
     - DOMAIN,imasdk.googleapis.com,Google # 拦截会导致动画疯加载失败
-    - IP-CIDR,169.254.169.254/32,REJECT
+    - IP-CIDR,169.254.169.254/32,REJECT,no-resolve
 
     # DOMAIN REJECT-DROP
     - DOMAIN,game.eve.mdt.qq.com,REJECT-DROP

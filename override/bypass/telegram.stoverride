@@ -11,6 +11,7 @@ category: ruleset
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/telegram.png
 
 rules:
+    - IP-CIDR,95.161.76.100/31,REJECT,no-resolve
     - IP-ASN,59930,TelegramDC1,no-resolve
     - IP-ASN,44907,TelegramDC2,no-resolve
     - IP-ASN,211157,TelegramDC3,no-resolve
