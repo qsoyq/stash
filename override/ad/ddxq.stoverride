@@ -57,4 +57,4 @@ http:
 
 rules:
     # http dns
-    - IP-CIDR,119.29.29.90/32,REJECT-DROP
+    - IP-CIDR,119.29.29.90/32,REJECT-DROP,no-resolve
