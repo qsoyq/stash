@@ -45,7 +45,7 @@ http:
         - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/bottomNavi response-jq .data.adId=null # 广告?
         - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/bottomNavi response-jq .data.bottom_list[].badgePopText="" # 底部导航栏移除高亮提示文字
         - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/bottomNavi response-jq .data.bottom_list|=map(select(.name!="分类")) # 底部导航栏移除分类
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/bottomNavi response-jq .data.bottom_list|=map(select(.name!="吃什么")) # 底部导航栏移除AI
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/bottomNavi response-jq .data.bottom_list|=map(select(.type!="eatwhat")) # 底部导航栏移除AI
         - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/homeFlowDetail response-jq .data.list|=map(select(.recommend_cate!=12)) # 首页推荐流｜人气榜
         - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/homeFlowDetail response-jq .data.list|=map(select(.recommend_cate!=3)) # 首页推荐流｜广告｜超级品牌周
 
