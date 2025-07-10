@@ -527,27 +527,26 @@ function removeAds(document) {
 
 
 async function main() {
-    echo("start")
     switch (getScriptType()) {
-        case "request":
-            let url = (new URL($request.url))
-            echo(`url: ${url}`)
-            if (url.pathname === '/jump') {
-                let to = url.searchParams.get("to")
-                if (to) {
-                    echo(`跳转url: ${to}`)
-                    $done({ "url": to })
-                    break
-                }
-            }
         case "response":
+            let url = (new URL($request.url))
             let body = getScriptResponseBody()
             let ct = $response.headers['Content-Type']
             if (ct && ct.includes("text/html") && body) {
-                const document = new DOMParser().parseFromString(body, 'text/html')
-                removeAds(document)
-                $done({ body: document.documentElement.outerHTML })
-                break
+                echo(`url: ${url}, path: ${url.pathname}`)
+                if (url.pathname === '/jump') {
+                    let to = url.searchParams.get("to")
+                    if (to) {
+                        echo(`跳转url: ${to}`)
+                        $done({ "status": 307, "headers": { "Location": to }, "body": "" })
+                        break
+                    }
+                } else {
+                    const document = new DOMParser().parseFromString(body, 'text/html')
+                    removeAds(document)
+                    $done({ body: document.documentElement.outerHTML })
+                    break
+                }
             }
         default:
             $done({})

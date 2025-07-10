@@ -17,22 +17,12 @@ http:
     script:
         - name: nodeseek
           binary-mode: false
-          match: https://www.nodeseek.com/jump
-          max-size: 1048576
-          require-body: true
-          timeout: 20
-          type: request
-          debug: false
-
-        # 详情页
-        - name: nodeseek
-          binary-mode: false
           match: https://www.nodeseek.com/
           max-size: 1048576
           require-body: true
           timeout: 20
           type: response
-          debug: false
+          debug: true
 
 script-providers:
     nodeseek:
