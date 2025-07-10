@@ -1,9 +1,10 @@
 name: nodeseek
 desc: |-
-    - 广告位
+    - 广告
     - 快捷功能区
     - 所有板块
     - 用户数目｜欢迎新用户
+    - 用户签名
     - 页脚
     - 外链自动重定向
 category: ad
@@ -22,7 +23,7 @@ http:
           require-body: true
           timeout: 20
           type: response
-          debug: true
+          debug: false
 
 script-providers:
     nodeseek:

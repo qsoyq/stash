@@ -506,10 +506,30 @@ function parseDocument(body) {
 function removeAdsCode() {
     document.addEventListener('DOMContentLoaded', (event) => {
         console.log("removeAdsCode")
-        Array.from(document.querySelectorAll("#nsk-right-panel-container > div:nth-child(5)")).forEach(e => { e.remove() })
+        // 快捷功能区
         Array.from(document.querySelectorAll('div[class="nsk-panel quick-access"]')).forEach(e => { e.remove() })
+
+        // 板块列表
         Array.from(document.querySelectorAll('div[class="nsk-panel category-list"]')).forEach(e => { e.remove() })
+
+        // 页脚信息
         Array.from(document.querySelectorAll('footer')).forEach(e => { e.remove() })
+
+        // 返回上一页悬浮按钮
+        Array.from(document.querySelectorAll('#back-to-parent')).forEach(e => { e.remove() })
+
+        // 用户签名
+        Array.from(document.querySelectorAll('div[class="signature"]')).forEach(e => { e.remove() })
+
+        // 右侧迎新面板
+        Array.from(document.querySelectorAll('h4')).forEach(e => {
+
+            if (e.textContent === "📈用户数目📈") {
+                e.parentElement?.remove()
+            }
+
+        })
+
     });
 }
 
