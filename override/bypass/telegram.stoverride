@@ -18,8 +18,9 @@ rules:
     - IP-ASN,62041,TelegramDC4,no-resolve
     - IP-ASN,62014,TelegramDC5,no-resolve
     - DOMAIN-SUFFIX,iturrit.com,Telegram
-    - RULE-SET,ip.telegram,Telegram,no-resolve
+    - DOMAIN-SUFFIX,telegram.tools,Telegram
     - geosite,telegram,Telegram
+    - RULE-SET,ip.telegram,Telegram,no-resolve
 
 rule-providers:
     ip.telegram:
