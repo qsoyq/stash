@@ -17,6 +17,11 @@ rules:
     - IP-ASN,211157,TelegramDC3,no-resolve
     - IP-ASN,62041,TelegramDC4,no-resolve
     - IP-ASN,62014,TelegramDC5,no-resolve
+    - DOMAIN,pluto.web.telegram.org,TelegramDC1
+    - DOMAIN,venus.web.telegram.org,TelegramDC2
+    - DOMAIN,aurora.web.telegram.org,TelegramDC3
+    - DOMAIN,vesta.web.telegram.org,TelegramDC4
+    - DOMAIN,flora.web.telegram.org,TelegramDC5
     - DOMAIN-SUFFIX,iturrit.com,Telegram
     - DOMAIN-SUFFIX,telegram.tools,Telegram
     - geosite,telegram,Telegram
