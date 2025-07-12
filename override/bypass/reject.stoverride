@@ -70,7 +70,7 @@ rules:
     - DOMAIN,www.google-analytics.com,REJECT
     - DOMAIN,push.ele.me,REJECT
     - DOMAIN,config.jpush-ipv6.cn,REJECT
-    - DOAMIN,googleads.g.doubleclick.net,REJECT
+    - DOMAIN,googleads.g.doubleclick.net,REJECT
 
     # DOMAIN-SUFFIX REJECT
     - DOMAIN-SUFFIX,monitor.xiaoheihe.cn,REJECT
