@@ -506,6 +506,10 @@ function parseDocument(body) {
 function removeAdsCode() {
     document.addEventListener('DOMContentLoaded', (event) => {
         console.log("removeAdsCode")
+
+        // 首页置顶轮播帖子
+        Array.from(document.querySelectorAll('div[class="topic-carousel-wrapper"]')).forEach(e => { e.remove() })
+
         // 快捷功能区
         Array.from(document.querySelectorAll('div[class="nsk-panel quick-access"]')).forEach(e => { e.remove() })
 
