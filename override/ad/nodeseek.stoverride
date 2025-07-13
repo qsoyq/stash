@@ -8,6 +8,7 @@ desc: |-
     - 用户签名
     - 页脚
     - 外链自动重定向
+    - 导航｜增加内版模块
 category: ad
 icon: https://www.nodeseek.com/static/image/favicon/favicon-32x32.png
 http:

@@ -506,6 +506,22 @@ function parseDocument(body) {
 function removeAdsCode() {
     document.addEventListener('DOMContentLoaded', (event) => {
         console.log("removeAdsCode")
+        let url = new URL(window.location.href)
+
+        // 板块导航增加内版
+        Array.from(document.querySelectorAll('ul[class="nav-menu"]')).forEach(e => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = '/categories/inside'
+            a.textContent = '内版'
+            li.appendChild(a);
+            e.appendChild(li)
+
+            if (url.pathname === '/categories/inside') {
+                li.classList.add("current-category")
+                console.log('inside')
+            }
+        })
 
         // 首页置顶轮播帖子
         Array.from(document.querySelectorAll('div[class="topic-carousel-wrapper"]')).forEach(e => { e.remove() })
