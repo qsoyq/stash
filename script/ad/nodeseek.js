@@ -509,7 +509,9 @@ function removeAdsCode() {
         let url = new URL(window.location.href)
 
         // 板块导航增加内版
-        Array.from(document.querySelectorAll('ul[class="nav-menu"]')).forEach(e => {
+        let isMobileNav = false
+        Array.from(document.querySelectorAll('ul[class="mobile-nav"]')).forEach(e => {
+            isMobileNav = true
             const li = document.createElement('li');
             const a = document.createElement('a');
             a.href = '/categories/inside'
@@ -519,9 +521,23 @@ function removeAdsCode() {
 
             if (url.pathname === '/categories/inside') {
                 li.classList.add("current-category")
-                console.log('inside')
             }
         })
+        if (isMobileNav === false) {
+            Array.from(document.querySelectorAll('ul[class="nav-menu"]')).forEach(e => {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = '/categories/inside'
+                a.textContent = '内版'
+                li.appendChild(a);
+                e.appendChild(li)
+
+                if (url.pathname === '/categories/inside') {
+                    li.classList.add("current-category")
+                }
+            })
+        }
+
 
         // 首页置顶轮播帖子
         Array.from(document.querySelectorAll('div[class="topic-carousel-wrapper"]')).forEach(e => { e.remove() })
