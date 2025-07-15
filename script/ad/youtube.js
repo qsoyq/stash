@@ -1,14 +1,14 @@
-/** @namespace result.youtube */
+/** @namespace youtube */
 
 /**
- * @typedef {Object} result.youtube.HTTPResponse
+ * @typedef {Object} youtube.HTTPResponse
  * @property {string|null} error - 错误信息，如果没有错误则为 null
  * @property {object} response - HTTP 响应对象
  * @property {string|null} data - 返回的数据，如果没有数据则为 null
  */
 
 /**
- * @typedef {function(Error|string|null, Object, string|null): void} result.youtube.HTTPCallback
+ * @typedef {function(Error|string|null, Object, string|null): void} youtube.HTTPCallback
  * 回调函数类型，接受错误、响应和数据作为参数。
  * @param {Error|string|null} error - 错误信息，可以是 Error 对象、字符串或者 null
  * @param {Object} response - HTTP 响应对象
@@ -16,18 +16,18 @@
  */
 
 /**
- * @typedef {function(Object, result.youtube.HTTPCallback): result.youtube.HTTPResponse} result.youtube.HTTPMethod
+ * @typedef {function(Object, youtube.HTTPCallback): youtube.HTTPResponse} youtube.HTTPMethod
  */
 
 /**
- * @typedef {Object} result.youtube.HttpClient
- * @property {result.youtube.HTTPMethod} get - 发送 GET 请求
- * @property {result.youtube.HTTPMethod} post - 发送 POST 请求
- * @property {result.youtube.HTTPMethod} put - 发送 PUT 请求
- * @property {result.youtube.HTTPMethod} delete - 发送 DELETE 请求
+ * @typedef {Object} youtube.HttpClient
+ * @property {youtube.HTTPMethod} get - 发送 GET 请求
+ * @property {youtube.HTTPMethod} post - 发送 POST 请求
+ * @property {youtube.HTTPMethod} put - 发送 PUT 请求
+ * @property {youtube.HTTPMethod} delete - 发送 DELETE 请求
  */
 
-/** @type {result.youtube.HttpClient} */
+/** @type {youtube.HttpClient} */
 var $httpClient;
 
 var $request, $response, $notification, $argument, $persistentStore, $script
@@ -39,12 +39,12 @@ var $done
  * 对异步回调的 HTTP 调用包装成 async 函数
  * @param {'GET'|'POST'|'PUT'|'DELETE'} method - HTTP 方法类型，支持 GET、POST、PUT 和 DELETE
  * @param {Object} params - 请求参数对象，包含请求所需的各类信息
- * @returns {Promise<result.youtube.HTTPResponse>} 返回一个 Promise，解析为包含 error、response 和 data 的对象
+ * @returns {Promise<youtube.HTTPResponse>} 返回一个 Promise，解析为包含 error、response 和 data 的对象
  * @throws {Error} 如果请求失败，Promise 会被拒绝并返回错误信息
  */
 async function request(method, params) {
     return new Promise((resolve, reject) => {
-        /** @type {result.youtube.HTTPMethod} */
+        /** @type {youtube.HTTPMethod} */
         const httpMethod = $httpClient[method.toLowerCase()]; // 通过 HTTP 方法选择对应的请求函数
         httpMethod(params, (error, response, data) => {
             if (error) {
@@ -60,7 +60,7 @@ async function request(method, params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<result.youtube.HTTPResponse>}
+ * @returns {Promise<youtube.HTTPResponse>}
  */
 async function get(params) {
     return request('GET', params);
@@ -69,7 +69,7 @@ async function get(params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<result.youtube.HTTPResponse>}
+ * @returns {Promise<youtube.HTTPResponse>}
  */
 async function post(params) {
     return request('POST', params);
@@ -78,7 +78,7 @@ async function post(params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<result.youtube.HTTPResponse>}
+ * @returns {Promise<youtube.HTTPResponse>}
  */
 async function put(params) {
     return request('PUT', params);
@@ -87,7 +87,7 @@ async function put(params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<result.youtube.HTTPResponse>}
+ * @returns {Promise<youtube.HTTPResponse>}
  */
 async function delete_(params) {
     return request('DELETE', params);
@@ -503,69 +503,87 @@ function parseDocument(body) {
     return domParser.parseFromString(body, 'text/html');
 }
 
-function removeAds(document) {
-    // document.getElementById("taw").remove()
-    // document.getElementById("bottomads").remove()
-    let pyv = document.querySelector("ytd-search-pyv-renderer")
-    echo(`pyv: ${pyv}`)
-    if (pyv) {
-        pyv.remove()
+function inner() {
+    const url = new URL(window.location.href)
+    switch (url.pathname) {
+        case '/':
+            console.log("index page")
+            Array.from(document.querySelectorAll('div[class="style-scope ytd-ad-slot-renderer"]')).forEach(e => {
+                console.log(`检测到广告视频 ${e}, 删除！`)
+                e.parentElement?.parentElement?.parentElement?.remove()
+            })
+            // @ts-ignore
+            let tabs = window?.ytInitialData?.contents?.twoColumnBrowseResultsRenderer?.tabs
+            if (tabs) {
+                for (const tab of tabs) {
+                    let contents = tab?.tabRenderer?.content?.richGridRenderer?.contents
+                    if (contents) {
+                        tab.tabRenderer.content.richGridRenderer.contents = tab.tabRenderer.content.richGridRenderer.contents.filter(e => {
+                            if (e?.richItemRenderer?.content?.adSlotRenderer) {
+                                console.log(e?.richItemRenderer?.content?.adSlotRenderer?.fulfillmentContent?.fulfilledLayout?.inFeedAdLayoutRenderer?.renderingContent?.videoDisplayButtonGroupRenderer)
+                            }
+                            return !e?.richItemRenderer?.content?.adSlotRenderer
+                        })
+                    }
+                }
+            }
+            break
+        case "/watch":
+            Array.from(document.querySelectorAll('#panels')).forEach(e => {
+                e.remove()
+            })
+            document.querySelectorAll("")[0].remove()
+            break
+        case "/results":
+            // @ts-ignore
+            if (window?.ytInitialData?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents[0]?.itemSectionRenderer?.contents) {
+                // @ts-ignore
+                let contents = window.ytInitialData.contents.twoColumnSearchResultsRenderer.primaryContents.sectionListRenderer.contents[0].itemSectionRenderer.contents
+                for (const content of contents) {
+                    if (content?.searchPyvRenderer) {
+                        content.searchPyvRenderer.ads = []
+                    }
+
+                    if (content?.adSlotRenderer) {
+                        content.adSlotRenderer = {}
+                    }
+                }
+            }
+            break
     }
-    echo("移除广告成功")
 
-}
-
-
-function removeAdsCode() {
-    console.log("[removeAds] begin")
     // @ts-ignore
-    if (window?.ytInitialData?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents[0]?.itemSectionRenderer?.contents) {
+    if (window?.ytInitialData) {
         // @ts-ignore
-        let contents = window.ytInitialData.contents.twoColumnSearchResultsRenderer.primaryContents.sectionListRenderer.contents[0].itemSectionRenderer.contents
-        for (const content of contents) {
-            if (content?.searchPyvRenderer) {
-                content.searchPyvRenderer.ads = []
-            }
-
-            if (content?.adSlotRenderer) {
-                content.adSlotRenderer = {}
-            }
-        }
+        console.log(`ytInitialData: ${JSON.stringify(window?.ytInitialData)}`)
     }
-    console.log("[removeAds] done")
+
 }
 
 function removeAds(document) {
     let code = `
-    console.log("[removeAds] begin")
-    // @ts-ignore
-    if (window?.ytInitialData?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents[0]?.itemSectionRenderer?.contents) {
-        // @ts-ignore
-        let contents = window.ytInitialData.contents.twoColumnSearchResultsRenderer.primaryContents.sectionListRenderer.contents[0].itemSectionRenderer.contents
-        for (const content of contents) {
-            if (content?.searchPyvRenderer) {
-                content.searchPyvRenderer.ads = []
-            }
-
-            if (content?.adSlotRenderer) {
-                content.adSlotRenderer = {}
-            }
-        }
-    }
-    console.log("[removeAds] done")
+    ${inner.toString()};
+    inner();
     `
-
     let script = document.createElement('script');
     script.textContent = code
-    document['head'].appendChild(script);
-    echo("注入代码以移除广告")
+    document['body'].appendChild(script);
+    const url = new URL($request.url)
+    if (url.pathname === '/') {
+
+    }
 }
+
+
 
 async function main() {
     switch (getScriptType()) {
         case "response":
+            let url = (new URL($request.url))
             let body = getScriptResponseBody()
-            if (body) {
+            let ct = $response.headers['Content-Type']
+            if (ct && ct.includes("text/html") && body) {
+                echo(`url: ${url}, path: ${url.pathname}`)
                 const document = new DOMParser().parseFromString(body, 'text/html')
                 removeAds(document)
                 $done({ body: document.documentElement.outerHTML })
@@ -575,14 +593,15 @@ async function main() {
             $done({})
     }
 }
+
 (async () => {
     main().then(_ => {
-        $done({})
+
     }).catch(error => {
         if (typeof error === 'object') {
-            error = JSON.stringify(error)
+            error = error.toString()
         }
-        echo(`[Error]: ${error?.message || error}`)
+        echo(`[Error]: ${error}`)
         $done({})
     })
 })();
