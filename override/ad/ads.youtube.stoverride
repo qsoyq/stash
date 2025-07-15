@@ -29,7 +29,7 @@ http:
           timeout: 10
           argument: ""
           type: response
-          debug: true
+          debug: false
 
 script-providers:
     "youtube":
