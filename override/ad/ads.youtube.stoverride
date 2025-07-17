@@ -4,6 +4,7 @@ desc: |-
     - Web 端首页｜短视频
     - Web 端播放页｜赞助商广告
     - Web 端搜索页｜赞助商广告
+    - Web 端搜索页｜网格短视频
 
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/youtube.png
 category: ad
@@ -21,6 +22,9 @@ http:
 
         - https://www.youtube.com/youtubei/v1/search response-jq walk(if type == "object" and has("ads") then .ads = [] else . end)
         - https://www.youtube.com/youtubei/v1/search response-jq walk(if type == "object" and has("adSlotRenderer") then .adSlotRenderer = {} else . end)
+
+        # 短视频
+        - https://www.youtube.com/youtubei/v1/search response-jq walk(if type == "object" and has("itemSectionRenderer") then .itemSectionRenderer.contents|=map(select(.gridShelfViewModel==null)) else . end)
     mitm:
         - "www.youtube.com"
     script:

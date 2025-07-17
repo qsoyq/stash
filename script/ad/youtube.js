@@ -537,6 +537,7 @@ function inner() {
             break
         case "/results":
             // @ts-ignore
+            // 广告
             if (window?.ytInitialData?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents[0]?.itemSectionRenderer?.contents) {
                 // @ts-ignore
                 let contents = window.ytInitialData.contents.twoColumnSearchResultsRenderer.primaryContents.sectionListRenderer.contents[0].itemSectionRenderer.contents
@@ -549,6 +550,17 @@ function inner() {
                         content.adSlotRenderer = {}
                     }
                 }
+            }
+            // 短视频
+            // @ts-ignore
+            if (window?.ytInitialData?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents[0]?.itemSectionRenderer?.contents) {
+                // @ts-ignore
+                window.ytInitialData.contents.twoColumnSearchResultsRenderer.primaryContents.sectionListRenderer.contents[0].itemSectionRenderer.contents = window.ytInitialData.contents.twoColumnSearchResultsRenderer.primaryContents.sectionListRenderer.contents[0].itemSectionRenderer.contents.filter(e => {
+                    if (e?.gridShelfViewModel) {
+                        return false
+                    }
+                    return true
+                })
             }
             break
     }
