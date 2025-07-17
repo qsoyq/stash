@@ -1,6 +1,7 @@
 name: YouTube
 desc: |-
     - Web 端首页｜赞助商广告
+    - Web 端首页｜短视频
     - Web 端播放页｜赞助商广告
     - Web 端搜索页｜赞助商广告
 
@@ -12,9 +13,11 @@ http:
     body-rewrite:
         # 首页下拉加载
         - https://www.youtube.com/youtubei/v1/browse response-jq walk(if type == "object" and has("continuationItems") then .continuationItems|=map(select(.richItemRenderer?.content?.adSlotRenderer==null)) else . end)
+        - https://www.youtube.com/youtubei/v1/browse response-jq walk(if type == "object" and has("richShelfRenderer") then .richShelfRenderer.contents|=map(select(.richItemRenderer?.content?.shortsLockupViewModel==null)) else . end)
 
         # 回到首页
         - https://www.youtube.com/youtubei/v1/browse response-jq walk(if type == "object" and has("tabRenderer") then .tabRenderer.content.richGridRenderer.contents|=map(select(.richItemRenderer?.content?.adSlotRenderer==null)) else . end)
+        - https://www.youtube.com/youtubei/v1/browse response-jq walk(if type == "object" and has("richShelfRenderer") then .richShelfRenderer.contents|=map(select(.richItemRenderer?.content?.shortsLockupViewModel==null)) else . end)
 
         - https://www.youtube.com/youtubei/v1/search response-jq walk(if type == "object" and has("ads") then .ads = [] else . end)
         - https://www.youtube.com/youtubei/v1/search response-jq walk(if type == "object" and has("adSlotRenderer") then .adSlotRenderer = {} else . end)

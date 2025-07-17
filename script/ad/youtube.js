@@ -504,14 +504,10 @@ function parseDocument(body) {
 }
 
 function inner() {
+
     const url = new URL(window.location.href)
     switch (url.pathname) {
         case '/':
-            console.log("index page")
-            Array.from(document.querySelectorAll('div[class="style-scope ytd-ad-slot-renderer"]')).forEach(e => {
-                console.log(`检测到广告视频 ${e}, 删除！`)
-                e.parentElement?.parentElement?.parentElement?.remove()
-            })
             // @ts-ignore
             let tabs = window?.ytInitialData?.contents?.twoColumnBrowseResultsRenderer?.tabs
             if (tabs) {
@@ -519,10 +515,15 @@ function inner() {
                     let contents = tab?.tabRenderer?.content?.richGridRenderer?.contents
                     if (contents) {
                         tab.tabRenderer.content.richGridRenderer.contents = tab.tabRenderer.content.richGridRenderer.contents.filter(e => {
+                            // 赞助商广告
                             if (e?.richItemRenderer?.content?.adSlotRenderer) {
-                                console.log(e?.richItemRenderer?.content?.adSlotRenderer?.fulfillmentContent?.fulfilledLayout?.inFeedAdLayoutRenderer?.renderingContent?.videoDisplayButtonGroupRenderer)
+                                return false
                             }
-                            return !e?.richItemRenderer?.content?.adSlotRenderer
+                            // 短视频
+                            if (e?.richSectionRenderer?.content?.richShelfRenderer?.title?.runs[0]?.text === 'Shorts') {
+                                return false
+                            }
+                            return true
                         })
                     }
                 }
