@@ -1,7 +1,7 @@
 name: 可莉油管去广告
 desc: |-
-    https://kelee.one/Tool/Loon/Plugin/YouTube_remove_ads.plugin
-    #!date=2025-03-21 23:17:16
+    - https://kelee.one/Tool/Loon/Lpx/YouTube_remove_ads.lpx
+    - 2025.07.25 21:40
 icon: https://raw.githubusercontent.com/luestr/IconResource/main/App_icon/120px/YouTube.png
 category: ad
 http:
@@ -26,9 +26,9 @@ http:
 
 script-providers:
     "油管去广告":
-        url: https://kelee.one/Resource/Script/YouTube/YouTube_remove_ads/YouTube_remove_ads_response.js
+        url: https://kelee.one/Resource/JavaScript/YouTube/YouTube_remove_ads/YouTube_remove_ads_response.js
         interval: 86400
 
 rules:
-    - AND,((PROTOCOL,QUIC),(DOMAIN,youtubei.googleapis.com)),REJECT
+    - AND,((PROTOCOL,QUIC),(DOMAIN-SUFFIX,youtubei.googleapis.com)),REJECT
     - AND,((PROTOCOL,QUIC),(DOMAIN-SUFFIX,googlevideo.com)),REJECT
