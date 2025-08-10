@@ -504,6 +504,20 @@ function parseDocument(body) {
 }
 
 function inner() {
+    function translateComment() {
+        document.querySelectorAll("ytd-tri-state-button-view-model").forEach(e => {
+            let button = e.querySelector("tp-yt-paper-button")
+            if (button) {
+                console.log(button.textContent)
+                if (button.textContent.includes("查看原文")) {
+                    console.log(button.textContent)
+                } else {
+                    // @ts-ignore
+                    button.click()
+                }
+            }
+        })
+    }
 
     const url = new URL(window.location.href)
     switch (url.pathname) {
@@ -530,10 +544,16 @@ function inner() {
             }
             break
         case "/watch":
+            // 这是啥
             Array.from(document.querySelectorAll('#panels')).forEach(e => {
                 e.remove()
             })
-            document.querySelectorAll("")[0].remove()
+
+            // 自动翻译评论
+            window.addEventListener('scroll', () => {
+                translateComment()
+            });
+
             break
         case "/results":
             // @ts-ignore
