@@ -7,4 +7,4 @@ http:
         - "gspe1-ssl.ls.apple.com"
 
     url-rewrite:
-        - ^https?://gspe1-ssl.ls.apple.com/pep/gcc https://p.19940731.xyz/api/apple/location/GB 307
+        - ^https?://gspe1-ssl.ls.apple.com/pep/gcc https://p.19940731.xyz/api/apple/location/GB transparent
