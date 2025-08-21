@@ -58,6 +58,17 @@ http:
         # - https://x.com/home response-replace "Content-Security-Policy:default-src 'self'; script-src 'self' 'unsafe-inline';"
         - https://x.com/home response-del content-security-policy
 
+    script:
+        - name: x
+          binary-mode: false
+          match: https://x.com/
+          max-size: 2097152
+          require-body: true
+          timeout: 10
+          argument: ""
+          type: response
+          debug: false
+
 script-providers:
     "x":
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/x.js
