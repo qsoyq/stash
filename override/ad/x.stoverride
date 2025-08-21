@@ -12,6 +12,10 @@ desc: |-
     - 删除 CSP 策略，允许在网页上执行
     - 用户| 推文标签页 | Who to follow | suggest_who_to_follow
     - 用户| 回复标签页 | Who to follow | suggest_who_to_follow
+    - 页面元素移除｜移动端网页右下角悬浮发帖按钮
+    - 页面元素移除｜PC端右上角订阅提醒
+    - 页面元素移除｜PC端右侧Grok悬浮按钮
+
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/x.png
 
@@ -53,3 +57,8 @@ http:
     header-rewrite:
         # - https://x.com/home response-replace "Content-Security-Policy:default-src 'self'; script-src 'self' 'unsafe-inline';"
         - https://x.com/home response-del content-security-policy
+
+script-providers:
+    "x":
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/x.js
+        interval: 86400
