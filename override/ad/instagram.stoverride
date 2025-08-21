@@ -1,6 +1,8 @@
 name: instagram
 desc: |-
-    - 网页端首页时间线广告
+    - 首页｜时间线广告
+    - 首页｜使用应用提醒
+    - 首页｜story
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/instagram.png
 http:
@@ -9,6 +11,8 @@ http:
     body-rewrite:
         - https://www.instagram.com/graphql/query response-jq if .data.xdt_api__v1__feed__timeline__connection.edges!=null then .data.xdt_api__v1__feed__timeline__connection.edges|=map(select(.node.ad==null)) end
         - https://www.instagram.com/graphql/query response-jq if .data.xdt_api__v1__feed__timeline__connection.edges!=null then .data.xdt_api__v1__feed__timeline__connection.edges|=map(select(.node?.ad?.label|tostring!="赞助内容")) end
+    header-rewrite:
+        - https://www.instagram.com response-del content-security-policy
 
     script:
         - name: instagram
@@ -18,8 +22,8 @@ http:
           require-body: true
           timeout: 20
           type: response
-          debug: true
           argument: ""
+          debug: false
 
 script-providers:
     instagram:

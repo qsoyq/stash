@@ -515,53 +515,111 @@ function parseDocument(body) {
     return domParser.parseFromString(body, 'text/html');
 }
 
-async function main() {
-    echo("start")
-    if (getScriptType() === "response") {
-        let body = getScriptResponseBody()
-        let document = parseDocument(body)
-        let flag = false
-        Array.from(document.querySelectorAll('script[type="application/json"][data-sjs]')).forEach(e => {
-            let json = parseJsonBody(e.textContent)
-            if (json) {
-                let edges = json?.require?.[0]?.[3]?.[0]?.__bbox?.require?.[0]?.[3]?.[1]?.__bbox?.result?.data?.xdt_api__v1__feed__timeline__connection?.edges
-                if (edges) {
-                    console.log(e)
-                    console.log(e.textContent?.length)
-                    for (const edge of edges) {
-                        if (edge?.node?.media) {
-                            console.log(`${edge?.node?.media?.user?.username}\t${edge?.node?.media?.user?.full_name}`)
-                        }
-                        if (edge?.node?.ad) {
-                            console.log(`ad title: ${edge.node.ad.ad_title}`)
-                        }
-                    }
+function removeAdsCode() {
+    let count = 0
+    // 
 
-                    edges = edges.filter(edge => {
-                        return edge?.node?.ad === null || edge?.node?.ad === undefined
-                    })
-                    json.require[0][3][0].__bbox.require[0][3][1].__bbox.result.data.xdt_api__v1__feed__timeline__connection.edges = edges
-                    e.textContent = JSON.stringify(json)
-                    // @ts-ignore
-                    e.setAttribute("data-content-len", e.textContent.length)
-                }
-                flag = true
-            }
-        })
-        if (flag) {
-            $done({ body: document.documentElement.outerHTML })
-        } else {
-            $done({})
+    function removeElements() {
+        count += 1
+        // 首页应用使用提醒
+        let tag = document.querySelector("div[class='_acc8 _abpk']")
+        if (tag) {
+            tag.remove()
+            console.log("remove div[class='_acc8 _abpk']")
         }
+        // 首页 story
+        tag = document.querySelector("div[data-pagelet='story_tray']")
+        if (tag) {
+            tag.remove()
+            console.log("remove div[data-pagelet='story_tray']")
+        }
+
+    }
+    let timer = setInterval(() => {
+        removeElements()
+        if (count >= 100) {
+            clearInterval(timer)
+        }
+    }, 100)
+
+
+    ///////////////////////////////////////////////////////////
+    document.addEventListener('DOMContentLoaded', (event) => {
+        console.log("removeAdsCode")
+        let url = new URL(window.location.href)
+        console.log(`path: ${url.pathname}`)
+
+    });
+}
+
+
+function removeAds(document) {
+    let code = `
+    ${removeAdsCode.toString()};
+    removeAdsCode();
+    `
+    let script = document.createElement('script');
+    script.textContent = code
+    document['body'].appendChild(script);
+    echo("注入代码以移除广告")
+
+    Array.from(document.querySelectorAll('script[type="application/json"][data-sjs]')).forEach(e => {
+        let json = parseJsonBody(e.textContent)
+        if (json) {
+            let edges = json?.require?.[0]?.[3]?.[0]?.__bbox?.require?.[0]?.[3]?.[1]?.__bbox?.result?.data?.xdt_api__v1__feed__timeline__connection?.edges
+            if (edges) {
+                console.log(e)
+                console.log(e.textContent?.length)
+                for (const edge of edges) {
+                    if (edge?.node?.media) {
+                        console.log(`${edge?.node?.media?.user?.username}\t${edge?.node?.media?.user?.full_name}`)
+                    }
+                    if (edge?.node?.ad) {
+                        console.log(`ad title: ${edge.node.ad.ad_title}`)
+                    }
+                }
+
+                edges = edges.filter(edge => {
+                    return edge?.node?.ad === null || edge?.node?.ad === undefined
+                })
+                json.require[0][3][0].__bbox.require[0][3][1].__bbox.result.data.xdt_api__v1__feed__timeline__connection.edges = edges
+                e.textContent = JSON.stringify(json)
+                // @ts-ignore
+                e.setAttribute("data-content-len", e.textContent.length)
+            }
+        }
+    })
+
+}
+
+
+
+async function main() {
+    switch (getScriptType()) {
+        case "response":
+            let url = (new URL($request.url))
+            let body = getScriptResponseBody()
+            let ct = $response.headers['Content-Type']
+            if (ct && ct.includes("text/html") && body) {
+                echo(`url: ${url}, path: ${url.pathname}`)
+                const document = new DOMParser().parseFromString(body, 'text/html')
+                removeAds(document)
+                $done({ body: document.documentElement.outerHTML })
+                break
+            }
+        default:
+            $done({})
     }
 }
 
 (async () => {
     main().then(_ => {
-        echo("done")
+
     }).catch(error => {
-        console.log(`[Error]: ${error?.message || error}`)
+        if (typeof error === 'object') {
+            error = error.toString()
+        }
+        echo(`[Error]: ${error}`)
         $done({})
     })
-
 })();
