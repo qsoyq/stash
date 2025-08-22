@@ -717,6 +717,24 @@ function inner() {
             window.addEventListener('scroll', () => {
                 translateComment()
             });
+
+            let removedCount = 1
+            let timer = setInterval(() => {
+                // 移除频道订阅水印
+                let tag = document.querySelector(".branding-img.iv-click-target")
+                if (tag) {
+                    tag.remove()
+                    removedCount -= 1
+                    console.log("频道订阅水印已移除")
+                }
+                if (removedCount === 0) {
+                    clearInterval(timer)
+                }
+            }, 100)
+
+
+
+
             break
         case "/results":
             // @ts-ignore
