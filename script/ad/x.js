@@ -504,43 +504,31 @@ function parseDocument(body) {
 }
 
 function removeAdsCode() {
-    let count = 0
-    // 移动端网页右下角悬浮发帖按钮
-    let hasFloatingActionButtonRemoved = false
-
-    // PC 端右上角订阅提醒
-    let hasUpsellCardRenderProperties = false
-
-    // PC 端右侧Grok悬浮按钮
-    let hasGrokDrawer = false
     function removeElements() {
-        count += 1
+        // 移动端网页右下角悬浮发帖按钮
         let tag = document.querySelector("div[data-testid='FloatingActionButtonBase']")
         if (tag) {
             tag.remove()
-            hasFloatingActionButtonRemoved = true
             console.log("remove FloatingActionButtonBase")
         }
 
+        // PC 端右上角订阅提醒
         tag = document.querySelector("div[data-testid='super-upsell-UpsellCardRenderProperties']")
         if (tag) {
             tag.remove()
-            hasUpsellCardRenderProperties = true
             console.log("remove super-upsell-UpsellCardRenderProperties")
         }
+
+        // PC 端右侧Grok悬浮按钮
         tag = document.querySelector("div[data-testid='GrokDrawer']")
         if (tag) {
             tag.remove()
-            hasGrokDrawer = true
             console.log("remove GrokDrawer")
         }
     }
-    let timer = setInterval(() => {
+    setInterval(() => {
         removeElements()
-        if (count >= 100 || (hasFloatingActionButtonRemoved && hasUpsellCardRenderProperties && hasGrokDrawer)) {
-            clearInterval(timer)
-        }
-    }, 100)
+    }, 250)
 
 
     ///////////////////////////////////////////////////////////
