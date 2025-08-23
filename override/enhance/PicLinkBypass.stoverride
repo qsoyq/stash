@@ -1,0 +1,16 @@
+name: 直链访问限制解锁
+desc: |-
+    - 绕过部分图片等资源对直链访问的限制
+category: debug
+http:
+    mitm:
+        - i.111666.best
+        - img4.nga.178.com
+        - www.nodeseek.com
+
+    header-rewrite:
+        - https://i.111666.best/ request-add Referer https://www.nodeseek.com/
+
+        - https://img4.nga.178.com/ request-add Referer https://bbs.nga.cn/
+
+        - https://www.nodeseek.com/avatar/ request-replace User-Agent Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36
