@@ -1,15 +1,28 @@
 name: 高德地图
 desc: |-
-    - 首页下方卡片
-    - 首页顶部提醒
+    - 开屏广告
+    - 首页
+        - 下方卡片
+        - 顶部提醒
+        - AI 探索
     - 查找推荐关键词
+    - 底部导航栏
+        - 红色文字
+    - 搜索
+        - quickLink
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/amap.png
 http:
     mitm:
         - m5.amap.com
-
+        - ai.amap.com
+        - faas-image.amap.com
+        - center.amap.com
+        - info.amap.com
     body-rewrite:
+        # 开屏广告
+        - https://m5.amap.com/ws/valueadded/alimama/splash_screen response-jq .data.ad=[]
+
         # 首页卡片
         - https://m5.amap.com/ws/faas/amap-navigation/main-page response-jq .data.cardList=[]
 
@@ -19,3 +32,22 @@ http:
         # 查找推荐关键词
         - https://m5.amap.com/ws/shield/scene/recommend response-jq .data.wordInbox.words=[]
         - https://m5.amap.com/ws/shield/scene/recommend response-jq .data.wordInbox.discovery_words=[]
+        - https://m5.amap.com/ws/shield/scene/recommend response-jq .data.shadingWords.data.modules.searchFind.data=[]
+        - https://m5.amap.com/ws/shield/scene/recommend response-jq .data.shadingWords.data.modules.wordInBox.data=[]
+
+        # - https://m5.amap.com/ws/faas/amap-navigation/main-page-aiqs response-jq .data.mapBizList|=map(select(.cardName!="UserAssetsVirtualCard"))
+        # - https://m5.amap.com/ws/faas/amap-navigation/main-page-aiqs response-jq .data.mapBizList|=map(select(.cardName!="SmartMapBubbleVirtualCard"))
+
+        # 底部导航栏红字
+        - https://center.amap.com/ws/message/notice/list response-jq .data.noticeList=[]
+        - https://m5.amap.com/ws/message/notice/list response-jq .data.noticeList=[]
+
+        # 搜索
+        - https://info.amap.com/ws/c3frontend/af-search/search response-jq .data.modules.quickLink.data.list=[]
+
+    mock:
+        - match: https://ai.amap.com/v1/ai_rec/home_qs
+          text: "event: COMPLETE\ndata: {}\n\n\n"
+          status-code: 200
+          headers:
+              Content-Type: text/event-stream;charset=UTF-8
