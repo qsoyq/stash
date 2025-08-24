@@ -1,20 +1,35 @@
 name: x
 desc: |-
-    移动端不兼容
-    - 首页时间线广告
-    - 首页时间线新推文通知浮动窗口 | NewTweets | TimelineShowAlert
-    - 首页时间线 | Pinned by people you follow
-    - 首页时间线 | Discover new Communities    
-    - 首页时间线 | Creators for you | suggest_who_to_subscribe
-    - 首页时间线 | Who to follow | suggest_who_to_follow
-    - 首页时间线 | Go ad-free with Premium+ | premium-plus-upsell-prompt
-    - 详情页评论广告
-    - 删除 CSP 策略，允许在网页上执行
-    - 用户| 推文标签页 | Who to follow | suggest_who_to_follow
-    - 用户| 回复标签页 | Who to follow | suggest_who_to_follow
-    - 页面元素移除｜移动端网页右下角悬浮发帖按钮
-    - 页面元素移除｜PC端右上角订阅提醒
-    - 页面元素移除｜PC端右侧Grok悬浮按钮
+    - 删除 CSP 策略，允许在网页上执行内联代码
+    - 首页时间线
+        - 广告
+        - NewTweets | TimelineShowAlert
+        - Pinned by people you follow
+        - Discover new Communities    
+        - Creators for you | suggest_who_to_subscribe
+        - Who to follow | suggest_who_to_follow
+        - Go ad-free with Premium+ | premium-plus-upsell-prompt
+    - 详情页
+        - 评论广告
+    - 用户页面 
+        - 推文标签页 | Who to follow | suggest_who_to_follow
+    - 用户页面
+        - 回复标签页 | Who to follow | suggest_who_to_follow
+    - 页面元素移除
+        - 时间线
+            - 快捷发帖组件
+        - 页面浮标
+            - PC端右侧Grok悬浮按钮
+            - 移动端网页右下角悬浮发帖按钮
+        - 右侧导航栏
+            - PC端右上角订阅提醒
+            - 趋势
+        - 左侧导航栏
+            - Grok
+            - Premium
+            - Verified Orgs
+            - Jobs
+            - Account menu
 
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/x.png
@@ -55,8 +70,7 @@ http:
         # 用户| 回复标签页 | Who to follow | suggest_who_to_follow
         - https://x.com/i/api/graphql/.+/UserTweetsAndReplies response-jq walk(if type == "object" and has("entries") then .entries |=map(select(.content?.clientEventInfo?.component!="suggest_who_to_follow")) else . end)
     header-rewrite:
-        # - https://x.com/home response-replace "Content-Security-Policy:default-src 'self'; script-src 'self' 'unsafe-inline';"
-        - https://x.com/home response-del content-security-policy
+        - https://x.com/ response-del content-security-policy
 
     script:
         - name: x

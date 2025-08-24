@@ -505,30 +505,58 @@ function parseDocument(body) {
 
 function removeAdsCode() {
     function removeElements() {
-        // 移动端网页右下角悬浮发帖按钮
-        let tag = document.querySelector("div[data-testid='FloatingActionButtonBase']")
-        if (tag) {
-            tag.remove()
-            console.log("remove FloatingActionButtonBase")
-        }
+        const queryList = [
+            // 时间线
+            "div[role='progressbar'] + div", // 时间线快捷发帖组件
 
-        // PC 端右上角订阅提醒
-        tag = document.querySelector("div[data-testid='super-upsell-UpsellCardRenderProperties']")
-        if (tag) {
-            tag.remove()
-            console.log("remove super-upsell-UpsellCardRenderProperties")
-        }
+            // 右侧导航栏
+            "div[data-testid='super-upsell-UpsellCardRenderProperties']",   // 订阅提醒
+            "div[aria-label='Trending']", // 右侧 Trending
 
-        // PC 端右侧Grok悬浮按钮
-        tag = document.querySelector("div[data-testid='GrokDrawer']")
-        if (tag) {
-            tag.remove()
-            console.log("remove GrokDrawer")
-        }
+            // 左侧导航栏
+            "a[aria-label='Grok']",
+            "a[aria-label='Premium']",
+            "a[aria-label='Verified Orgs']",
+            "a[aria-label='Jobs']",
+            "button[aria-label='Account menu']",
+
+            // 页面浮标
+            "div[data-testid='FloatingActionButtonBase']",  // mobile 发帖悬浮按钮
+            "div[data-testid='GrokDrawer']", // Grok悬浮按钮
+        ]
+        queryList.forEach(query => {
+            let tag = document.querySelector(query)
+            if (tag) {
+                tag.remove()
+                console.log(`remove ${query}`)
+            }
+        })
+
+        // "Automated"
+        document.querySelectorAll('span').forEach(span => {
+            if (span.textContent === "Automated") {
+                // @ts-ignore
+                span.parentNode.parentNode.parentNode.parentNode.remove()
+                console.log(span);
+            }
+        });
+
+        // 文本内容匹配移除
+        document.querySelectorAll('span').forEach(span => {
+            let blockedWords = ["Show probable spam"]
+            for (const words of blockedWords) {
+                if (span.textContent === words) {
+                    span.remove()
+                    console.log(span);
+                    break
+                }
+            }
+        });
+
     }
     setInterval(() => {
         removeElements()
-    }, 250)
+    }, 150)
 
 
     ///////////////////////////////////////////////////////////
