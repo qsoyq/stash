@@ -516,30 +516,21 @@ function parseDocument(body) {
 }
 
 function removeAdsCode() {
-    let count = 0
-    // 
-
     function removeElements() {
-        count += 1
-        // 首页应用使用提醒
-        let tag = document.querySelector("div[class='_acc8 _abpk']")
-        if (tag) {
-            tag.remove()
-            console.log("remove div[class='_acc8 _abpk']")
-        }
-        // 首页 story
-        tag = document.querySelector("div[data-pagelet='story_tray']")
-        if (tag) {
-            tag.remove()
-            console.log("remove div[data-pagelet='story_tray']")
-        }
-
+        const queryList = [
+            "div[class='_acc8 _abpk']", // 首页 `使用这款应用`
+            "div[data-pagelet='story_tray']", // 首页 Story
+        ]
+        queryList.forEach(query => {
+            let tag = document.querySelector(query)
+            if (tag) {
+                tag.remove()
+                console.log(`remove ${query}`)
+            }
+        })
     }
-    let timer = setInterval(() => {
+    setInterval(() => {
         removeElements()
-        if (count >= 100) {
-            clearInterval(timer)
-        }
     }, 100)
 
 

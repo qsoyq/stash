@@ -1,8 +1,9 @@
 name: instagram
 desc: |-
-    - 首页｜时间线广告
-    - 首页｜使用应用提醒
-    - 首页｜story
+    - 首页｜
+        - 时间线广告
+        - 使用应用提醒
+        - Story
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/instagram.png
 http:
