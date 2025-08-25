@@ -19,6 +19,10 @@ http:
         - faas-image.amap.com
         - center.amap.com
         - info.amap.com
+
+    url-rewrite:
+        - https://ai.amap.com/v1/ai_rec/home_qs - reject
+
     body-rewrite:
         # 开屏广告
         - https://m5.amap.com/ws/valueadded/alimama/splash_screen response-jq .data.ad=[]
@@ -44,10 +48,3 @@ http:
 
         # 搜索
         - https://info.amap.com/ws/c3frontend/af-search/search response-jq .data.modules.quickLink.data.list=[]
-
-    mock:
-        - match: https://ai.amap.com/v1/ai_rec/home_qs
-          text: "event: COMPLETE\ndata: {}\n\n\n"
-          status-code: 200
-          headers:
-              Content-Type: text/event-stream;charset=UTF-8
