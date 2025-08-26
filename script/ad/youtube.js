@@ -541,6 +541,19 @@ function inner() {
                     }
                 }
             }
+            setInterval(() => {
+                let queryList = [
+                    "#dismissible.style-scope.ytd-statement-banner-renderer", //会员订阅介绍: 6 位家庭成员，1 笔费用，超实惠
+                    "#dismissible.style-scope.ytd-rich-shelf-renderer", // Shorts
+                ]
+                queryList.forEach(query => {
+                    let tag = document.querySelector(query)
+                    if (tag) {
+                        tag.remove()
+                        console.log(`remove ${query}`)
+                    }
+                })
+            }, 100)
             break
         case "/watch":
 
