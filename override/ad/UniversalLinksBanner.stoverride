@@ -1,0 +1,8 @@
+name: Universal Links Banner
+desc: |-
+    - 阻止 iOS/iPadOS 在安装应用时访问 AASA
+category: ad
+icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Apple.png
+http:
+    mitm:
+        - app-site-association.cdn-apple.com
