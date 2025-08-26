@@ -1,10 +1,28 @@
 name: 少数派
 desc: |-
     - 开屏广告
+    - apple-itunes-app
 category: ad
 icon: https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/b2/c5/53/b2c553dd-2a46-8d09-962d-f3d8281ad308/AppIcon-0-0-1x_U007epad-0-1-0-85-220.png/512x512bb.jpg
 http:
     mitm:
         - ios.sspai.com
+        - sspai.com
     url-rewrite:
         - https://ios.sspai.com/api/v3/recommend/page/get\?ad_morning_paper_show=0&page=1&page_size=20&type=ios_home_modal - reject
+
+    script:
+        - name: sspai
+          binary-mode: false
+          match: https://sspai.com/
+          max-size: 2097152
+          require-body: true
+          timeout: 10
+          argument: ""
+          type: response
+          debug: false
+
+script-providers:
+    "sspai":
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/sspai.js
+        interval: 86400
