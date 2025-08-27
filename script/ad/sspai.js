@@ -503,15 +503,30 @@ function parseDocument(body) {
     return domParser.parseFromString(body, 'text/html');
 }
 
-function removeAdsCode() {
-
+function runtimeCode() {
+    function openApp() {
+        const url = new URL(window.location.href)
+        if (/^\/post\/\d+/.test(url.pathname)) {
+            let pid = url.pathname.split('/')[2]
+            if (pid) {
+                let button = document.querySelector('#btn-call-app')
+                if (button) {
+                    addEventListener('click', function () {
+                        window.location.href = `sspai://sspai.com/post/${pid}`;
+                        console.log(`click btn-call-app`)
+                    });
+                }
+            }
+        }
+    }
+    openApp()
 }
 
 
-function removeAds(document) {
+function runtime(document) {
     let code = `
-    ${removeAdsCode.toString()};
-    removeAdsCode();
+    ${runtimeCode.toString()};
+    runtimeCode();
     `
     let script = document.createElement('script');
     script.textContent = code
@@ -527,7 +542,6 @@ function removeAds(document) {
             console.log(`remove ${query}`)
         }
     })
-
 }
 
 
@@ -541,7 +555,7 @@ async function main() {
             if (ct && ct.includes("text/html") && body) {
                 echo(`url: ${url}, path: ${url.pathname}`)
                 const document = new DOMParser().parseFromString(body, 'text/html')
-                removeAds(document)
+                runtime(document)
                 $done({ body: document.documentElement.outerHTML })
                 break
             }
