@@ -1,4 +1,4 @@
-/** @namespace x */
+/** @namespace sspai */
 
 /**
  * @typedef {Object} sspai.HTTPResponse
