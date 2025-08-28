@@ -504,6 +504,95 @@ function parseDocument(body) {
 }
 
 function runtimeCode() {
+    function addFloatBtn() {
+        let href = ''
+        const logoHref = 'https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Telegram.png'
+        let tag = document.querySelector("meta[property='al:android:url']")
+        if (tag) {
+            href = tag.attributes["content"].textContent
+        }
+        const floatBtn = document.createElement('a');
+        floatBtn.href = href;
+        Object.assign(floatBtn.style, {
+            position: 'fixed',
+            left: '50%',
+            bottom: '40px',
+            transform: 'translateX(-50%)',
+            background: '#fff',
+            color: '#333',
+            padding: '8px 20px 8px 12px',
+            borderRadius: '24px',
+            textDecoration: 'none',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            zIndex: '9999',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            minWidth: '180px',
+            maxWidth: '320px',
+            fontSize: '16px',
+            fontWeight: '500',
+            boxSizing: 'border-box',
+            gap: '4px',
+        });
+
+        // logo
+        const logo = document.createElement('img');
+        logo.src = logoHref; // 替换为你的logo路径
+        logo.alt = 'Logo';
+        Object.assign(logo.style, {
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            display: 'block',
+            flexShrink: '0',
+        });
+
+        // 文字
+        const text = document.createElement('span');
+        text.textContent = '在 App 内打开';
+        Object.assign(text.style, {
+            flex: '1',
+            textAlign: 'center',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+        });
+
+        // 删除按钮
+        const closeBtn = document.createElement('span');
+        closeBtn.title = '关闭';
+        Object.assign(closeBtn.style, {
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginLeft: '0px',
+            flexShrink: '0',
+        });
+        closeBtn.innerHTML = `
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
+        xmlns="http://www.w3.org/2000/svg" style="display:block;">
+        <circle cx="10" cy="10" r="9" fill="#f5f5f5" stroke="#ccc"/>
+        <path d="M7 7L13 13M13 7L7 13" stroke="#999" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    `;
+        closeBtn.onclick = function (e) {
+            e.stopPropagation();
+            floatBtn.remove();
+        };
+
+        // 组装
+        floatBtn.appendChild(logo);
+        floatBtn.appendChild(text);
+        floatBtn.appendChild(closeBtn);
+
+        document.body.appendChild(floatBtn);
+    }
+
+    if (window.self === window.top) {
+        addFloatBtn()
+    }
 
 }
 
@@ -570,16 +659,17 @@ function runtime(document) {
         }
     })
 
-    // let code = `
-    // ${runtimeCode.toString()};
-    // runtimeCode();
-    // `
-    // let script = document.createElement('script');
-    // script.textContent = code
-    // document['body'].appendChild(script);
-    // echo("注入代码以移除广告")
+    let code = `
+    ${runtimeCode.toString()};
+    runtimeCode();
+    `
+    let script = document.createElement('script');
+    script.textContent = code
+    document['body'].appendChild(script);
+    echo("注入代码以移除广告")
     const queryList = [
         "div.tgme_head > a.tgme_head_right_btn", // 顶部下载客户端横幅
+        "#widget_actions_wrap", // 底部居中 - View in Channel
     ]
     queryList.forEach(query => {
         let tag = document.querySelector(query)
