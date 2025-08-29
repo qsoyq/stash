@@ -9,12 +9,17 @@ desc: |-
     - 阅读页｜新闻 | 书友xxxx成为了本作品长老
     - 阅读页｜上方工具栏通知弹窗｜上月订阅满1000点，获得3张月票
     - 阅读页｜追更排名前 100 提示
+    - 移动端
+        - 打开起点读书 App/继续浏览 弹窗
+        - 底部下载 App 按钮
+        - 页脚
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/qidian.png
 
 http:
     mitm:
         - magev6.if.qidian.com
+        - m.qidian.com
     body-rewrite:
         - https://magev6.if.qidian.com/argus/api/v4/client/getsplashscreen response-jq .Data.List=[] # 开屏
         - https://magev6.if.qidian.com/argus/api/v1/message/getPopup response-jq .Data={} # 首页上方弹窗，好评
@@ -31,3 +36,19 @@ http:
         - https://magev6.if.qidian.com/argus/api/v1/assembly/toolbar response-jq .Data.Getfrontactivity={} # 阅读页上方工具栏通知弹窗｜上月订阅满1000点，获得3张月票
 
         - https://magev6.if.qidian.com/argus/api/v1/bookLastPage/chaseChapterUpdate response-jq .Data.ChaseChapterUpdateRank=-1 # 阅读页｜追更排名前 100 提示
+
+    script:
+        - name: qidian
+          binary-mode: false
+          match: https://m.qidian.com
+          max-size: 2097152
+          require-body: true
+          timeout: 10
+          argument: ""
+          type: response
+          debug: false
+
+script-providers:
+    "qidian":
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/qidian.js
+        interval: 86400
