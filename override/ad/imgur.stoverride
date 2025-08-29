@@ -1,0 +1,23 @@
+name: imgur
+desc: |-
+    - 图片预览页广告
+category: ad
+icon: https://imgur.com/favicon.ico
+http:
+    mitm:
+        - imgur.com
+
+    script:
+        - name: imgur
+          binary-mode: false
+          match: https://imgur.com/
+          max-size: 1048576
+          require-body: true
+          timeout: 20
+          type: response
+          debug: false
+
+script-providers:
+    imgur:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/imgur.js
+        interval: 86400
