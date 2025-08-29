@@ -1,12 +1,21 @@
 name: 谷歌搜索
 desc: |-
-    - 移除搜索结果赞助商广告
-    - 手机浏览器里访问会导致地点相关结果样式布局异常
+    - 搜索结果页
+        - 赞助商广告
+        - 图片
+        - 相关问题
+        - 视频
+        - 短视频
+        - 用户还搜索了
+        - 图书
+        - 参演电视剧
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/google.png
 http:
     mitm:
         - www.google.com
+    header-rewrite:
+        - https://www.google.com/ response-del content-security-policy
     script:
         - match: ^https?://www.google.com/search\?q=.*$
           name: google-search-rewrite
@@ -14,7 +23,7 @@ http:
           require-body: true
           max-size: -1
           timeout: 5
-          debug: false
+          debug: true
 
 script-providers:
     google-search-rewrite:

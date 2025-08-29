@@ -503,11 +503,63 @@ function parseDocument(body) {
     return domParser.parseFromString(body, 'text/html');
 }
 
-function removeAds(document) {
-    document.getElementById("taw").remove()
-    document.getElementById("bottomads").remove()
-    echo("移除广告成功")
 
+function runtimeCode() {
+    console.log("runtimeCode")
+    setInterval(() => {
+        const queryList = [
+            "#bottomads", // 赞助商广告
+        ]
+        queryList.forEach(query => {
+            let tag = document.querySelector(query)
+            if (tag) {
+                tag.remove()
+                console.log(`remove ${query}`)
+            }
+        })
+
+        // 图片块
+        Array.from(document.querySelectorAll("span")).forEach(e => {
+            if (e.textContent === '图片') {
+                e.parentElement?.parentElement?.parentElement?.parentElement?.parentElement?.parentElement?.parentElement?.remove()
+            }
+        })
+
+        Array.from(document.querySelectorAll("span[role='heading']")).forEach(e => {
+
+            if (e.textContent === '相关问题') {
+                e.parentElement?.parentElement?.parentElement?.remove()
+            }
+            if (e.textContent === '视频') {
+                e.parentElement?.parentElement?.parentElement?.remove()
+            }
+            if (e.textContent === '短视频') {
+                e.parentElement?.parentElement?.parentElement?.remove()
+            }
+            if (e.textContent === '用户还搜索了') {
+                e.parentElement?.parentElement?.parentElement?.remove()
+            }
+            if (e.textContent === '图书') {
+                e.parentElement?.parentElement?.parentElement?.parentElement?.parentElement?.remove()
+            }
+            if (e.textContent === '参演电视剧') {
+                e.parentElement?.parentElement?.parentElement?.parentElement?.parentElement?.remove()
+            }
+        })
+    }, 100)
+
+
+}
+
+function runtime(document) {
+    let code = `
+    ${runtimeCode.toString()};
+    runtimeCode();
+    `
+    let script = document.createElement('script');
+    script.textContent = code
+    document['body'].appendChild(script);
+    echo("注入代码以移除广告")
 }
 
 
@@ -515,10 +567,13 @@ function removeAds(document) {
 async function main() {
     switch (getScriptType()) {
         case "response":
+            let url = (new URL($request.url))
             let body = getScriptResponseBody()
-            if (body) {
+            let ct = $response.headers['Content-Type']
+            if (ct && ct.includes("text/html") && body) {
+                echo(`url: ${url}, path: ${url.pathname}`)
                 const document = new DOMParser().parseFromString(body, 'text/html')
-                removeAds(document)
+                runtime(document)
                 $done({ body: document.documentElement.outerHTML })
                 break
             }
@@ -532,9 +587,9 @@ async function main() {
 
     }).catch(error => {
         if (typeof error === 'object') {
-            error = JSON.stringify(error)
+            error = error.toString()
         }
-        echo(`[Error]: ${error?.message || error}`)
+        echo(`[Error]: ${error}`)
         $done({})
     })
 })();
