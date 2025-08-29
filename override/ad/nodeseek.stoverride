@@ -9,6 +9,7 @@ desc: |-
     - 页脚
     - 外链自动重定向
     - 导航｜增加内版模块
+    - 支持 NetNewsWire 访问头像
 category: ad
 icon: https://www.nodeseek.com/static/image/favicon/favicon-32x32.png
 http:
@@ -18,6 +19,15 @@ http:
         - https://www.nodeseek.com/api/promotion/list response-jq .data=[]
 
     script:
+        - name: nodeseek
+          binary-mode: false
+          match: https://www.nodeseek.com/avatar/
+          max-size: 1048576
+          require-body: true
+          timeout: 20
+          type: request
+          debug: false
+
         - name: nodeseek
           binary-mode: false
           match: https://www.nodeseek.com/

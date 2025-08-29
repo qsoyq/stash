@@ -583,9 +583,21 @@ function removeAds(document) {
 
 
 async function main() {
+    let url = (new URL($request.url))
     switch (getScriptType()) {
+        case "request":
+            if (/\/avatar\/.*/g.test(url.pathname)) {
+                let headers = $request.headers
+                echo(`request avatar ${url.pathname} ${headers["User-Agent"]}`)
+                if (/NetNewsWire/g.test(headers["User-Agent"])) {
+                    headers['User-Agent'] = "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/605.1.15"
+                    $done({ headers: headers })
+                    break
+                }
+            }
+            $done({})
+            break
         case "response":
-            let url = (new URL($request.url))
             let body = getScriptResponseBody()
             let ct = $response.headers['Content-Type']
             if (ct && ct.includes("text/html") && body) {
