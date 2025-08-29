@@ -1,19 +1,23 @@
 name: 哔哩哔哩
 desc: |-
     - 美区 Bilibili|Bilibili HD 开屏广告
-    - Bilibili HD｜首页 banner 轮播
-    - Bilibili HD｜首页推荐广告
-    - Bilibili HD｜后台切前台闪屏广告
-    - 直播间｜右下角横幅小组件 | 航海粉丝日 | 团战燃魂赛
-    - 直播间｜推荐购买商品悬浮窗 | 大家都在买
-    - 直播间｜一对一教学推荐
-    - 直播间｜购物车
-    - 直播间｜banner
-    - 直播间｜match_card｜follow_card｜forecast_card｜wish_list_card
-    - 直播间｜更多解说
-    - 直播间｜人气榜打榜提醒弹窗
-    - 视频｜云视听小电视
-    - 首页｜发现 N 条新内容提示
+    - 直播间｜
+        - 右下角横幅小组件 | 航海粉丝日 | 团战燃魂赛
+        - 推荐购买商品悬浮窗 | 大家都在买
+        - 一对一教学推荐
+        - 购物车
+        - banner
+        - match_card｜follow_card｜forecast_card｜wish_list_card
+        - 更多解说
+        - 人气榜打榜提醒弹窗
+        - 自动切换最高画质
+    - 视频
+        云视听小电视
+    - 首页
+        - 发现 N 条新内容提示
+        - banner 轮播
+        - 推荐广告
+        - 后台切前台闪屏广告
 
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/bilibili-intl.png
@@ -23,6 +27,10 @@ http:
         - api.live.bilibili.com
         - i1.hdslb.com
         - i2.hdslb.com
+        - www.bilibili.com
+        - m.bilibili.com
+        - bilibili.com
+        - live.bilibili.com
     url-rewrite:
         # 哔哩哔哩开屏广告
         - https?://app.bilibili.com/x/v2/splash/show - reject
@@ -74,3 +82,19 @@ http:
 
         # 首页｜发现 N 条新内容提示
         - https://app.bilibili.com/x/v2/feed/index response-jq .data.config.toast=null
+
+    script:
+        - name: bilibili
+          binary-mode: false
+          match: https://live.bilibili.com/\d+
+          max-size: 2097152
+          require-body: true
+          timeout: 10
+          argument: ""
+          type: response
+          debug: false
+
+script-providers:
+    "bilibili":
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/bilibili.js
+        interval: 86400
