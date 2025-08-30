@@ -25,7 +25,6 @@ http:
           name: YouTube去广告
           type: response
           require-body: true
-          argument: "[{blockUpload},{blockShorts},{blockImmersive},{captionLang},{lyricLang},{debug}]"
           binary-mode: true
           timeout: 20
 rules:
