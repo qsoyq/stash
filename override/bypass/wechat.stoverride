@@ -19,5 +19,6 @@ rule-providers:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/ruleset/ip.wechat.yaml
 
 rules:
+    - DOMAIN,dns.weixin.qq.com.cn,DIRECT # 部分去广告规则屏蔽微信DNS导致启动加载慢
     - RULE-SET,ip.wechat,DIRECT,no-resolve,no-track
     - RULE-SET,domain.wechat,DIRECT,no-resolve,no-track
