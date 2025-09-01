@@ -547,8 +547,7 @@ function runtimeCode() {
     setInterval(() => {
         const queryList = [
             ".OpenInAppButton", //在 App 内打开
-            ".css-wfkf2m", //顶部菜单栏
-            "Button.css-183aq3r.Button--blue", //顶部打开 App
+            "div.css-wfkf2m>button", //顶部菜单栏 -> 打开 App
         ]
         queryList.forEach(query => {
             let tag = document.querySelector(query)
@@ -557,12 +556,6 @@ function runtimeCode() {
                 console.log(`remove ${query}`)
             }
         })
-
-        // let tag = document.querySelector("html")
-        // if (tag && tag.getAttribute("data-ios")) {
-        //     tag.removeAttribute("data-ios")
-        //     console.log('remove data-ios')
-        // }
     }, 100);
 }
 
@@ -608,17 +601,10 @@ async function main() {
                 const document = new DOMParser().parseFromString(body, 'text/html')
                 runtime(document)
                 body = document.documentElement.outerHTML
-                body = body?.replace("zhihu://articles", "")
                 $done({ body: body })
                 break
             }
 
-            if (ct && ct.includes("application/javascript")) {
-
-                body = body?.replace("zhihu://articles", "")
-                $done({ body: body })
-                break
-            }
         default:
             $done({})
     }

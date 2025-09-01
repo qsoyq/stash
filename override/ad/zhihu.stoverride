@@ -1,0 +1,32 @@
+name: 知乎
+desc: |-
+    - 移动端 h5
+        - 浮标 -> App 内打开
+        - 顶部菜单栏 -> 打开 App
+        - 是否在知乎 App 内阅读全文
+category: ad
+icon: https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/01/16/f1/0116f15d-7fcb-e88d-78dc-ece632f3a4bc/AppIcon-0-0-1x_U007emarketing-0-7-0-0-sRGB-85-220.png/512x512bb.jpg
+
+http:
+    mitm:
+        - zhuanlan.zhihu.com
+        - www.zhihu.com
+
+    header-rewrite:
+        - https://zhuanlan.zhihu.com/ response-del content-security-policy
+        - https://www.zhihu.com/ response-del content-security-policy
+    script:
+        - name: zhihu
+          binary-mode: false
+          match: https://.*\.zhihu.com/
+          max-size: -1
+          require-body: true
+          timeout: 10
+          argument: ""
+          type: response
+          debug: false
+
+script-providers:
+    "zhihu":
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/zhihu.js
+        interval: 86400
