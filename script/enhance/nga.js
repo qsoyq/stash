@@ -635,6 +635,13 @@ function runtimeCode() {
     setInterval(() => {
         // App 阅读
         Array.from(document.querySelectorAll("a.cell.rep.txtbtnx.nobr.disable_tap_menu.teal")).forEach(e => { e.parentElement?.remove() })
+
+        // Array.from(document.querySelectorAll("div.posterInfoLine.posterInfoLineB > span")).forEach(e => {
+        //     if (e) {
+        //         // @ts-ignore
+        //         e.style.display = "flex;"
+        //     }
+        // })
     }, 150)
 }
 
@@ -653,7 +660,7 @@ function runtime(document) {
     // 移除页面元素
     const queryList = [
         "meta[name='apple-itunes-app']",
-        "meta[name='viewport']",
+        // "meta[name='viewport']",
         "div.xtxt.silver",// 页脚备案信息
 
     ]
@@ -665,17 +672,25 @@ function runtime(document) {
             console.log(`remove ${query}`)
         }
     })
-
     // 修复排版问题
     let meta = document.createElement('meta');
     meta.name = "viewport";
     meta.content = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no";
-    document.head.appendChild(meta);
+    // document.head.appendChild(meta);
 
     // 禁止横向滚动
     document.body.style.overflowX = 'hidden';
-    document.body.style.maxWidth = '100%';
-    document.body.style.boxSizing = 'border-box';
+    // document.body.style.maxWidth = '100%';
+    // document.body.style.boxSizing = 'border-box';
+
+    const style = document.createElement('style');
+    // 设置样式内容
+    style.innerHTML = `
+        div.posterInfoLine.posterInfoLineB {
+            display: flex;
+        }
+    `;
+    document.head.appendChild(style);
 }
 
 
@@ -693,9 +708,9 @@ async function main() {
                 echo(`url: ${url}, path: ${url.pathname}`)
                 const document = new DOMParser().parseFromString(body, 'text/html')
                 runtime(document)
-
                 let encoded = str2gbk(document.documentElement.outerHTML)
-                $done({ body: encoded })
+                body = encoded
+                $done({ body: body })
                 break
             }
         default:
