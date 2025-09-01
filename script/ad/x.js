@@ -523,6 +523,11 @@ function removeAdsCode() {
             // 页面浮标
             "div[data-testid='FloatingActionButtonBase']",  // mobile 发帖悬浮按钮
             "div[data-testid='GrokDrawer']", // Grok悬浮按钮
+
+            // 详情
+            "div[aria-live='polite']", // Who can reply
+            "button[aria-label='Grok actions']", // Grok actions
+
         ]
         queryList.forEach(query => {
             let tag = document.querySelector(query)
@@ -552,6 +557,12 @@ function removeAdsCode() {
                 }
             }
         });
+
+        // Translate post
+        let btn = document.querySelector('button[aria-label="Translate post"]')
+        if (btn) {
+            btn.parentElement?.remove()
+        }
 
     }
     setInterval(() => {

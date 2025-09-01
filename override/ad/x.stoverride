@@ -11,6 +11,9 @@ desc: |-
         - Go ad-free with Premium+ | premium-plus-upsell-prompt
     - 详情页
         - 评论广告
+        - Who can reply
+        - Grok actions
+        - Translate post button
     - 用户页面 
         - 推文标签页 | Who to follow | suggest_who_to_follow
     - 用户页面
