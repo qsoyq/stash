@@ -578,6 +578,16 @@ function removeAds(document) {
     script.textContent = code
     document['body'].appendChild(script);
     echo("注入代码以移除广告")
+
+    Array.from(document.querySelectorAll("a")).forEach(e => {
+        let href = e.attributes["href"]?.textContent
+        if (href.indexOf("/jump?to=") === 0) {
+            let target = href.substring(9)
+            let url = decodeURIComponent(target)
+            e.href = url
+            console.log(`replace ${href} to ${url}`)
+        }
+    })
 }
 
 
@@ -608,6 +618,8 @@ async function main() {
             if (ct && ct.includes("text/html") && body) {
                 echo(`url: ${url}, path: ${url.pathname}`)
                 if (url.pathname === '/jump') {
+                    // 已经在页面中替换 href
+                    // 此部分代码实际已不会生效
                     let to = url.searchParams.get("to")
                     if (to) {
                         echo(`跳转url: ${to}`)
