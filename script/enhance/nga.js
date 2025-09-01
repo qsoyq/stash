@@ -503,6 +503,23 @@ function parseDocument(body) {
     return domParser.parseFromString(body, 'text/html');
 }
 
+function isMobile(userAgent) {
+    if (!userAgent) {
+        if (typeof navigator !== 'undefined') {
+            userAgent = navigator.userAgent
+        }
+
+    }
+    // 常见移动端关键词
+    const mobileKeywords = [
+        'Android', 'webOS', 'iPhone', 'iPad', 'iPod', 'BlackBerry', 'Windows Phone', 'Opera Mini', 'IEMobile'
+    ];
+
+    return mobileKeywords.some(keyword => userAgent.includes(keyword));
+}
+
+
+
 // https://github.com/EtherDream/str2gbk
 let table
 
@@ -635,13 +652,6 @@ function runtimeCode() {
     setInterval(() => {
         // App 阅读
         Array.from(document.querySelectorAll("a.cell.rep.txtbtnx.nobr.disable_tap_menu.teal")).forEach(e => { e.parentElement?.remove() })
-
-        // Array.from(document.querySelectorAll("div.posterInfoLine.posterInfoLineB > span")).forEach(e => {
-        //     if (e) {
-        //         // @ts-ignore
-        //         e.style.display = "flex;"
-        //     }
-        // })
     }, 150)
 }
 
@@ -655,14 +665,10 @@ function runtime(document) {
     document['body'].appendChild(script);
     echo("注入代码以移除广告")
 
-
-
     // 移除页面元素
     const queryList = [
         "meta[name='apple-itunes-app']",
-        // "meta[name='viewport']",
         "div.xtxt.silver",// 页脚备案信息
-
     ]
 
     queryList.forEach(query => {
@@ -672,28 +678,14 @@ function runtime(document) {
             console.log(`remove ${query}`)
         }
     })
-    // 修复排版问题
-    let meta = document.createElement('meta');
-    meta.name = "viewport";
-    meta.content = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no";
-    // document.head.appendChild(meta);
 
-    // 禁止横向滚动
-    document.body.style.overflowX = 'hidden';
-    // document.body.style.maxWidth = '100%';
-    // document.body.style.boxSizing = 'border-box';
+    if (isMobile($request.headers["User-Agent"])) {
+        // 禁止横向滚动
+        document.body.style.overflowX = 'hidden';
+    }
+    console.log(`isMobile: ${isMobile($request.headers["User-Agent"])}`)
 
-    const style = document.createElement('style');
-    // 设置样式内容
-    style.innerHTML = `
-        div.posterInfoLine.posterInfoLineB {
-            display: flex;
-        }
-    `;
-    document.head.appendChild(style);
 }
-
-
 
 
 async function main() {
