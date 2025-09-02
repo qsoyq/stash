@@ -581,7 +581,7 @@ function removeAds(document) {
 
     Array.from(document.querySelectorAll("a")).forEach(e => {
         let href = e.attributes["href"]?.textContent
-        if (href.indexOf("/jump?to=") === 0) {
+        if (href && href.indexOf("/jump?to=") === 0) {
             let target = href.substring(9)
             let url = decodeURIComponent(target)
             e.href = url
