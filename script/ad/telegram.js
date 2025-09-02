@@ -688,8 +688,16 @@ async function main() {
             let url = (new URL($request.url))
             let body = getScriptResponseBody()
             let ct = $response.headers['Content-Type']
+
+            echo(`url: ${url}, path: ${url.pathname}, content-type: ${ct}`)
+
+            if (url.searchParams.get("embed") === "1") {
+                echo("skip because of embed")
+                $done({})
+                break
+            }
+
             if (ct && ct.includes("text/html") && body) {
-                echo(`url: ${url}, path: ${url.pathname}`)
                 const document = new DOMParser().parseFromString(body, 'text/html')
                 runtime(document)
                 $done({ body: document.documentElement.outerHTML })

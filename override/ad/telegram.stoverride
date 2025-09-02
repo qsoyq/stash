@@ -11,7 +11,7 @@ http:
         - t.me
     script:
         - name: telegram
-          binary-mode: false
+          binary-mode: true
           match: https://t.me/
           max-size: 2097152
           require-body: true
