@@ -7,6 +7,8 @@ icon: https://raw.githubusercontent.com/qsoyq/shell/main/assets/icon/debug.png
 
 http:
     mitm:
+        # 米家 App
+        - "-*api.mijia.tech"
         # include before exclude
         - "gspe1-ssl.ls.apple.com"
 
@@ -35,8 +37,13 @@ http:
 
         # include
         - "*.com"
+        - "*.by"
+        - "*.app"
+        - "*.xyz"
         - "*.net"
         - "*.org"
+        - "*.ai"
+        - "*.ua"
         - "*.me"
         - "*.top"
         - "*.md"
