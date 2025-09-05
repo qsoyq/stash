@@ -537,35 +537,6 @@ function removeAdsCode() {
                 }
             })
         }
-
-
-        // 首页置顶轮播帖子
-        Array.from(document.querySelectorAll('div[class="topic-carousel-wrapper"]')).forEach(e => { e.remove() })
-
-        // 快捷功能区
-        Array.from(document.querySelectorAll('div[class="nsk-panel quick-access"]')).forEach(e => { e.remove() })
-
-        // 板块列表
-        Array.from(document.querySelectorAll('div[class="nsk-panel category-list"]')).forEach(e => { e.remove() })
-
-        // 页脚信息
-        Array.from(document.querySelectorAll('footer')).forEach(e => { e.remove() })
-
-        // 返回上一页悬浮按钮
-        Array.from(document.querySelectorAll('#back-to-parent')).forEach(e => { e.remove() })
-
-        // 用户签名
-        Array.from(document.querySelectorAll('div[class="signature"]')).forEach(e => { e.remove() })
-
-        // 右侧迎新面板
-        Array.from(document.querySelectorAll('h4')).forEach(e => {
-
-            if (e.textContent === "📈用户数目📈") {
-                e.parentElement?.remove()
-            }
-
-        })
-
     });
 }
 
@@ -577,7 +548,6 @@ function removeAds(document) {
     let script = document.createElement('script');
     script.textContent = code
     document['body'].appendChild(script);
-    echo("注入代码以移除广告")
 
     Array.from(document.querySelectorAll("a")).forEach(e => {
         let href = e.attributes["href"]?.textContent
@@ -588,9 +558,41 @@ function removeAds(document) {
             console.log(`replace ${href} to ${url}`)
         }
     })
+
+    addCSS(document)
 }
 
 
+function addCSS(document) {
+    let style = document.createElement("style")
+    style.type = 'text/css';
+    style.innerHTML = `
+        div.topic-carousel-wrapper{
+            display: none;
+        }
+
+        div.nsk-panel{
+            display: none;
+        }
+
+        div.nsk-panel.category-list{
+            display: none;
+        }
+
+        footer{
+            display: none;
+        }
+
+        ##back-to-parent{
+            display: none;
+        }
+
+        div.signature{
+            display: none;
+        }
+    `
+    document.head.appendChild(style)
+}
 
 async function main() {
     let url = (new URL($request.url))

@@ -30,7 +30,7 @@ http:
 
         - name: nodeseek
           binary-mode: false
-          match: https://www.nodeseek.com/(post-.*|categories.*|$)
+          match: https://www.nodeseek.com/(post-.*|categories.*|space.*|$)
           max-size: 1048576
           require-body: true
           timeout: 20
