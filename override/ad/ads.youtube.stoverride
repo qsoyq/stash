@@ -1,20 +1,18 @@
 name: YouTube
 desc: |-
-    - Web
-        - 赞助商广告
+    - 页脚
     - Web 端首页
+        - 赞助商广告
         - 短视频
-        - 会员订阅介绍
+        - 你对这个视频的看法
+        - 会员订阅介绍: 6 位家庭成员，1 笔费用，超实惠
     - Web 端播放页
         - 赞助商广告
-    - Web 端播放页
         - 下拉自动翻译评论
-    - Web 端播放页
         - 画质自动选择｜自动选择不包含 8k｜当前画质 8k 时不会自动切换        
-        - 画质自动选择来源: https://greasyfork.org/zh-CN/scripts/544945-youtube-%E8%87%AA%E5%8A%A8%E9%80%89%E6%8B%A9%E6%9C%80%E9%AB%98%E7%94%BB%E8%B4%A8-%E8%87%AA%E5%8A%A8%E8%B7%B3%E8%BF%87%E5%B9%BF%E5%91%8A
+            - 画质自动选择来源: https://greasyfork.org/zh-CN/scripts/544945-youtube-%E8%87%AA%E5%8A%A8%E9%80%89%E6%8B%A9%E6%9C%80%E9%AB%98%E7%94%BB%E8%B4%A8-%E8%87%AA%E5%8A%A8%E8%B7%B3%E8%BF%87%E5%B9%BF%E5%91%8A
     - Web 端搜索页
         - 赞助商广告
-    - Web 端搜索页
         - 网格短视频
 
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/youtube.png

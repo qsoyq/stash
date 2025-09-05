@@ -543,8 +543,8 @@ function inner() {
             }
             setInterval(() => {
                 let queryList = [
-                    "#dismissible.style-scope.ytd-statement-banner-renderer", //会员订阅介绍: 6 位家庭成员，1 笔费用，超实惠
-                    "#dismissible.style-scope.ytd-rich-shelf-renderer", // Shorts
+                    // "#dismissible.style-scope.ytd-statement-banner-renderer", //会员订阅介绍: 6 位家庭成员，1 笔费用，超实惠
+                    // "#dismissible.style-scope.ytd-rich-shelf-renderer", // Shorts
                 ]
                 queryList.forEach(query => {
                     let tag = document.querySelector(query)
@@ -797,10 +797,35 @@ function removeAds(document) {
     document['body'].appendChild(script);
     const url = new URL($request.url)
     if (url.pathname === '/') {
-
     }
+
+    addCss(document)
 }
 
+function addCss(document) {
+    let style = document.createElement("style")
+    style.innerHTML = `
+    // 本周新上线的音乐视频
+    //.ytd-brand-video-shelf-renderer {
+        display: none; 
+    }
+
+    // 会员订阅介绍: 6 位家庭成员，1 笔费用，超实惠
+    #dismissible.style-scope.ytd-statement-banner-renderer  {
+        display: none;
+    }
+
+    // 你对这个视频有何看法
+    #star-survey {
+        display: none;
+    }
+
+    #footer {
+        display: none;
+    }
+    `
+    document.head.appendChild(style)
+}
 
 
 async function main() {
