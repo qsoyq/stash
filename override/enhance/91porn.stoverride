@@ -1,7 +1,10 @@
 name: 91porn
 desc: |-
-    - 视频播放页播放时支持方向键左右前进/退后
-    - 视频播放前置广告
+    - 视频播放页
+        - 视频播放支持方向键左右前进/退后
+    - 页面图片广告
+    - 页面页脚
+    - 顶部用户信息
 category: enhance
 icon: https://91porn.com/favicon.ico
 http:
@@ -14,24 +17,16 @@ http:
         - https://mp4.blkj58.com/fh.mp4 - reject
     script:
         - name: 91porn
-          binary-mode: false
-          match: https://91porn.com/view_video.php
+          binary-mode: true
+          match: https://91porn.com/.*\.php
           max-size: 1048576
           require-body: true
           timeout: 20
           type: response
-          argument: |-
-              {\
-                "documentEvalCodes": [\
-                    "console.log(\'123\')",\
-                    "context.ele=context.document.createElement(\'script\')",\
-                    "context.ele.src=\\\"https://raw.githubusercontent.com/qsoyq/shell/main/tampermonkey/91/shortcuts.js\\\"",\
-                    "context.document.body.appendChild(context.ele)",\
-                    "console.log(\'234\')"\
-                ]\
-              }
+          argument: ""
+          debug: false
 
 script-providers:
     91porn:
-        url: https://raw.githubusercontent.com/qsoyq/shell/main/config/stash/script/debug/HttpRewrite.js
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/91porn.js
         interval: 86400
