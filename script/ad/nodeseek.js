@@ -590,6 +590,10 @@ function addCSS(document) {
         div.signature{
             display: none;
         }
+
+        div#fast-nav-button-group {
+            display: none;
+        }
     `
     document.head.appendChild(style)
 }
