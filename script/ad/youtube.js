@@ -543,14 +543,23 @@ function inner() {
             }
             setInterval(() => {
                 let queryList = [
-                    // "#dismissible.style-scope.ytd-statement-banner-renderer", //会员订阅介绍: 6 位家庭成员，1 笔费用，超实惠
-                    // "#dismissible.style-scope.ytd-rich-shelf-renderer", // Shorts
+
                 ]
                 queryList.forEach(query => {
                     let tag = document.querySelector(query)
                     if (tag) {
                         tag.remove()
                         console.log(`remove ${query}`)
+                    }
+                })
+
+                Array.from(document.querySelectorAll("span[id='title']")).forEach(ele => {
+                    let contains = ["重大新闻", "Shorts", "YouTube 游戏大本营"].some(item => ele.textContent.includes(item))
+                    if (contains) {
+                        let parent = ele?.parentElement?.parentElement?.parentElement?.parentElement?.parentElement?.parentElement?.parentElement?.parentElement?.parentElement
+                        if (parent) {
+                            parent.style.display = "none"
+                        }
                     }
                 })
             }, 100)
