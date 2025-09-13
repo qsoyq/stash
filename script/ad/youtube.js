@@ -542,16 +542,6 @@ function inner() {
                 }
             }
             setInterval(() => {
-                let queryList = [
-
-                ]
-                queryList.forEach(query => {
-                    let tag = document.querySelector(query)
-                    if (tag) {
-                        tag.remove()
-                        console.log(`remove ${query}`)
-                    }
-                })
 
                 Array.from(document.querySelectorAll("span[id='title']")).forEach(ele => {
                     let contains = ["重大新闻", "Shorts", "YouTube 游戏大本营"].some(item => ele.textContent.includes(item))
@@ -829,6 +819,11 @@ function addCss(document) {
         display: none;
     }
 
+    // Premium 订阅广告
+    // 准备好体验 Premium 学生方案了吗？
+    #ytd-statement-banner-renderer {
+        display: none;
+    }
     #footer {
         display: none;
     }
