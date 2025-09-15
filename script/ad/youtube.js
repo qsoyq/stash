@@ -30,6 +30,24 @@
 /** @type {youtube.HttpClient} */
 var $httpClient;
 
+/**
+ * @type {{ read: (arg0: string) => string; write: (arg0: string, arg1: string) => void; }}
+ */
+/**
+ * @type {{ post: (arg0: string, arg1: string, arg2: string, arg3: { url: string; } | { url?: undefined; }) => void; }}
+ */
+/**
+ * @type {{ headers: { [x: string]: any; }; url: string | URL; }}
+ */
+/**
+ * @type {any}
+ */
+/**
+ * @type {{ type: string; }}
+ */
+/**
+ * @type {{ body: AllowSharedBufferSource | undefined; headers: { [x: string]: any; }; }}
+ */
 var $request, $response, $notification, $argument, $persistentStore, $script
 
 /** @type {function(Object):void} */

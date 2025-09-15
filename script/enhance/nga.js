@@ -498,11 +498,17 @@ function safeEval(code, context) {
     return func(...Object.values(context));
 }
 
+/**
+ * @param {string} body
+ */
 function parseDocument(body) {
     let domParser = new DOMParser();
     return domParser.parseFromString(body, 'text/html');
 }
 
+/**
+ * @param {string | string[]} userAgent
+ */
 function isMobile(userAgent) {
     if (!userAgent) {
         if (typeof navigator !== 'undefined') {
@@ -521,6 +527,9 @@ function isMobile(userAgent) {
 
 
 // https://github.com/EtherDream/str2gbk
+/**
+ * @type {any[] | Uint16Array<ArrayBuffer>}
+ */
 let table
 
 function initGbkTable() {
@@ -612,10 +621,20 @@ function str2gbk(str, opt = {}) {
 }
 
 function runtimeCode() {
+    /**
+     * @param {{ button: number; metaKey: any; }} event
+     * @param {{ tagName: string; href: string | URL | undefined; }} tag
+     */
     function newUrlAlert(event, tag) {
         if (tag.tagName && tag.tagName.toLowerCase() === 'a') {
             if (tag.href) {
-                window.location.href = tag.href;
+                console.log(event.button, event.metaKey)
+                if (event.button === 0 && event.metaKey) {
+                    window.open(tag.href, '_blank');
+                } else if (event.button === 0) {
+                    window.open(tag.href, '_blank');
+                }
+
             }
         }
     }
@@ -626,6 +645,9 @@ function runtimeCode() {
     }
 
     function swipe() {
+        /**
+         * @type {number}
+         */
         let startX
         let tag = document.querySelector("#mmc")
         if (tag) {
@@ -672,6 +694,9 @@ function runtimeCode() {
     }, 150)
 }
 
+/**
+ * @param {Document} document
+ */
 function runtime(document) {
     let code = `
     ${runtimeCode.toString()};
