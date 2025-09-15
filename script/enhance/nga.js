@@ -612,6 +612,13 @@ function str2gbk(str, opt = {}) {
 }
 
 function runtimeCode() {
+    function newUrlAlert(event, tag) {
+        if (tag.tagName && tag.tagName.toLowerCase() === 'a') {
+            if (tag.href) {
+                window.location.href = tag.href;
+            }
+        }
+    }
 
     function autoShowPic() {
         // @ts-ignore
@@ -649,9 +656,19 @@ function runtimeCode() {
     }
     swipe();
     autoShowPic();
+
+
     setInterval(() => {
         // App 阅读
         Array.from(document.querySelectorAll("a.cell.rep.txtbtnx.nobr.disable_tap_menu.teal")).forEach(e => { e.parentElement?.remove() })
+
+        // 覆写函数取消外链弹窗
+        // @ts-ignore
+        if (window?.ubbcode?.showUrlAlert) {
+            // @ts-ignore
+            window.ubbcode.showUrlAlert = newUrlAlert;
+        }
+
     }, 150)
 }
 
