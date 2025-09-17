@@ -503,28 +503,86 @@ function parseDocument(body) {
     return domParser.parseFromString(body, 'text/html');
 }
 
-function removeAdsCode() {
-    // @ts-ignore
-    $(document).ready(function () {
-        Array.from(document.querySelectorAll('div[data-group="content_page1"]')).forEach(e => { e.remove() })
-        Array.from(document.querySelectorAll('div[data-group="content_page2"]')).forEach(e => { e.remove() })
-        Array.from(document.querySelectorAll('div[data-group="album_detail"]')).forEach(e => { e.remove() })
-        Array.from(document.querySelectorAll('div[class="col-lg-3 col-md-3 col-sm-3 col-xs-6"]')).forEach(e => { e.remove() })
-        Array.from(document.querySelectorAll('div[class="footer"]')).forEach(e => { e.remove() })
-        Array.from(document.querySelectorAll('img[src="/templates/frontend/airav/img/daily/index_sign_in.png?v="]')).forEach(e => { e.remove() })
-        Array.from(document.querySelectorAll('img[src="/templates/frontend/airav/img/float-right-close.png?v="]')).forEach(e => { e.remove() })
-    });
+function addScript(document, url) {
+    let script = document.createElement('script');
+    script.src = url
+    document.head.appendChild(script)
 }
 
-function removeAds(document) {
+function addCSS(document) {
+    let style = document.createElement("style")
+    style.type = 'text/css';
+    style.innerHTML = `
+    div.footer {
+        display: none;
+    }
+
+    div.div-bf-pv {
+        display: none; // banner轮播
+    }
+
+    div.col-lg-3.col-md-3.col-sm-3.col-xs-6 {
+        display: none; // 首页AD
+    }
+
+    div.col-lg-3col-md-3col-sm-3col-xs-6 {
+        // display: none;
+    }
+
+    div.float-right-daily.hidden-xs.hidden-sm.hidden-md {
+        display: none; // 每日签到浮窗
+    }
+
+    div.row.m-b-10.m-l-0.m-r-0.center.suggest-tag {
+        display: none; //搜索页 标签建议
+    }
+
+    div.photo_center_div{
+        display: none; // 阅读页 AD
+    }
+
+    div.center.scramble-page.thewayhome {
+        display: none; // 阅读页顶部第一方广告
+    }
+    `
+    document.head.appendChild(style)
+}
+
+
+
+function runtimeCode() {
+
+}
+
+function addRuntimeCode(document) {
     let code = `
-    ${removeAdsCode.toString()};
-    removeAdsCode();
+    ${runtimeCode.toString()};
+    runtimeCode();
     `
     let script = document.createElement('script');
     script.textContent = code
     document['body'].appendChild(script);
-    echo("注入代码以移除广告")
+}
+
+function inject(document) {
+    const url = new URL($request.url)
+    addRuntimeCode(document)
+    addCSS(document)
+    console.log(`path: ${url.pathname}`)
+
+    // 人偶浮窗
+    Array.from(document.querySelectorAll("div[class='float-right-image close hidden-xs hidden-sm hidden-md']")).forEach(ele => {
+        ele.remove()
+    })
+
+    // 搜索页右侧AD
+    Array.from(document.querySelectorAll("div[data-group='skyscraper_1']")).forEach(ele => {
+        ele.remove()
+    })
+
+    // 详情页AD
+    Array.from(document.querySelectorAll('div[data-group="content_page1"]')).forEach(e => { e.remove() })
+    Array.from(document.querySelectorAll('div[data-group="content_page2"]')).forEach(e => { e.remove() })
 }
 
 
@@ -535,7 +593,7 @@ async function main() {
             let body = getScriptResponseBody()
             if (body) {
                 const document = new DOMParser().parseFromString(body, 'text/html')
-                removeAds(document)
+                inject(document)
                 $done({ body: document.documentElement.outerHTML })
                 break
             }
