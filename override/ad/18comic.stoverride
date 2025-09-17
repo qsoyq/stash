@@ -32,7 +32,7 @@ http:
           require-body: true
           timeout: 20
           type: response
-          debug: true
+          debug: false
 
 script-providers:
     18comic:
