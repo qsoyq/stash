@@ -583,6 +583,8 @@ function inject(document) {
     // 详情页AD
     Array.from(document.querySelectorAll('div[data-group="content_page1"]')).forEach(e => { e.remove() })
     Array.from(document.querySelectorAll('div[data-group="content_page2"]')).forEach(e => { e.remove() })
+    Array.from(document.querySelectorAll('div[data-group="album_detail"]')).forEach(e => { e.remove() })
+
 }
 
 
