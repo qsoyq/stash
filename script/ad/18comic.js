@@ -585,6 +585,8 @@ function inject(document) {
     Array.from(document.querySelectorAll('div[data-group="content_page2"]')).forEach(e => { e.remove() })
     Array.from(document.querySelectorAll('div[data-group="album_detail"]')).forEach(e => { e.remove() })
 
+    // 阅读页
+    Array.from(document.querySelectorAll('div[data-group="photo_center_games_1"]')).forEach(e => { e.remove() })
 }
 
 
