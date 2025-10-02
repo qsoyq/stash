@@ -522,7 +522,9 @@ async function parseBilibiliChinaMainland() {
     }
 }
 
-async function getBilibiliHKMCTWStatus() {
+
+
+async function parseBilibiliHKMCTW() {
     let res = await get("https://api.bilibili.com/pgc/player/web/playurl?avid=18281381&cid=29892777&qn=0&type=&otype=json&ep_id=183799&fourk=1&fnver=0&fnval=16&module=bangumi")
     if (res.error || res.response.status >= 400) {
         echo(`parseBilibiliHKMCTW error: ${res.error}, ${res.response.status}, ${res.data}`)
@@ -536,12 +538,6 @@ async function getBilibiliHKMCTWStatus() {
     } else {
         return "Failed"
     }
-}
-
-
-async function parseBilibiliHKMCTW() {
-    let status = await getBilibiliHKMCTWStatus()
-    return `哔哩哔哩港澳台: ${status}`
 }
 
 
