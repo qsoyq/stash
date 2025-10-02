@@ -634,13 +634,16 @@ async function parseYoutubePremium() {
      */
     function parseYoutubePremiumCountryCode(htmlString) {
         try {
-            let parser = new DOMParser();
-            let code = parser.parseFromString(htmlString, 'text/html')?.getElementById("country-code")?.textContent.trim()
-            return code || null
+            let result = htmlString?.match(/"GL":\s?"(\w+)"/)
+            if (result?.length === 2) {
+                return result[1]
+            }
+            return null
         } catch (error) {
             echo(`parseCountryCode error: ${error}`)
         }
     }
+
     let url = 'https://www.youtube.com/premium'
     let res = await get(url)
 
