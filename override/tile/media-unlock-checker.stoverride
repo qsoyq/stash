@@ -18,7 +18,7 @@ tiles:
       argument: |-
           {"name": "bilibili"}
 
-    - name: chatgpt-unlock-checker
+    - name: chatgpt-region-unlock-checker
       backgroundColor: "#178BD8"
       interval: 1800
       collapsed: true
@@ -27,7 +27,7 @@ tiles:
       argument: |-
           {"name": "chatgptLoc"}
 
-    - name: chatgpt-unlock-checker
+    - name: chatgpt-web-unlock-checker
       backgroundColor: "#178BD8"
       interval: 1800
       collapsed: true
@@ -36,7 +36,7 @@ tiles:
       argument: |-
           {"name": "chatgptWeb"}
 
-    - name: chatgpt-unlock-checker
+    - name: chatgpt-ios-unlock-checker
       backgroundColor: "#178BD8"
       interval: 1800
       collapsed: true
@@ -70,7 +70,13 @@ script-providers:
     bilibili-unlock-checker:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/tile/media-unlock-checker.js
         interval: 86400
-    chatgpt-unlock-checker:
+    chatgpt-region-unlock-checker:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/tile/media-unlock-checker.js
+        interval: 86400
+    chatgpt-ios-unlock-checker:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/tile/media-unlock-checker.js
+        interval: 86400
+    chatgpt-web-unlock-checker:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/tile/media-unlock-checker.js
         interval: 86400
     youtube-unlock-checker:

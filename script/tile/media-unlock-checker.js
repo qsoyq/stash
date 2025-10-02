@@ -609,7 +609,7 @@ async function parseGemini() {
     let res = await get(url)
 
     if (typeof res.data !== 'string') {
-        return 'Gemini: Failed'
+        return 'Failed'
     }
     let isOk = res.data.includes('45631641,null,true') ? "Yes" : "";
 
@@ -620,7 +620,7 @@ async function parseGemini() {
     let result = isOk ? "Yes" : "No"
     if (match) {
         countrycode = match[1];  // Extract the country code (3-letter code)
-        return ` ${result} \n${countryCodeToEmoji(countrycode)}${countrycode}`
+        return ` ${result}, Region: ${countryCodeToEmoji(countrycode)}${countrycode}`
     } else {
         return `${result}`
     }
