@@ -317,7 +317,6 @@ function countryCodeToEmoji(countryCode) {
     }
     // 将代码转为大写
     countryCode = countryCode.toUpperCase();
-
     // 如果是三位代码，转换为两位代码
     const threeToTwo = {
         'USA': 'US',
@@ -325,7 +324,7 @@ function countryCodeToEmoji(countryCode) {
         'GBR': 'GB',
         'FRA': 'FR',
         'DEU': 'DE',
-        // 继续添加你需要支持的三位代码
+        "KOR": "KR",
     };
 
     // 如果代码长度为3，尝试查找转换表
@@ -694,6 +693,7 @@ async function main() {
         $done(pannel);
         return
     }
+
     let content = ""
     switch (name) {
         case "bilibili":
@@ -714,7 +714,6 @@ async function main() {
         default:
             break
     }
-
     pannel = { "content": content }
     $done(pannel)
 }
