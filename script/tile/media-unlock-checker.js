@@ -523,21 +523,29 @@ async function parseBilibiliChinaMainland() {
     }
 }
 
-async function parseBilibiliHKMCTW() {
+async function getBilibiliHKMCTWStatus() {
     let res = await get("https://api.bilibili.com/pgc/player/web/playurl?avid=18281381&cid=29892777&qn=0&type=&otype=json&ep_id=183799&fourk=1&fnver=0&fnval=16&module=bangumi")
     if (res.error || res.response.status >= 400) {
         echo(`parseBilibiliHKMCTW error: ${res.error}, ${res.response.status}, ${res.data}`)
-        return '哔哩哔哩港澳台: Failed'
+        return "Failed"
     }
     let body = parseJsonBody(res.data)
     if (body?.code === 0) {
-        return '哔哩哔哩港澳台: Yes'
+        return "YES"
     } else if (body?.code === -10403) {
-        return '哔哩哔哩港澳台: No'
+        return "NO"
     } else {
-        return '哔哩哔哩港澳台: Failed'
+        return "Failed"
     }
 }
+
+
+async function parseBilibiliHKMCTW() {
+    let status = await getBilibiliHKMCTWStatus()
+    return `哔哩哔哩港澳台: ${status}`
+}
+
+
 
 async function getChatGPTCountryCode() {
     let url = 'https://chat.openai.com/cdn-cgi/trace'
@@ -559,7 +567,6 @@ async function getChatGPTCountryCode() {
                 return `ChatGPT: ${emoji}${loc}`
             }
         }
-
         return 'ChatGPT: Unknown country code'
     }
 }
@@ -663,27 +670,52 @@ async function parseYoutubePremium() {
 
 async function main() {
     echo("Starting the parallel execution...");
-    let contents = await Promise.all([
-        parseBilibiliHKMCTW(),
-        getChatGPTCountryCode(),
-        parseChatGPTiOS(),
-        parseChatGPTWeb(),
-        parseGemini(),
-        parseYoutubePremium()
-    ]);
-    echo("All promises resolved.");
+    let pannel = {}
+    let name = getScriptArgument("name")
+    if (!name) {
+        let contents = await Promise.all([
+            parseBilibiliHKMCTW(),
+            getChatGPTCountryCode(),
+            parseChatGPTiOS(),
+            parseChatGPTWeb(),
+            parseGemini(),
+            parseYoutubePremium()
+        ]);
+        echo("All promises resolved.");
 
-    let content = contents.join('\n');
-    content += `\n执行时间: ${getLocalDateString()}`;
+        let content = contents.join('\n');
+        content += `\n执行时间: ${getLocalDateString()}`;
 
-    echo(`Final content prepared:\n${content}`);
+        echo(`Final content prepared:\n${content}`);
 
-    const panel = {
-        title: `流媒体解锁检测`,
-        content: content
-    };
+        const pannel = {
+            content: content
+        };
+        $done(pannel);
+    }
+    let content = ""
+    switch (name) {
+        case "bilibili":
+            content = await parseBilibiliHKMCTW()
+            break
+        case "chatgpt":
+            let code = await getChatGPTCountryCode()
+            let chatgptIOS = await parseChatGPTiOS()
+            let chatgptWeb = await parseChatGPTWeb()
+            content = `${code}\n${chatgptIOS}\n${chatgptWeb}`
+            break
+        case "youtube":
+            content = await parseYoutubePremium()
+            break
+        case "gemini":
+            content = await parseGemini()
+            break
+        default:
+            break
+    }
 
-    $done(panel);
+    pannel = { "content": content }
+    $done(pannel)
 }
 
 

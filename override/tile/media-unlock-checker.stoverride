@@ -18,6 +18,37 @@ tiles:
       backgroundColor: "#178BD8"
       interval: 1800
       collapsed: true
+      title: 哔哩哔哩港澳台
+      content: 加载中
+      argument: |-
+          {"name": "bilibili"}
+
+    - name: MediaUnlockChecker
+      backgroundColor: "#178BD8"
+      interval: 1800
+      collapsed: true
+      title: ChatGPT
+      content: 加载中
+      argument: |-
+          {"name": "chatgpt"}
+
+    - name: MediaUnlockChecker
+      backgroundColor: "#178BD8"
+      interval: 1800
+      collapsed: true
+      title: YouTube
+      content: 加载中
+      argument: |-
+          {"name": "youtube"}
+
+    - name: MediaUnlockChecker
+      backgroundColor: "#178BD8"
+      interval: 1800
+      collapsed: true
+      title: Gemini
+      content: 加载中
+      argument: |-
+          {"name": "gemini"}
 
 script-providers:
     MediaUnlockChecker:
