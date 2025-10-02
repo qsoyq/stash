@@ -563,7 +563,7 @@ async function getChatGPTCountryCode() {
             let loc = map["loc"]
             if (loc) {
                 let emoji = countryCodeToEmoji(loc)
-                return `ChatGPT: ${emoji}${loc}`
+                return `${emoji}${loc}`
             }
         }
         return 'Unknown country code'
