@@ -692,6 +692,7 @@ async function main() {
             content: content
         };
         $done(pannel);
+        return
     }
     let content = ""
     switch (name) {

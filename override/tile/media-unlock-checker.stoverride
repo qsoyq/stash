@@ -14,7 +14,7 @@ tiles:
       interval: 1800
       collapsed: false
 
-    - name: MediaUnlockChecker
+    - name: bilibili-unlock-checker
       backgroundColor: "#178BD8"
       interval: 1800
       collapsed: true
@@ -23,7 +23,7 @@ tiles:
       argument: |-
           {"name": "bilibili"}
 
-    - name: MediaUnlockChecker
+    - name: chatgpt-unlock-checker
       backgroundColor: "#178BD8"
       interval: 1800
       collapsed: true
@@ -32,7 +32,7 @@ tiles:
       argument: |-
           {"name": "chatgpt"}
 
-    - name: MediaUnlockChecker
+    - name: youtube-unlock-checker
       backgroundColor: "#178BD8"
       interval: 1800
       collapsed: true
@@ -41,7 +41,7 @@ tiles:
       argument: |-
           {"name": "youtube"}
 
-    - name: MediaUnlockChecker
+    - name: gemini-unlock-checker
       backgroundColor: "#178BD8"
       interval: 1800
       collapsed: true
@@ -52,5 +52,17 @@ tiles:
 
 script-providers:
     MediaUnlockChecker:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/tile/media-unlock-checker.js
+        interval: 86400
+    bilibili-unlock-checker:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/tile/media-unlock-checker.js
+        interval: 86400
+    chatgpt-unlock-checker:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/tile/media-unlock-checker.js
+        interval: 86400
+    youtube-unlock-checker:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/tile/media-unlock-checker.js
+        interval: 86400
+    gemini-unlock-checker:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/tile/media-unlock-checker.js
         interval: 86400
