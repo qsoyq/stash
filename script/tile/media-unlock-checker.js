@@ -635,11 +635,8 @@ async function parseYoutubePremium() {
     function parseYoutubePremiumCountryCode(htmlString) {
         try {
             let parser = new DOMParser();
-            let doc = parser.parseFromString(htmlString, 'text/html');
-            let ele = doc.getElementById("country-code")
-            if (ele && ele.textContent) {
-                return ele.textContent.trim()
-            }
+            let code = parser.parseFromString(htmlString, 'text/html')?.getElementById("country-code")?.textContent.trim()
+            return code || null
         } catch (error) {
             echo(`parseCountryCode error: ${error}`)
         }
