@@ -9,11 +9,6 @@ category: tile
 icon: https://raw.githubusercontent.com/qsoyq/shell/main/assets/icon/override.png
 
 tiles:
-    - name: MediaUnlockChecker
-      backgroundColor: "#178BD8"
-      interval: 1800
-      collapsed: false
-
     - name: bilibili-unlock-checker
       backgroundColor: "#178BD8"
       interval: 1800
@@ -27,16 +22,34 @@ tiles:
       backgroundColor: "#178BD8"
       interval: 1800
       collapsed: true
-      title: ChatGPT
+      title: ChatGPT Region
       content: 加载中
       argument: |-
-          {"name": "chatgpt"}
+          {"name": "chatgptLoc"}
+
+    - name: chatgpt-unlock-checker
+      backgroundColor: "#178BD8"
+      interval: 1800
+      collapsed: true
+      title: ChatGPT Web
+      content: 加载中
+      argument: |-
+          {"name": "chatgptWeb"}
+
+    - name: chatgpt-unlock-checker
+      backgroundColor: "#178BD8"
+      interval: 1800
+      collapsed: true
+      title: ChatGPT iOS
+      content: 加载中
+      argument: |-
+          {"name": "chatgptIOS"}
 
     - name: youtube-unlock-checker
       backgroundColor: "#178BD8"
       interval: 1800
       collapsed: true
-      title: YouTube
+      title: YouTube Premium
       content: 加载中
       argument: |-
           {"name": "youtube"}

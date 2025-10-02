@@ -552,7 +552,7 @@ async function getChatGPTCountryCode() {
     let map = {}
     if (res.error || res.response.status >= 400) {
         echo(`getChatGPTCountryCode error: ${res.error}, ${res.response.status}, ${res.data}`)
-        return 'ChatGPT: Unknown country code'
+        return 'Unknown country code'
     } else {
         if (res.data) {
             res.data.split('\n').forEach(element => {
@@ -566,7 +566,7 @@ async function getChatGPTCountryCode() {
                 return `ChatGPT: ${emoji}${loc}`
             }
         }
-        return 'ChatGPT: Unknown country code'
+        return 'Unknown country code'
     }
 }
 
@@ -576,16 +576,16 @@ async function parseChatGPTiOS() {
     if (typeof res.data === 'string') {
         echo(`parseChatGPTiOS result: ${res.response.status}, ${res.data}`)
         if (res.data.toLowerCase().includes("You may be connected to a disallowed ISP".toLowerCase())) {
-            return 'ChatGPT iOS: Disallowed ISP'
+            return 'Disallowed ISP'
         } else if (res.data.toLowerCase().includes("Request is not allowed. Please try again later.".toLowerCase())) {
-            return 'ChatGPT iOS: Yes'
+            return 'Yes'
         } else if (res.data.toLowerCase().includes("Sorry, you have been blocked".toLowerCase())) {
-            return 'ChatGPT iOS: Blocked'
+            return 'Blocked'
         } else {
-            return 'ChatGPT iOS: Failed'
+            return 'Failed'
         }
     } else {
-        return 'ChatGPT iOS: Failed'
+        return 'Failed'
     }
 }
 
@@ -595,12 +595,12 @@ async function parseChatGPTWeb() {
     if (typeof res.data === 'string') {
         echo(`parseChatGPTWeb result: ${res.response.status}, ${res.data}`)
         if (res.data.toLowerCase().includes("unsupported_country".toLowerCase())) {
-            return 'ChatGPT Web: Unsupported Country'
+            return 'Unsupported Country'
         } else {
-            return 'ChatGPT Web: Yes'
+            return 'Yes'
         }
     } else {
-        return 'ChatGPT Web: Failed'
+        return 'Failed'
     }
 }
 
@@ -620,9 +620,9 @@ async function parseGemini() {
     let result = isOk ? "Yes" : "No"
     if (match) {
         countrycode = match[1];  // Extract the country code (3-letter code)
-        return `Gemini: ${result} ${countryCodeToEmoji(countrycode)}${countrycode}`
+        return ` ${result} \n${countryCodeToEmoji(countrycode)}${countrycode}`
     } else {
-        return `Gemini: ${result}`
+        return `${result}`
     }
 }
 
@@ -648,11 +648,11 @@ async function parseYoutubePremium() {
     let res = await get(url)
 
     if (typeof res.data !== 'string') {
-        return 'Youtube Premium: Failed'
+        return 'Failed'
     }
 
     if (res.data.toLowerCase().includes('YouTube Premium is not available in your country'.toLowerCase())) {
-        return `Youtube Premium: No`
+        return `No`
 
     } else if (res.data.toLowerCase().includes("ad-free")) {
         let countryCode = parseYoutubePremiumCountryCode(res.data)
@@ -662,35 +662,16 @@ async function parseYoutubePremium() {
         if (countryCode) {
             region = `, Region: ${countryCodeToEmoji(countryCode)}${countryCode}`
         }
-        return `Youtube Premium: Yes${region}`
+        return `Yes${region}`
     }
-    return 'Youtube Premium: Failed'
+    return 'Failed'
 }
 
 async function main() {
-    echo("Starting the parallel execution...");
     let pannel = {}
     let name = getScriptArgument("name")
     if (!name) {
-        let contents = await Promise.all([
-            parseBilibiliHKMCTW(),
-            getChatGPTCountryCode(),
-            parseChatGPTiOS(),
-            parseChatGPTWeb(),
-            parseGemini(),
-            parseYoutubePremium()
-        ]);
-        echo("All promises resolved.");
-
-        let content = contents.join('\n');
-        content += `\n执行时间: ${getLocalDateString()}`;
-
-        echo(`Final content prepared:\n${content}`);
-
-        const pannel = {
-            content: content
-        };
-        $done(pannel);
+        $done({})
         return
     }
 
@@ -699,11 +680,17 @@ async function main() {
         case "bilibili":
             content = await parseBilibiliHKMCTW()
             break
-        case "chatgpt":
+        case "chatgptLoc":
             let code = await getChatGPTCountryCode()
-            let chatgptIOS = await parseChatGPTiOS()
+            content = `${code}`
+            break
+        case "chatgptWeb":
             let chatgptWeb = await parseChatGPTWeb()
-            content = `${code}\n${chatgptIOS}\n${chatgptWeb}`
+            content = `${chatgptWeb}`
+            break
+        case "chatgptIOS":
+            let chatgptIOS = await parseChatGPTiOS()
+            content = `${chatgptIOS}`
             break
         case "youtube":
             content = await parseYoutubePremium()
