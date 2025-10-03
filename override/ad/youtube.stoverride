@@ -27,6 +27,7 @@ http:
           require-body: true
           binary-mode: true
           timeout: 20
+          argument: '{"blockUpload": false, "blockShorts": false, "blockImmersive": false, "captionLang": "zh-Hans", "lyricLang": "zh-Hans", "debug": true}'
 rules:
     - AND,((DOMAIN-SUFFIX,googlevideo.com),(PROTOCOL,QUIC)),REJECT
     - AND,((DOMAIN-SUFFIX,youtubei.googleapis.com),(PROTOCOL,QUIC)),REJECT
