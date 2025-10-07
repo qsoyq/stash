@@ -1,0 +1,38 @@
+name: mitm 白名单
+category: enhance
+desc: |-
+    - 添加白名单禁止对部分域名 mitm
+    - 需要将优先级调整到最高
+
+icon: https://stash.wiki/favicon.ico
+
+http:
+    mitm:
+        # 米家
+        - "-*api.mijia.tech"
+
+        # Apple
+        - "-*.itunes.apple.com"
+        - "-*.iadsdk.apple.com"
+        - "-*.apple.com"
+        - "-*.mzstatic.com"
+
+        - "-*.icloud-content.com"
+        - "-*.icloud.com"
+        - "-gspe1-ssl.ls.apple.com"
+
+        # 抖音
+        - "-*.douyinvod.com"
+        - "-*.douyinpic.com"
+        - "-*.amemv.com"
+
+        # 番茄小说
+        - "-*api5-normal-sinfonlineb.fqnovel.com"
+        - "-*fqnovelpic.com"
+
+        # ？
+        - "-wxapp.tc.qq.com"
+
+        # Tiktok
+        - "-*.tiktokv.*"
+        - "-*.tiktokcdn-*.com"
