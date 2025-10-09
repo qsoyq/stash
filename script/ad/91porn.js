@@ -536,10 +536,6 @@ function addCSS(document) {
     div.useraction {
         display: none;
     }
-        
-    div#videodetails-content {
-        display: none;
-    }
     `
     document.head.appendChild(style)
 }
