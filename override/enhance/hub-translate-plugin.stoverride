@@ -1,0 +1,23 @@
+name: 插件转换
+desc: |-
+    - 对指定网站的插件安装地址重写为 Stash 可用的安装链接
+category: enhance
+icon: https://stash.wiki/favicon.ico
+
+http:
+    mitm:
+        - "hub.kelee.one"
+    script:
+        - name: hub-rewrite-plugin
+          binary-mode: false
+          match: https://hub.kelee.one/
+          max-size: 1048576
+          require-body: true
+          timeout: 20
+          type: response
+          debug: false
+
+script-providers:
+    hub-rewrite-plugin:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/enhance/plugin.js
+        interval: 86400
