@@ -517,36 +517,34 @@ function addCSS(document) {
 
 function runtimeCode() {
 
-}
+    /**
+    * 将 Loon 插件模块的地址替换成 Stash 的导入规则
+    * @param {string} url 描述参数信息
+    * @returns {string} 描述返回值信息
+    * @throws {错误类型} 描述可能抛出的错误
+    */
+    function get_stash_override_url_from_loon(url) {
+        let addr = `https://p.19940731.xyz/api/stash/stoverride/loon?url=${url}`
+        return `stash://install-override?url=${encodeURI(addr)}`
+    }
 
-
-/**
-* 将 Loon 插件模块的地址替换成 Stash 的导入规则
-* @param {string} url 描述参数信息
-* @returns {string} 描述返回值信息
-* @throws {错误类型} 描述可能抛出的错误
-*/
-function get_stash_override_url_from_loon(url) {
-    let addr = `https://p.19940731.xyz/api/stash/stoverride/loon?url=${url}`
-    return `stash://install-override?url=${encodeURI(addr)}`
-}
-
-
-function inject(document) {
-    (() => {
-        const regex = /loon:\/\/import\?plugin=(https?:\/\/[^\s]+)/;
-        Array.from(document.querySelectorAll("a")).forEach(tag => {
-            let href = tag?.attributes?.href?.textContent
-            if (href) {
-                let result = href.match(regex)
-                if (result) {
-                    tag.setAttribute("href", get_stash_override_url_from_loon(result[1]))
+    const loonRegex = /loon:\/\/import\?plugin=(https?:\/\/[^\s]+)/;
+    setInterval(() => {
+        (() => {
+            Array.from(document.querySelectorAll("a")).forEach(tag => {
+                let href = tag?.attributes?.href?.textContent
+                if (href) {
+                    let result = href.match(loonRegex)
+                    if (result) {
+                        tag.setAttribute("href", get_stash_override_url_from_loon(result[1]))
+                    }
                 }
-            }
-        })
-    })();
-}
+            })
+        })();
+    }, 250)
 
+
+}
 
 function addRuntimeCode(document) {
     let code = `
@@ -558,7 +556,14 @@ function addRuntimeCode(document) {
     document['body'].appendChild(script);
 }
 
+
+function inject(document) {
+    addRuntimeCode(document)
+}
+
+
 async function main() {
+    echo("start")
     switch (getScriptType()) {
         case "response":
             let body = getScriptResponseBody()
