@@ -1,14 +1,14 @@
-/** @namespace base */
+/** @namespace plugin */
 
 /**
- * @typedef {Object} base.HTTPResponse
+ * @typedef {Object} plugin.HTTPResponse
  * @property {string|null} error - 错误信息，如果没有错误则为 null
  * @property {object} response - HTTP 响应对象
  * @property {string|null} data - 返回的数据，如果没有数据则为 null
  */
 
 /**
- * @typedef {function(Error|string|null, Object, string|null): void} base.HTTPCallback
+ * @typedef {function(Error|string|null, Object, string|null): void} plugin.HTTPCallback
  * 回调函数类型，接受错误、响应和数据作为参数。
  * @param {Error|string|null} error - 错误信息，可以是 Error 对象、字符串或者 null
  * @param {Object} response - HTTP 响应对象
@@ -16,18 +16,18 @@
  */
 
 /**
- * @typedef {function(Object, base.HTTPCallback): base.HTTPResponse} base.HTTPMethod
+ * @typedef {function(Object, plugin.HTTPCallback): plugin.HTTPResponse} plugin.HTTPMethod
  */
 
 /**
- * @typedef {Object} base.HttpClient
- * @property {base.HTTPMethod} get - 发送 GET 请求
- * @property {base.HTTPMethod} post - 发送 POST 请求
- * @property {base.HTTPMethod} put - 发送 PUT 请求
- * @property {base.HTTPMethod} delete - 发送 DELETE 请求
+ * @typedef {Object} plugin.HttpClient
+ * @property {plugin.HTTPMethod} get - 发送 GET 请求
+ * @property {plugin.HTTPMethod} post - 发送 POST 请求
+ * @property {plugin.HTTPMethod} put - 发送 PUT 请求
+ * @property {plugin.HTTPMethod} delete - 发送 DELETE 请求
  */
 
-/** @type {base.HttpClient} */
+/** @type {plugin.HttpClient} */
 var $httpClient;
 
 var $request, $response, $notification, $argument, $persistentStore, $script
@@ -39,12 +39,12 @@ var $done
  * 对异步回调的 HTTP 调用包装成 async 函数
  * @param {'GET'|'POST'|'PUT'|'DELETE'} method - HTTP 方法类型，支持 GET、POST、PUT 和 DELETE
  * @param {Object} params - 请求参数对象，包含请求所需的各类信息
- * @returns {Promise<base.HTTPResponse>} 返回一个 Promise，解析为包含 error、response 和 data 的对象
+ * @returns {Promise<plugin.HTTPResponse>} 返回一个 Promise，解析为包含 error、response 和 data 的对象
  * @throws {Error} 如果请求失败，Promise 会被拒绝并返回错误信息
  */
 async function request(method, params) {
     return new Promise((resolve, reject) => {
-        /** @type {base.HTTPMethod} */
+        /** @type {plugin.HTTPMethod} */
         const httpMethod = $httpClient[method.toLowerCase()]; // 通过 HTTP 方法选择对应的请求函数
         httpMethod(params, (error, response, data) => {
             if (error) {
@@ -60,7 +60,7 @@ async function request(method, params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<base.HTTPResponse>}
+ * @returns {Promise<plugin.HTTPResponse>}
  */
 async function get(params) {
     return request('GET', params);
@@ -69,7 +69,7 @@ async function get(params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<base.HTTPResponse>}
+ * @returns {Promise<plugin.HTTPResponse>}
  */
 async function post(params) {
     return request('POST', params);
@@ -78,7 +78,7 @@ async function post(params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<base.HTTPResponse>}
+ * @returns {Promise<plugin.HTTPResponse>}
  */
 async function put(params) {
     return request('PUT', params);
@@ -87,7 +87,7 @@ async function put(params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<base.HTTPResponse>}
+ * @returns {Promise<plugin.HTTPResponse>}
  */
 async function delete_(params) {
     return request('DELETE', params);
@@ -519,6 +519,34 @@ function runtimeCode() {
 
 }
 
+
+/**
+* 将 Loon 插件模块的地址替换成 Stash 的导入规则
+* @param {string} url 描述参数信息
+* @returns {string} 描述返回值信息
+* @throws {错误类型} 描述可能抛出的错误
+*/
+function get_stash_override_url_from_loon(url) {
+    return `https://p.19940731.xyz/api/stash/stoverride/loon?url=${encodeURI(url)}`
+}
+
+
+function inject(document) {
+    (() => {
+        const regex = /loon:\/\/import\?plugin=(https?:\/\/[^\s]+)/;
+        Array.from(document.querySelectorAll("a")).forEach(tag => {
+            let href = tag?.attributes?.href?.textContent
+            if (href) {
+                let result = href.match(regex)
+                if (result) {
+                    tag.setAttribute("href", get_stash_override_url_from_loon(result[1]))
+                }
+            }
+        })
+    })();
+}
+
+
 function addRuntimeCode(document) {
     let code = `
     ${runtimeCode.toString()};
@@ -530,8 +558,18 @@ function addRuntimeCode(document) {
 }
 
 async function main() {
-    echo(`[Argument] ${$argument}`)
-    echo(`[Argument] [JSON] ${parseJsonBody($argument)}`)
+    switch (getScriptType()) {
+        case "response":
+            let body = getScriptResponseBody()
+            if (body) {
+                const document = new DOMParser().parseFromString(body, 'text/html')
+                inject(document)
+                $done({ body: document.documentElement.outerHTML })
+                break
+            }
+        default:
+            $done({})
+    }
 }
 
 (async () => {
