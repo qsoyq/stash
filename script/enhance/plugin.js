@@ -563,11 +563,13 @@ function inject(document) {
 
 
 async function main() {
-    echo("start")
     switch (getScriptType()) {
         case "response":
+            let url = (new URL($request.url))
             let body = getScriptResponseBody()
-            if (body) {
+            let ct = $response.headers['Content-Type']
+            if (ct && ct.includes("text/html") && body) {
+                echo(`url: ${url}, path: ${url.pathname}`)
                 const document = new DOMParser().parseFromString(body, 'text/html')
                 inject(document)
                 $done({ body: document.documentElement.outerHTML })
