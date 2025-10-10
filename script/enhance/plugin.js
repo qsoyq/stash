@@ -527,7 +527,8 @@ function runtimeCode() {
 * @throws {错误类型} 描述可能抛出的错误
 */
 function get_stash_override_url_from_loon(url) {
-    return `https://p.19940731.xyz/api/stash/stoverride/loon?url=${encodeURI(url)}`
+    let addr = `https://p.19940731.xyz/api/stash/stoverride/loon?url=${url}`
+    return `stash://install-override?url=${encodeURI(addr)}`
 }
 
 
