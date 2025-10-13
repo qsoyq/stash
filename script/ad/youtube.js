@@ -560,7 +560,6 @@ function inner() {
                 }
             }
             setInterval(() => {
-
                 Array.from(document.querySelectorAll("span[id='title']")).forEach(ele => {
                     let contains = ["重大新闻", "Shorts", "YouTube 游戏大本营"].some(item => ele.textContent.includes(item))
                     if (contains) {
@@ -568,6 +567,14 @@ function inner() {
                         if (parent) {
                             parent.style.display = "none"
                         }
+                    }
+                })
+
+                // 视频合辑
+                Array.from(document.querySelectorAll(".ytCollectionThumbnailViewModelHost")).forEach(ele => {
+                    let parent = ele?.parentElement?.parentElement?.parentElement?.parentElement?.parentElement
+                    if (parent) {
+                        parent.style.display = "none"
                     }
                 })
             }, 100)
@@ -807,7 +814,7 @@ function inner() {
 function removeAds(document) {
     let code = `
     ${inner.toString()};
-    inner();
+        inner();
     `
     let script = document.createElement('script');
     script.textContent = code
@@ -859,7 +866,7 @@ async function main() {
             if (ct && ct.includes("text/html") && body) {
                 echo(`url: ${url}, path: ${url.pathname}`)
                 const document = new DOMParser().parseFromString(body, 'text/html')
-                removeAds(document)
+                removeAds(document, config)
                 $done({ body: document.documentElement.outerHTML })
                 break
             }
