@@ -866,7 +866,7 @@ async function main() {
             if (ct && ct.includes("text/html") && body) {
                 echo(`url: ${url}, path: ${url.pathname}`)
                 const document = new DOMParser().parseFromString(body, 'text/html')
-                removeAds(document, config)
+                removeAds(document)
                 $done({ body: document.documentElement.outerHTML })
                 break
             }
