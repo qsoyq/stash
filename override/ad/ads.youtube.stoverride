@@ -6,6 +6,7 @@ desc: |-
         - 短视频
         - 你对这个视频的看法
         - 会员订阅介绍: 6 位家庭成员，1 笔费用，超实惠
+        - 合辑视频
     - Web 端播放页
         - 赞助商广告
         - 下拉自动翻译评论
@@ -43,8 +44,8 @@ http:
           max-size: 2097152
           require-body: true
           timeout: 10
-          argument: ""
           type: response
+          argument: ""
           debug: false
 
 script-providers:
