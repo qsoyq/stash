@@ -8,6 +8,11 @@ icon: https://stash.wiki/favicon.ico
 
 http:
     mitm:
+        # ChatGPT App
+        - "-ios.chat.openai.com"
+        - "-ws.chatgpt.com"
+        - "-ab.chatgpt.com"
+
         # 米家
         - "-*api.mijia.tech"
 
