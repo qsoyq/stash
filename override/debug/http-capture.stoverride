@@ -7,21 +7,15 @@ icon: https://raw.githubusercontent.com/qsoyq/shell/main/assets/icon/debug.png
 
 http:
     mitm:
-        # 米家 App
+        # ChatGPT App
+        - "-ios.chat.openai.com"
+        - "-ws.chatgpt.com"
+        - "-ab.chatgpt.com"
+
+        # 米家
         - "-*api.mijia.tech"
-        # include before exclude
-        - "gspe1-ssl.ls.apple.com"
 
-        # exclude
-        - "-*.douyinvod.com"
-        - "-*.douyinpic.com"
-        - "-*.amemv.com"
-
-        # 番茄小说段落评论
-        - "-*api5-normal-sinfonlineb.fqnovel.com"
-        # 番茄小说书籍封面图片
-        - "-*fqnovelpic.com"
-
+        # Apple
         - "-*.itunes.apple.com"
         - "-*.iadsdk.apple.com"
         - "-*.apple.com"
@@ -29,9 +23,21 @@ http:
 
         - "-*.icloud-content.com"
         - "-*.icloud.com"
+        - "-gspe1-ssl.ls.apple.com"
 
+        # 抖音
+        - "-*.douyinvod.com"
+        - "-*.douyinpic.com"
+        - "-*.amemv.com"
+
+        # 番茄小说
+        - "-*api5-normal-sinfonlineb.fqnovel.com"
+        - "-*fqnovelpic.com"
+
+        # ？
         - "-wxapp.tc.qq.com"
 
+        # Tiktok
         - "-*.tiktokv.*"
         - "-*.tiktokcdn-*.com"
 
