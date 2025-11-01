@@ -513,6 +513,10 @@ function addCSS(document) {
     let style = document.createElement("style")
     style.type = 'text/css';
     style.innerHTML = `
+    div.web-right-float-button {
+        display: none; // 右测浮动按钮
+    }
+
     div.footer {
         display: none;
     }
