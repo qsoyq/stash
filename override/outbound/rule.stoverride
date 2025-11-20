@@ -1,0 +1,6 @@
+name: rule
+desc: |-
+    - 强制规则
+category: Device
+icon: https://raw.githubusercontent.com/qsoyq/shell/main/assets/icon/debug.png
+mode: rule

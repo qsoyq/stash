@@ -1,0 +1,6 @@
+name: direct
+desc: |-
+    - 强制直连
+category: Device
+icon: https://raw.githubusercontent.com/qsoyq/shell/main/assets/icon/debug.png
+mode: direct

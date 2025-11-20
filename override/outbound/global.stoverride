@@ -1,0 +1,6 @@
+name: global
+desc: |-
+    - 强制全局
+category: Device
+icon: https://raw.githubusercontent.com/qsoyq/shell/main/assets/icon/debug.png
+mode: global
