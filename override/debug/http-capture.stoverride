@@ -33,6 +33,10 @@ http:
         # 番茄小说
         - "-*api5-normal-sinfonlineb.fqnovel.com"
         - "-*fqnovelpic.com"
+        - "-*fqnovel.com"
+
+        # 腾讯地图
+        - "-lbs.map.qq.com"
 
         # ？
         - "-wxapp.tc.qq.com"

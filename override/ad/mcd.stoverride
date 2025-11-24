@@ -1,3 +1,4 @@
+#SUBSCRIBED https://raw.githubusercontent.com/qsoyq/stash/main/override/ad/mcd.stoverride
 name: 麦当劳
 desc: |-
     - 开屏广告
@@ -9,7 +10,10 @@ icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/mcd.png
 http:
     mitm:
         - api.mcd.cn
+        - api2.mcd.cn
     url-rewrite:
-        - ^https://api.mcd.cn/bff/portal/home/splash - reject # 开屏广告
-        - ^https://api.mcd.cn/bff/portal/richpop - reject # 弹窗广告
-        - ^https://api.mcd.cn/bff/portal/home/hotActivity - reject # 首页热门活动
+        - https://api.mcd.cn/bff/portal/home/splash - reject # 开屏广告
+        - https://api.mcd.cn/bff/portal/richpop - reject # 弹窗广告
+        - https://api.mcd.cn/bff/portal/home/hotActivity - reject # 首页热门活动
+    body-rewrite:
+        - https://api2.mcd.cn/bff/portal/home/splash response-jq .list=[]
