@@ -30,6 +30,9 @@ http:
         - "-*.douyinpic.com"
         - "-*.amemv.com"
 
+        # 美团
+        - "-*rpc.meituan.com" # 大众点评支付
+
         # 番茄小说
         - "-*api5-normal-sinfonlineb.fqnovel.com"
         - "-*fqnovelpic.com"
