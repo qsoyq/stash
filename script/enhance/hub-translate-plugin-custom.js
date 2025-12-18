@@ -540,7 +540,7 @@ function runtimeCode() {
         if (name === '') {
             return url
         }
-        // let addr = `http://script.hub/file/_start_/${url}/_end_/${name}.stoverride?type=loon-plugin&target=stash-stoverride&del=true&jqEnabled=true`
+        // let addr = `http://script.hub/file/_start_/${encodeURI(url)}/_end_/${name}.stoverride?type=loon-plugin&target=stash-stoverride&del=true&jqEnabled=true`
         let addr = `https://p.19940731.xyz/api/stash/stoverride/loon?url=${url}&category=ad`
         let replaced = `stash://install-override?url=${encodeURI(addr)}`
         console.log(addr)
