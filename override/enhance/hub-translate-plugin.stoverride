@@ -1,4 +1,4 @@
-name: 插件转换
+name: 插件转换 - ScriptHub 转换
 desc: |-
     - 对指定网站的插件安装地址重写为 Stash 可用的安装链接
 category: enhance

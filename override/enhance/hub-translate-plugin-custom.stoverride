@@ -1,4 +1,4 @@
-name: 插件转换
+name: 插件转换 - 自定义转换
 desc: |-
     - 对指定网站的插件安装地址重写为 Stash 可用的安装链接
 category: enhance
@@ -8,7 +8,7 @@ http:
     mitm:
         - "hub.kelee.one"
     script:
-        - name: hub-rewrite-plugin
+        - name: hub-rewrite-plugin-custom
           binary-mode: false
           match: https://hub.kelee.one/
           max-size: 1048576
@@ -18,6 +18,6 @@ http:
           debug: false
 
 script-providers:
-    hub-rewrite-plugin:
+    hub-rewrite-plugin-custom:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/enhance/hub-translate-plugin-custom.js
         interval: 86400
