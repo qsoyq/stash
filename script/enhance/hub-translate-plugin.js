@@ -514,8 +514,19 @@ function addCSS(document) {
 }
 
 
-
 function runtimeCode() {
+    /**
+    * 返回 URL Path 最后一部分作为文件名
+    * @param {string} url 
+    * @returns {string} 描述返回值信息
+    * @throws {错误类型} 描述可能抛出的错误
+    */
+    function getFilenameFromUrl(url) {
+        const path = url.split('?')[0].split('#')[0];
+        const parts = path.replace(/\/+$/, '').split('/').filter(Boolean);
+        return parts.length ? parts[parts.length - 1] : '';
+    }
+
 
     /**
     * 将 Loon 插件模块的地址替换成 Stash 的导入规则
@@ -524,8 +535,17 @@ function runtimeCode() {
     * @throws {错误类型} 描述可能抛出的错误
     */
     function get_stash_override_url_from_loon(url) {
-        let addr = `https://p.19940731.xyz/api/stash/stoverride/loon?url=${url}&category=ad`
-        return `stash://install-override?url=${encodeURI(addr)}`
+        console.log(`url: ${url}`)
+        let name = getFilenameFromUrl(url)
+        if (name === '') {
+            return url
+        }
+        let addr = `http://script.hub/file/_start_/${url}/_end_/${name}.stoverride?type=loon-plugin&target=stash-stoverride&del=true&jqEnabled=true`
+        // let addr = `https://p.19940731.xyz/api/stash/stoverride/loon?url=${url}&category=ad`
+        let replaced = `stash://install-override?url=${encodeURI(addr)}`
+        console.log(addr)
+        console.log(replaced)
+        return replaced
     }
 
     const loonRegex = /loon:\/\/import\?plugin=(https?:\/\/[^\s]+)/;
