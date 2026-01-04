@@ -27,6 +27,5 @@ repos:
       hooks:
           - id: check-stash-override-format
             args: [--inplace]
-            files: "\\.(py)$"
             always_run: true
             verbose: true
