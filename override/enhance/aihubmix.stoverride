@@ -5,7 +5,8 @@ category: enhance
 icon: https://aihubmix.com/favicon.ico
 http:
     mitm:
-        - "api.openai.com"
+        - api.openai.com
+    force-http-engine:
+        - api.openai.com
     url-rewrite:
-        - https://api.openai.com/v1/chat/completions https://aihubmix.com transparent # OpenAI重定向
-
+        - https://api.openai.com/v1/chat/completions https://aihubmix.com transparent

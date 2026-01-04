@@ -1,23 +1,18 @@
 name: 分流直连
-desc: |-
+desc: ""
 category: ruleset
 icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Direct.png
-
 rules:
-    # QQ网页端快捷登陆
     - DOMAIN,localhost.ptlogin2.qq.com,DIRECT
     - DOMAIN,localhost.sec.qq.com,DIRECT
-
     - DOMAIN-SUFFIX,lcdn-locator.apple.com,DIRECT
     - DOMAIN-SUFFIX,lcdn-registration.apple.com,DIRECT
     - DOMAIN-SUFFIX,aihubmix.com,DIRECT
-    - DOMAIN-SUFFIX,knit.bid,DIRECT # 爱妹子
-    - DOMAIN-SUFFIX,ddxq.mobi,DIRECT # 叮咚买菜
-    - DOMAIN-SUFFIX,tastientech.com,DIRECT # 塔斯汀
+    - DOMAIN-SUFFIX,knit.bid,DIRECT
+    - DOMAIN-SUFFIX,ddxq.mobi,DIRECT
+    - DOMAIN-SUFFIX,tastientech.com,DIRECT
     - DOMAIN-SUFFIX,wushuangai.com,DIRECT
-
-    - DOMAIN-SUFFIX,jk.com,DIRECT # 幂健康
-    - DOMAIN-SUFFIX,yuwell.com,DIRECT # 鱼跃
-    - DOMAIN-SUFFIX,novocare.com.cn,DIRECT # 诺和关怀
-
+    - DOMAIN-SUFFIX,jk.com,DIRECT
+    - DOMAIN-SUFFIX,yuwell.com,DIRECT
+    - DOMAIN-SUFFIX,novocare.com.cn,DIRECT
     - DOMAIN,time.is,DIRECT

@@ -18,7 +18,6 @@ desc: |-
         - banner 轮播
         - 推荐广告
         - 后台切前台闪屏广告
-
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/bilibili-intl.png
 http:
@@ -31,70 +30,50 @@ http:
         - m.bilibili.com
         - bilibili.com
         - live.bilibili.com
+    force-http-engine:
+        - api.live.bilibili.com
+        - app.bilibili.com
+        - bilibili.com
+        - i1.hdslb.com
+        - i2.hdslb.com
+        - live.bilibili.com
+        - m.bilibili.com
+        - www.bilibili.com
     url-rewrite:
-        # 哔哩哔哩开屏广告
         - https?://app.bilibili.com/x/v2/splash/show - reject
-
-        # 直播间 ｜ 一对一教学推荐
         - https://api.live.bilibili.com/xlive/app-ucenter/v2/playTogether/GetPlayTogetherUserAnchorInfoV2 - reject
         - https://api.live.bilibili.com/xlive/app-ucenter/v2/playTogether/PlayTogetherServiceCardDetail - reject
-
-        # 视频｜云视听小电视
         - https://i1.hdslb.com/bfs/activity-plat/static/9bdd988aed64a23976d6d5494533a450/vBISHozSu0.png - reject
         - https://i2.hdslb.com/bfs/activity-plat/static/9bdd988aed64a23976d6d5494533a450/vBISHozSu0.png - reject
-
     body-rewrite:
-        # Bilibili HD 首页 banner 轮播
         - ^https?://app.bilibili.com/x/v2/feed/index.*$ response-jq if .data.items!=null then .data.items |= map(select(.card_type!="banner_ipad_v8")) end
-
-        # Bilibili HD 首页推荐广告
         - ^https?://app.bilibili.com/x/v2/feed/index.*$ response-jq if .data.items!=null then .data.items |= map(select(.card_goto!="ad_web_s")) end
-
-        # Bilibili HD 后台切前台闪屏广告
         - https?://app.bilibili.com/x/v2/splash/list response-jq .data={}
-
-        # 直播右下角横幅小组件
         - https://api.live.bilibili.com/xlive/play-interface/widgetService/GetWidgetBannerList response-jq .data={}
-
-        # 直播间推荐购买商品悬浮窗 ｜ 大家都在买
         - https://api.live.bilibili.com/xlive/e-commerce-interface/v1/ecommerce-user/get_shopping_info response-jq .data.recommend_card_detail={}
         - https://api.live.bilibili.com/xlive/e-commerce-interface/v1/ecommerce-user/get_shopping_info response-jq .data.h5jump_popup=[]
         - https://api.live.bilibili.com/xlive/e-commerce-interface/v1/ecommerce-user/get_shopping_info response-jq .data.selected_goods={}
         - https://api.live.bilibili.com/xlive/e-commerce-interface/v1/ecommerce-user/get_shopping_info response-jq .data.bubbles_detail={}
         - https://api.live.bilibili.com/xlive/e-commerce-interface/v1/ecommerce-user/get_shopping_info response-jq .data.shopping_card_detail={}
-
-        # 直播间 ｜ 购物车
         - https://api.live.bilibili.com/xlive/e-commerce-interface/v1/ecommerce-user/get_shopping_cart_list response-jq .data.goods_list=[]
         - https://api.live.bilibili.com/xlive/e-commerce-interface/v1/ecommerce-user/get_shopping_cart_list response-jq .data.has_next_page=false
         - https://api.live.bilibili.com/xlive/e-commerce-interface/v1/ecommerce-user/get_shopping_cart_list response-jq .data.introduce_goods=null
-
-        # 直播间 ｜ banner
         - https://api.live.bilibili.com/xlive/app-room/v1/index/getInfoByRoom response-jq .data.activity_banner_info={}
-
-        # 直播间｜match_card｜follow_card｜forecast_card｜wish_list_card
         - https://api.live.bilibili.com/xlive/app-room/v1/index/getInfoByRoom response-jq .data.function_card=null
-
-        # 直播间更多解说
         - https://api.live.bilibili.com/xlive/app-room/v1/index/getInfoByRoom response-jq .data.multi_view_info={}
-
-        # 直播间人气榜打榜提醒弹窗
         - https://api.live.bilibili.com/xlive/app-room/v1/index/getInfoByUser response-jq .data.popular_rank_guide_card={}
-
-        # 首页｜发现 N 条新内容提示
         - https://app.bilibili.com/x/v2/feed/index response-jq .data.config.toast=null
-
     script:
-        - name: bilibili
-          binary-mode: false
-          match: https://live.bilibili.com/\d+
-          max-size: 2097152
-          require-body: true
-          timeout: 10
-          argument: ""
-          type: response
-          debug: false
-
+        -   name: bilibili
+            binary-mode: false
+            match: https://live.bilibili.com/\d+
+            max-size: 2097152
+            require-body: true
+            timeout: 10
+            argument: ''
+            type: response
+            debug: false
 script-providers:
-    "bilibili":
+    bilibili:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/bilibili.js
         interval: 86400

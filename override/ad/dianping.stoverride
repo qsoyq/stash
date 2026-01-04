@@ -6,5 +6,7 @@ icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/dianping.pn
 http:
     mitm:
         - img.meituan.net
+    force-http-engine:
+        - img.meituan.net
     url-rewrite:
         - ^https://img.meituan.net/goodsawardpic/.* - reject

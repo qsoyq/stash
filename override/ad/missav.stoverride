@@ -4,23 +4,21 @@ desc: |-
     - 播放页｜事件监听｜blur
 category: ad
 icon: https://missav.ai/favicon.ico
-
 http:
     mitm:
         - missav.ai
-    url-rewrite:
-
+    force-http-engine:
+        - missav.ai
+    url-rewrite: null
     script:
-        # 播放页
-        - name: missav
-          binary-mode: false
-          match: https://missav.ai/
-          max-size: 1048576
-          require-body: true
-          timeout: 20
-          type: response
-          debug: false
-
+        -   name: missav
+            binary-mode: false
+            match: https://missav.ai/
+            max-size: 1048576
+            require-body: true
+            timeout: 20
+            type: response
+            debug: false
 script-providers:
     missav:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/missav.js

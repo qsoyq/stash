@@ -1,8 +1,7 @@
 name: 分流拒绝
-desc: |-
+desc: ""
 category: ruleset
 icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Reject.png
-
 http:
     mitm:
         - api.bilibili.com
@@ -15,31 +14,35 @@ http:
         - h.trace.qq.com
         - image.spdbccc.com
         - www.youtube.com
-
+    force-http-engine:
+        - analytics.google.com
+        - api.bilibili.com
+        - b.clarity.ms
+        - data.bilibili.com
+        - h.trace.qq.com
+        - image.spdbccc.com
+        - redirector.googlevideo.com
+        - stats.g.doubleclick.net
+        - www.google-analytics.com
+        - www.youtube.com
     url-rewrite:
         - https://api.bilibili.com/x/push/report - reject
         - https://api.bilibili.com/x/report/click/ios - reject
         - https://api.bilibili.com/x/report/heartbeat/mobile - reject
         - https://api.bilibili.com/x/v2/history/report - reject
         - https://api.bilibili.com/x/v2/history/report_list - reject
-
         - https://data.bilibili.com/v2/log/web - reject
         - https://data.bilibili.com/log/web - reject
-
         - https://redirector.googlevideo.com/report_mapping - reject
         - https://www.google-analytics.com/\w+/collect - reject
         - https://analytics.google.com/\w+/collect - reject
         - https://stats.g.doubleclick.net/\w+/collect - reject
-
         - ^https?:\/\/image\.spdbccc\.com\.cn\/group\d\/M00\/[A-Z0-9]{2}\/[A-Z0-9]{2}\/.+(yg285|Qk562|Ac840|bM519|cE569|SQ969|0A304) - reject
         - https://b.clarity.ms/collect - reject
         - https://www.youtube.com/api/stats/qoe - reject
-
 rules:
-    - DOMAIN,imasdk.googleapis.com,Google # 拦截会导致动画疯加载失败
+    - DOMAIN,imasdk.googleapis.com,Google
     - IP-CIDR,169.254.169.254/32,REJECT,no-resolve
-
-    # DOMAIN REJECT-DROP
     - DOMAIN,game.eve.mdt.qq.com,REJECT-DROP
     - DOMAIN,rmonitor.aq.com,REJECT-DROP
     - DOMAIN,game.str.mdt.aq.com,REJECT-DROP
@@ -47,7 +50,6 @@ rules:
     - DOMAIN,stats-ipv6.jpush.cn,REJECT-DROP
     - DOMAIN,h.trace.qq.com,REJECT-DROP
     - DOMAIN,game.str.mdt.qq.com,REJECT-DROP
-
     - DOMAIN,api.segment.io,REJECT-DROP
     - DOMAIN,app-analytics-services.com,REJECT-DROP
     - DOMAIN,rmonitor.qq.com,REJECT-DROP
@@ -65,14 +67,10 @@ rules:
     - DOMAIN,mdap.alipay.com,REJECT-DROP
     - DOMAIN,amdc.alipay.com,REJECT-DROP
     - DOMAIN,dataflow.biliapi.com,REJECT-DROP
-
-    # DOMAIN REJECT
     - DOMAIN,www.google-analytics.com,REJECT
     - DOMAIN,push.ele.me,REJECT
     - DOMAIN,config.jpush-ipv6.cn,REJECT
     - DOMAIN,googleads.g.doubleclick.net,REJECT
-
-    # DOMAIN-SUFFIX REJECT
     - DOMAIN-SUFFIX,monitor.xiaoheihe.cn,REJECT
     - AND,((DOMAIN,stun.chat.bilibili.com),(DST-PORT,3478)),REJECT
     - AND,((DOMAIN,stun6.chat.bilibili.com),(DST-PORT,3479)),REJECT

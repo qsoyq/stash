@@ -2,98 +2,107 @@ name: HTTP抓包
 category: debug
 desc: |-
     - 部分请求不允许 mitm, 启用抓包会导致网络错误
-
 icon: https://raw.githubusercontent.com/qsoyq/shell/main/assets/icon/debug.png
-
 http:
     mitm:
-        # ChatGPT App
-        - "-ios.chat.openai.com"
-        - "-ws.chatgpt.com"
-        - "-ab.chatgpt.com"
-
-        # 米家
-        - "-*api.mijia.tech"
-
-        # Apple
-        - "-*.itunes.apple.com"
-        - "-*.iadsdk.apple.com"
-        - "-*.apple.com"
-        - "-*.mzstatic.com"
-
-        - "-*.icloud-content.com"
-        - "-*.icloud.com"
-        - "-gspe1-ssl.ls.apple.com"
-
-        # 抖音
-        - "-*.douyinvod.com"
-        - "-*.douyinpic.com"
-        - "-*.amemv.com"
-
-        # 美团
-        - "-*rpc.meituan.com" # 大众点评支付
-
-        # 番茄小说
-        - "-*api5-normal-sinfonlineb.fqnovel.com"
-        - "-*fqnovelpic.com"
-        - "-*fqnovel.com"
-
-        # 腾讯地图
-        - "-lbs.map.qq.com"
-
-        # ？
-        - "-wxapp.tc.qq.com"
-
-        # Tiktok
-        - "-*.tiktokv.*"
-        - "-*.tiktokcdn-*.com"
-
-        # include
-        - "*.com"
-        - "*.by"
-        - "*.app"
-        - "*.xyz"
-        - "*.net"
-        - "*.org"
-        - "*.ai"
-        - "*.ua"
-        - "*.me"
-        - "*.top"
-        - "*.md"
-        - "*.ws"
-        - "*.tv"
-        - "*.cc"
-        - "*.sb"
-        - "*.mobi"
-        - "*.info"
-        - "*.biz"
-        - "*.xyz"
-        - "*.online"
-        - "*.site"
-        - "*.tech"
-        - "*.store"
-        - "*.cn"
-        - "*.us"
-        - "*.uk"
-        - "*.de"
-        - "*.jp"
-        - "*.fr"
-        - "*.in"
-        - "*.au"
-        - "*.br"
-        - "*.ru"
-
+        - -ios.chat.openai.com
+        - -ws.chatgpt.com
+        - -ab.chatgpt.com
+        - -*api.mijia.tech
+        - -*.itunes.apple.com
+        - -*.iadsdk.apple.com
+        - -*.apple.com
+        - -*.mzstatic.com
+        - -*.icloud-content.com
+        - -*.icloud.com
+        - -gspe1-ssl.ls.apple.com
+        - -*.douyinvod.com
+        - -*.douyinpic.com
+        - -*.amemv.com
+        - -*rpc.meituan.com
+        - -*api5-normal-sinfonlineb.fqnovel.com
+        - -*fqnovelpic.com
+        - -*fqnovel.com
+        - -lbs.map.qq.com
+        - -wxapp.tc.qq.com
+        - -*.tiktokv.*
+        - -*.tiktokcdn-*.com
+        - '*.com'
+        - '*.by'
+        - '*.app'
+        - '*.xyz'
+        - '*.net'
+        - '*.org'
+        - '*.ai'
+        - '*.ua'
+        - '*.me'
+        - '*.top'
+        - '*.md'
+        - '*.ws'
+        - '*.tv'
+        - '*.cc'
+        - '*.sb'
+        - '*.mobi'
+        - '*.info'
+        - '*.biz'
+        - '*.xyz'
+        - '*.online'
+        - '*.site'
+        - '*.tech'
+        - '*.store'
+        - '*.cn'
+        - '*.us'
+        - '*.uk'
+        - '*.de'
+        - '*.jp'
+        - '*.fr'
+        - '*.in'
+        - '*.au'
+        - '*.br'
+        - '*.ru'
+    force-http-engine:
+        - '*.ai'
+        - '*.app'
+        - '*.au'
+        - '*.biz'
+        - '*.br'
+        - '*.by'
+        - '*.cc'
+        - '*.cn'
+        - '*.com'
+        - '*.de'
+        - '*.fr'
+        - '*.in'
+        - '*.info'
+        - '*.jp'
+        - '*.md'
+        - '*.me'
+        - '*.mobi'
+        - '*.net'
+        - '*.online'
+        - '*.org'
+        - '*.ru'
+        - '*.sb'
+        - '*.site'
+        - '*.store'
+        - '*.tech'
+        - '*.top'
+        - '*.tv'
+        - '*.ua'
+        - '*.uk'
+        - '*.us'
+        - '*.ws'
+        - '*.xyz'
     script:
-        - match: ^https?://.*
-          name: http-capture-all
-          type: response
-          require-body: true
-          timeout: 10
-          argument: ""
-          binary-mode: false
-          max-size: 2097152 # 2MB
-          debug: false
-
+        -   match: ^https?://.*
+            name: http-capture-all
+            type: response
+            require-body: true
+            timeout: 10
+            argument: ''
+            binary-mode: false
+            max-size: 2097152
+            debug: false
 script-providers:
     http-capture-all:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/debug/http-capture.js

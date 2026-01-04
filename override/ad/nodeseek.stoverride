@@ -15,28 +15,27 @@ icon: https://www.nodeseek.com/static/image/favicon/favicon-32x32.png
 http:
     mitm:
         - www.nodeseek.com
+    force-http-engine:
+        - www.nodeseek.com
     body-rewrite:
         - https://www.nodeseek.com/api/promotion/list response-jq .data=[]
-
     script:
-        - name: nodeseek
-          binary-mode: false
-          match: https://www.nodeseek.com/avatar/
-          max-size: 1048576
-          require-body: true
-          timeout: 20
-          type: request
-          debug: false
-
-        - name: nodeseek
-          binary-mode: false
-          match: https://www.nodeseek.com/(post-.*|categories.*|space.*|$)
-          max-size: 1048576
-          require-body: true
-          timeout: 20
-          type: response
-          debug: false
-
+        -   name: nodeseek
+            binary-mode: false
+            match: https://www.nodeseek.com/avatar/
+            max-size: 1048576
+            require-body: true
+            timeout: 20
+            type: request
+            debug: false
+        -   name: nodeseek
+            binary-mode: false
+            match: https://www.nodeseek.com/(post-.*|categories.*|space.*|$)
+            max-size: 1048576
+            require-body: true
+            timeout: 20
+            type: response
+            debug: false
 script-providers:
     nodeseek:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/nodeseek.js

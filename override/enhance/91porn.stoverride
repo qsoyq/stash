@@ -12,20 +12,23 @@ http:
         - 91porn.com
         - vthumb.killcovid2021.com
         - mp4.blkj58.com
+    force-http-engine:
+        - 91porn.com
+        - mp4.blkj58.com
+        - vthumb.killcovid2021.com
     url-rewrite:
         - https://vthumb.killcovid2021.com/300vip_and_yqm.mp4 - reject
         - https://mp4.blkj58.com/fh.mp4 - reject
     script:
-        - name: 91porn
-          binary-mode: true
-          match: https://91porn.com/.*\.php
-          max-size: 1048576
-          require-body: true
-          timeout: 20
-          type: response
-          argument: ""
-          debug: false
-
+        -   name: 91porn
+            binary-mode: true
+            match: https://91porn.com/.*\.php
+            max-size: 1048576
+            require-body: true
+            timeout: 20
+            type: response
+            argument: ''
+            debug: false
 script-providers:
     91porn:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/91porn.js

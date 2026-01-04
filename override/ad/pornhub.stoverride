@@ -5,18 +5,18 @@ category: ad
 icon: https://www.pornhub.com/favicon.ico
 http:
     mitm:
-        - "*.pornhub.com"
-
+        - '*.pornhub.com'
+    force-http-engine:
+        - '*.pornhub.com'
     script:
-        - name: pornhub
-          binary-mode: false
-          match: https://(.*).pornhub.com
-          max-size: 10485760
-          require-body: true
-          timeout: 20
-          type: response
-          debug: true
-
+        -   name: pornhub
+            binary-mode: false
+            match: https://(.*).pornhub.com
+            max-size: 10485760
+            require-body: true
+            timeout: 20
+            type: response
+            debug: true
 script-providers:
     pornhub:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/pornhub.js

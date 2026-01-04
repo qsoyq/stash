@@ -7,17 +7,17 @@ icon: https://www.itdog.cn/favicon.ico
 http:
     mitm:
         - www.itdog.cn
-
+    force-http-engine:
+        - www.itdog.cn
     script:
-        - name: itdog
-          binary-mode: false
-          match: https://www.itdog.cn/
-          max-size: 1048576
-          require-body: true
-          timeout: 20
-          type: response
-          debug: false
-
+        -   name: itdog
+            binary-mode: false
+            match: https://www.itdog.cn/
+            max-size: 1048576
+            require-body: true
+            timeout: 20
+            type: response
+            debug: false
 script-providers:
     itdog:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/itdog.js

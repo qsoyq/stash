@@ -5,6 +5,8 @@ category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/leigod.png
 http:
     mitm:
-        - "opapi.xxghh.biz"
+        - opapi.xxghh.biz
+    force-http-engine:
+        - opapi.xxghh.biz
     body-rewrite:
         - https://opapi.xxghh.biz/nn-assist/banner/list response-jq .retData|=map(select(.bannerType!=3))

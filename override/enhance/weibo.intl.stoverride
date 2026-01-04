@@ -3,21 +3,21 @@ desc: |-
     - 访问网页版微博时，发送通知, 点击通知跳转到微博国际版
 category: enhance
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/weibointl.png
-
 http:
     mitm:
         - weibo.com
         - m.weibo.cn
-
+    force-http-engine:
+        - m.weibo.cn
+        - weibo.com
     script:
-        - match: https://(weibo.com|m.weibo.cn)
-          name: "weibo.intl.urlscheme"
-          type: request
-          require-body: false
-          timeout: 5
-          argument: ""
-
+        -   match: https://(weibo.com|m.weibo.cn)
+            name: weibo.intl.urlscheme
+            type: request
+            require-body: false
+            timeout: 5
+            argument: ''
 script-providers:
-    "weibo.intl.urlscheme":
+    weibo.intl.urlscheme:
         url: https://raw.githubusercontent.com/qsoyq/shell/main/config/stash/script/weibo/goto_weibointernational_detail.js
         interval: 86400

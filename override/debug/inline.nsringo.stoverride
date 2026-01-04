@@ -1,9 +1,11 @@
 name: iRingo 资源在线预览
-desc: |-
+desc: ""
 category: debug
 icon: https://nsringo.github.io/NSRingoMasked64x.png
 http:
     mitm:
-        - "nsringo.github.io"
+        - nsringo.github.io
+    force-http-engine:
+        - nsringo.github.io
     header-rewrite:
         - https?://nsringo.github.io response-replace Content-Disposition inline

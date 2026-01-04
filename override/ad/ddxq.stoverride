@@ -19,42 +19,38 @@ desc: |-
     - 搜索｜ 搜索发现
     - 搜索｜ 叮咚热搜
     - 搜索｜ 排行榜
-
 category: ad
 icon: https://wx.m.ddxq.mobi/favicon.ico
 http:
     mitm:
-        # 叮咚买菜
         - maicai.api.ddxq.mobi
         - 212.129.229.168
+    force-http-engine:
+        - 212.129.229.168
+        - maicai.api.ddxq.mobi
     body-rewrite:
         - https://(maicai.api.ddxq.mobi|212.129.229.168)/advert/getAd response-jq .data={}
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/advert/startUpScreen response-jq .data={} # 开屏
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/advert/startUpScreen response-jq .data={}
         - https://(maicai.api.ddxq.mobi|212.129.229.168)/advert/getPreloadAd response-jq .data={}
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/advert/startUpScreen response-jq .data={} # 开屏
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/advert/startUpScreen response-jq .data={}
         - https://(maicai.api.ddxq.mobi|212.129.229.168)/advert/getPreloadAd response-jq .data={}
-
         - https://(maicai.api.ddxq.mobi|212.129.229.168)/vip/getVipAd response-jq .data={}
-
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/getAdvertTagInfo response-jq .data={} # 首页分类高亮
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/getHomeAdPop response-jq .data={} # 弹窗
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/newDetails response-jq .data.suspension=[] # 首页悬浮
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/newDetails response-jq .data.top_advert_data=[] # 顶部右上角签到
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/newDetails response-jq .data.list|=map(select(.type!=28)) # 品质之爱
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/newDetails response-jq .data.list|=map(select(.type!=5)) # 公告｜抱歉！受天气影响，您的订单可能延迟，请尽量错峰下单哦。
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/bottomNavi response-jq .data.adId=null # 广告?
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/bottomNavi response-jq .data.bottom_list[].badgePopText="" # 底部导航栏移除高亮提示文字
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/bottomNavi response-jq .data.bottom_list|=map(select(.name!="分类")) # 底部导航栏移除分类
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/bottomNavi response-jq .data.bottom_list|=map(select(.type!="eatwhat")) # 底部导航栏移除AI
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/homeFlowDetail response-jq .data.list|=map(select(.recommend_cate!=12)) # 首页推荐流｜人气榜
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/homeFlowDetail response-jq .data.list|=map(select(.recommend_cate!=3)) # 首页推荐流｜广告｜超级品牌周
-
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/coupon/unused response-jq .data.ad_info={} # 我的优惠券 ｜ 邀请有礼
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/search/rollHotKeyword response-jq .data.keywords=[] # 搜索｜ 滚动热词
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/search/hotKeyword response-jq .data.new_keywords=[] # 搜索｜ 搜索发现
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/search/rankingList response-jq .data.topic_list=[] # 搜索｜ 叮咚热搜
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/search/rankingList response-jq .data.ranking_lists=[] # 搜索｜ 排行榜
-
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/getAdvertTagInfo response-jq .data={}
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/getHomeAdPop response-jq .data={}
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/newDetails response-jq .data.suspension=[]
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/newDetails response-jq .data.top_advert_data=[]
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/newDetails response-jq .data.list|=map(select(.type!=28))
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/newDetails response-jq .data.list|=map(select(.type!=5))
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/bottomNavi response-jq .data.adId=null
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/bottomNavi response-jq .data.bottom_list[].badgePopText=""
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/bottomNavi response-jq .data.bottom_list|=map(select(.name!="分类"))
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/bottomNavi response-jq .data.bottom_list|=map(select(.type!="eatwhat"))
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/homeFlowDetail response-jq .data.list|=map(select(.recommend_cate!=12))
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/homeFlowDetail response-jq .data.list|=map(select(.recommend_cate!=3))
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/coupon/unused response-jq .data.ad_info={}
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/search/rollHotKeyword response-jq .data.keywords=[]
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/search/hotKeyword response-jq .data.new_keywords=[]
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/search/rankingList response-jq .data.topic_list=[]
+        - https://(maicai.api.ddxq.mobi|212.129.229.168)/search/rankingList response-jq .data.ranking_lists=[]
 rules:
-    # http dns
     - IP-CIDR,119.29.29.90/32,REJECT-DROP,no-resolve

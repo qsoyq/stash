@@ -95,7 +95,7 @@ async function delete_(params) {
 
 /**
  * 解析 cookies 字符串并返回对象
- * @param {string} cookie 
+ * @param {string} cookie
  * @returns {object|null} 当返回为 null 表示解析失败
  */
 function parseCookie(cookie) {
@@ -123,7 +123,7 @@ function parseCookie(cookie) {
 }
 /**
  * 读取 stash 内部持久化存储的值
- * @param {string} key 
+ * @param {string} key
  */
 function read(key) {
     $persistentStore.read(key)
@@ -131,8 +131,8 @@ function read(key) {
 
 /**
  * 更新 stash 内部持久化的值
- * @param {string} key 
- * @param {string} val 
+ * @param {string} key
+ * @param {string} val
  */
 function writePersistentArgument(key, val) {
     $persistentStore.write(val, key)
@@ -140,7 +140,7 @@ function writePersistentArgument(key, val) {
 
 /**
  *  基于持久化读取 Cookie
- * @param {string} key 
+ * @param {string} key
  * @returns {string}
  */
 function getCookie(key) {
@@ -149,19 +149,19 @@ function getCookie(key) {
 
 /**
  * 基于持久化写入 Cookie
- * @param {string} key 
- * @param {string} val 
- * @returns 
+ * @param {string} key
+ * @param {string} val
+ * @returns
  */
 function setCookie(key, val) {
     return $persistentStore.write(val, `Cookie.${key}`)
 }
 /**
  * 发送 stash 通知
- * @param {string} title 
- * @param {string} subtitle 
- * @param {string} content 
- * @param {string|undefined} url 
+ * @param {string} title
+ * @param {string} subtitle
+ * @param {string} content
+ * @param {string|undefined} url
  */
 function notificationPost(title, subtitle, content, url) {
     const params = url ? { url } : {};
@@ -170,7 +170,7 @@ function notificationPost(title, subtitle, content, url) {
 
 /**
  * 判断当前请求是否来自微信
- * @returns {Boolean} 
+ * @returns {Boolean}
  */
 function isWechat() {
     if (typeof $request === 'undefined') {
@@ -182,7 +182,7 @@ function isWechat() {
 
 /**
  * 返回指定数量的随机字符
- * @param {number} num 
+ * @param {number} num
  * @returns {string}
  */
 function randomChar(num) {
@@ -196,7 +196,7 @@ function randomChar(num) {
 
 /**
  * 将指定日期对象转为相应的日期时间字符串
- * @param {Date|null} [date=null] 
+ * @param {Date|null} [date=null]
  * @returns {string} 表示当前时间的字符串
  */
 function getLocalDateString(date = null) {
@@ -215,8 +215,8 @@ function getLocalDateString(date = null) {
 
 /**
  * 遍历并输出对象字面值
- * @param {object} body 
- * @param {string|undefined} prefix 
+ * @param {object} body
+ * @param {string|undefined} prefix
  */
 function visitAll(body, prefix = "", visited = new WeakSet()) {
     if (typeof body !== 'object' || body === null) {
@@ -242,8 +242,8 @@ function visitAll(body, prefix = "", visited = new WeakSet()) {
 }
 /**
  * 解析 json 字符串， 失败返回 null
- * @param {*} string 
- * @returns 
+ * @param {*} string
+ * @returns
  */
 function parseJsonBody(string) {
     try {
@@ -256,7 +256,7 @@ function parseJsonBody(string) {
 
 /**
  * 读取脚本参数
- * @param {string} key 
+ * @param {string} key
  * @returns {any|undefined|null}
  */
 function getScriptArgument(key) {
@@ -273,9 +273,9 @@ function getScriptArgument(key) {
 
 /**
  * 从环境中读取参数， 且参数不可为空，否则抛出异常
- * @param {string} key 
+ * @param {string} key
  * @returns {any}
- * @throws {Error} 如果找不到对应的参数值，或参数值为 `null` 或 `undefined`，则抛出一个包含错误信息的异常。* 
+ * @throws {Error} 如果找不到对应的参数值，或参数值为 `null` 或 `undefined`，则抛出一个包含错误信息的异常。*
  */
 function mustGetScriptArgument(key) {
     let val = getScriptArgument(key)
@@ -288,7 +288,7 @@ function mustGetScriptArgument(key) {
 
 /**
  * 读取本地持久化参数
- * @param {string} key 
+ * @param {string} key
  * @returns {string}
  */
 function getPersistentArgument(key) {
@@ -304,9 +304,9 @@ function getScriptType() {
 }
 
 /**
- * 
- * @param {string} countryCode 
- * @returns 
+ *
+ * @param {string} countryCode
+ * @returns
  */
 function countryCodeToEmoji(countryCode) {
     // 将代码转为大写
@@ -335,7 +335,7 @@ function countryCodeToEmoji(countryCode) {
 }
 
 /**
- * 
+ *
  * @returns {string | undefined}
  */
 function getScriptResponseBody() {
@@ -347,7 +347,7 @@ function getScriptResponseBody() {
  * 在指定作用域中执行代码
  * @param {*} code 执行代码
  * @param {*} context 上下文作用域
- * @returns 
+ * @returns
  */
 function safeEval(code, context) {
     const func = new Function(...Object.keys(context), code);
@@ -356,10 +356,10 @@ function safeEval(code, context) {
 
 async function main() {
     let type = getScriptType()
-    // {"rewriteHttpResponseBodyRegexps": [{"search": "a", "replace": "b"}]}                    
+    // {"rewriteHttpResponseBodyRegexps": [{"search": "a", "replace": "b"}]}
     let regexps = getScriptArgument("rewriteHttpResponseBodyRegexps") || []
 
-    // {"rewriteHttpResponseBodyRegexpsArray": [["a", "b"]]}                    
+    // {"rewriteHttpResponseBodyRegexpsArray": [["a", "b"]]}
     let regexpsArray = getScriptArgument("rewriteHttpResponseBodyRegexpsArray") || []
 
     // {"documentEvalCodes": ["console.log(1)"], "console.log(2)"]}

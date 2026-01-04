@@ -7,18 +7,18 @@ category: ad
 icon: https://1024.day/favicon.ico
 http:
     mitm:
-        - "1024.day"
+        - 1024.day
+    force-http-engine:
+        - 1024.day
     script:
-        - name: 1024.day
-          binary-mode: false
-          match: https://1024.day(/$|/d/\d+|/u/\w+)
-          max-size: 1048576
-          require-body: true
-          timeout: 20
-          type: response
-          argument: |-
-              {"documentEvalCodes": ["Array.from(context.document.getElementsByClassName(\\\"half\\\")).forEach(e => { e.remove() })"]}
-
+        -   name: 1024.day
+            binary-mode: false
+            match: https://1024.day(/$|/d/\d+|/u/\w+)
+            max-size: 1048576
+            require-body: true
+            timeout: 20
+            type: response
+            argument: '{"documentEvalCodes": ["Array.from(context.document.getElementsByClassName(\\\"half\\\")).forEach(e => { e.remove() })"]}'
 script-providers:
     1024.day:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/debug/http-rewrite.js

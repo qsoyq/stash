@@ -1,92 +1,36 @@
 name: x
-desc: |-
-    - 删除 CSP 策略，允许在网页上执行内联代码
-    - 首页时间线
-        - 广告
-        - NewTweets | TimelineShowAlert
-        - Pinned by people you follow
-        - Discover new Communities    
-        - Creators for you | suggest_who_to_subscribe
-        - Who to follow | suggest_who_to_follow
-        - Go ad-free with Premium+ | premium-plus-upsell-prompt
-    - 详情页
-        - 评论广告
-        - Who can reply
-        - Grok actions
-        - Translate post button
-    - 用户页面 
-        - 推文标签页 | Who to follow | suggest_who_to_follow
-    - 用户页面
-        - 回复标签页 | Who to follow | suggest_who_to_follow
-    - 页面元素移除
-        - 时间线
-            - 快捷发帖组件
-        - 页面浮标
-            - PC端右侧Grok悬浮按钮
-            - 移动端网页右下角悬浮发帖按钮
-        - 右侧导航栏
-            - PC端右上角订阅提醒
-            - 趋势
-        - 左侧导航栏
-            - Grok
-            - Premium
-            - Verified Orgs
-            - Jobs
-            - Account menu
-
+desc: "- 删除 CSP 策略，允许在网页上执行内联代码\n- 首页时间线\n    - 广告\n    - NewTweets | TimelineShowAlert\n    - Pinned by people you follow\n    - Discover new Communities    \n    - Creators for you | suggest_who_to_subscribe\n    - Who to follow | suggest_who_to_follow\n    - Go ad-free with Premium+ | premium-plus-upsell-prompt\n- 详情页\n    - 评论广告\n    - Who can reply\n    - Grok actions\n    - Translate post button\n- 用户页面 \n    - 推文标签页 | Who to follow | suggest_who_to_follow\n- 用户页面\n    - 回复标签页 | Who to follow | suggest_who_to_follow\n- 页面元素移除\n    - 时间线\n        - 快捷发帖组件\n    - 页面浮标\n        - PC端右侧Grok悬浮按钮\n        - 移动端网页右下角悬浮发帖按钮\n    - 右侧导航栏\n        - PC端右上角订阅提醒\n        - 趋势\n    - 左侧导航栏\n        - Grok\n        - Premium\n        - Verified Orgs\n        - Jobs\n        - Account menu"
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/x.png
-
 http:
     mitm:
-        # 推特
         - x.com
-
+    force-http-engine:
+        - x.com
     body-rewrite:
-        # 首页时间线广告
         - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq if .data.home.home_timeline_urt.instructions[0].entries != null then .data.home.home_timeline_urt.instructions[0].entries|=map(select(.content?.itemContent?.promotedMetadata==null)) end
-
-        # 首页时间线新推文通知浮动窗口 | NewTweets | TimelineShowAlert
         - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq .data.home.home_timeline_urt.instructions|=map(select(.alertType!="NewTweets"))
-
-        # 首页时间线 | Pinned by people you follow
         - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq if .data.home.home_timeline_urt.instructions[0].entries != null then .data.home.home_timeline_urt.instructions[0].entries|=map(select(.content?.clientEventInfo?.component!="for_you_pinned")) end
-
-        # 首页时间线 | Discover new Communities
         - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq if .data.home.home_timeline_urt.instructions[0].entries != null then .data.home.home_timeline_urt.instructions[0].entries|=map(select(.content?.clientEventInfo?.component!="community_to_join")) end
-
-        # 首页时间线 | Creators for you | suggest_who_to_subscribe
         - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq if .data.home.home_timeline_urt.instructions[0].entries != null then .data.home.home_timeline_urt.instructions[0].entries|=map(select(.content?.clientEventInfo?.component!="suggest_who_to_subscribe")) end
-
-        # 首页时间线 | Who to follow | suggest_who_to_follow
         - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq if .data.home.home_timeline_urt.instructions[0].entries != null then .data.home.home_timeline_urt.instructions[0].entries|=map(select(.content?.clientEventInfo?.component!="suggest_who_to_follow")) end
-
-        # 首页时间线 | Go ad-free with Premium+ | premium-plus-upsell-prompt
         - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq if .data.home.home_timeline_urt.instructions[0].entries != null then .data.home.home_timeline_urt.instructions[0].entries|=map(select(.content?.clientEventInfo?.component!="premium-plus-upsell-prompt")) end
-
-        # 详情页评论广告
         - https?://x.com/i/api/graphql/.+/TweetDetail.*$ response-jq walk(if type == "object" and has("entries") then .entries|=map(select(.content?.items[0]?.item?.itemContent?.promotedMetadata==null)) else . end)
-
-        # 用户| 推文标签页 | Who to follow | suggest_who_to_follow
         - https://x.com/i/api/graphql/.+/UserTweets response-jq walk(if type == "object" and has("entries") then .entries |=map(select(.content?.clientEventInfo?.component!="suggest_who_to_follow")) else . end)
-
-        # 用户| 回复标签页 | Who to follow | suggest_who_to_follow
         - https://x.com/i/api/graphql/.+/UserTweetsAndReplies response-jq walk(if type == "object" and has("entries") then .entries |=map(select(.content?.clientEventInfo?.component!="suggest_who_to_follow")) else . end)
     header-rewrite:
         - https://x.com/ response-del content-security-policy
-
     script:
-        - name: x
-          binary-mode: false
-          match: https://x.com/
-          max-size: 2097152
-          require-body: true
-          timeout: 10
-          argument: ""
-          type: response
-          debug: false
-
+        -   name: x
+            binary-mode: false
+            match: https://x.com/
+            max-size: 2097152
+            require-body: true
+            timeout: 10
+            argument: ''
+            type: response
+            debug: false
 script-providers:
-    "x":
+    x:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/x.js
         interval: 86400

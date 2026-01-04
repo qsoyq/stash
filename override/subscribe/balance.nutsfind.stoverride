@@ -5,28 +5,27 @@ desc: |-
     - 需要在网站上登陆一次
     - 会定时检查已使用流量，默认 3 分钟一次，并在流量变动达到阈值后发送通知
     - 默认流量通知阈值为 10 GB
-
 http:
     mitm:
         - nutsfind.com
         - www.nutsfind.com
+    force-http-engine:
+        - nutsfind.com
+        - www.nutsfind.com
     script:
-        - match: https://(www\.)?nutsfind.com/api/v1/user/getSubscribe
-          name: traffic.nutsfind
-          type: request
-          require-body: true
-          debug: false
-          argument: >-
-              {}
+        -   match: https://(www\.)?nutsfind.com/api/v1/user/getSubscribe
+            name: traffic.nutsfind
+            type: request
+            require-body: true
+            debug: false
+            argument: '{}'
 cron:
     script:
-        - name: traffic.nutsfind
-          cron: "*/3 * * * *"
-          timeout: 10
-          debug: false
-          argument: >-
-              {"decreaseTrafficAmountTrigger": 10}
-
+        -   name: traffic.nutsfind
+            cron: '*/3 * * * *'
+            timeout: 10
+            debug: false
+            argument: '{"decreaseTrafficAmountTrigger": 10}'
 script-providers:
     traffic.nutsfind:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/cron/traffic.nutsfind.js

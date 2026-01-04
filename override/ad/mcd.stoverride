@@ -5,16 +5,17 @@ desc: |-
     - 首页热门活动
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/mcd.png
-
 http:
     mitm:
         - api.mcd.cn
         - api2.mcd.cn
+    force-http-engine:
+        - api.mcd.cn
+        - api2.mcd.cn
     url-rewrite:
-        - https://api.mcd.cn/bff/portal/home/splash - reject # 开屏广告
-        - https://api.mcd.cn/bff/portal/richpop - reject # 弹窗广告
-        - https://api.mcd.cn/bff/portal/home/hotActivity - reject # 首页热门活动
-
-        - https://api2.mcd.cn/bff/portal/home/splash - reject # 开屏广告
-        - https://api2.mcd.cn/bff/portal/richpop - reject # 弹窗广告
-        - https://api2.mcd.cn/bff/portal/home/hotActivity - reject # 首页热门活动
+        - https://api.mcd.cn/bff/portal/home/splash - reject
+        - https://api.mcd.cn/bff/portal/richpop - reject
+        - https://api.mcd.cn/bff/portal/home/hotActivity - reject
+        - https://api2.mcd.cn/bff/portal/home/splash - reject
+        - https://api2.mcd.cn/bff/portal/richpop - reject
+        - https://api2.mcd.cn/bff/portal/home/hotActivity - reject

@@ -9,18 +9,19 @@ icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Telegram.
 http:
     mitm:
         - t.me
+    force-http-engine:
+        - t.me
     script:
-        - name: telegram
-          binary-mode: true
-          match: https://t.me/
-          max-size: 2097152
-          require-body: true
-          timeout: 10
-          argument: ""
-          type: response
-          debug: false
-
+        -   name: telegram
+            binary-mode: true
+            match: https://t.me/
+            max-size: 2097152
+            require-body: true
+            timeout: 10
+            argument: ''
+            type: response
+            debug: false
 script-providers:
-    "telegram":
+    telegram:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/telegram.js
         interval: 86400

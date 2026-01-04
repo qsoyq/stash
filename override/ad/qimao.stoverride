@@ -5,12 +5,17 @@ category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/qimao.png
 http:
     mitm:
-        - "mobads.baidu.com"
-        - "api-access.pangolin-sdk-toutiao.com"
-        - "lf-cdn-tos.bytescm.com"
-        - "sf3-fe-tos.pglstatp-toutiao.com"
-        - "*.meituan.net"
-
+        - mobads.baidu.com
+        - api-access.pangolin-sdk-toutiao.com
+        - lf-cdn-tos.bytescm.com
+        - sf3-fe-tos.pglstatp-toutiao.com
+        - '*.meituan.net'
+    force-http-engine:
+        - '*.meituan.net'
+        - api-access.pangolin-sdk-toutiao.com
+        - lf-cdn-tos.bytescm.com
+        - mobads.baidu.com
+        - sf3-fe-tos.pglstatp-toutiao.com
     url-rewrite:
         - https://api-access.pangolin-sdk-toutiao.com/api/ad/* - reject
         - https://lf-cdn-tos.bytescm.com/obj/static/ad/ - reject

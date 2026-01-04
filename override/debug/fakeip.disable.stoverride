@@ -5,4 +5,4 @@ desc: |-
     本地 dns 查询返回 real-ip
 dns:
     fake-ip-filter:
-        - "+.*"
+        - +.*

@@ -8,6 +8,9 @@ http:
     mitm:
         - res.kfc.com.cn
         - dynamicad.kfc.com.cn
+    force-http-engine:
+        - dynamicad.kfc.com.cn
+        - res.kfc.com.cn
     url-rewrite:
         - ^https?://res.kfc.com.cn/advertisement/ - reject
         - ^https?://res.kfc.com.cn/CRM/kfcad/apphome6/\w+.json\? - reject-dict

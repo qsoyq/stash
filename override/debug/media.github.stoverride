@@ -5,9 +5,10 @@ category: debug
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/github.png
 http:
     mitm:
-        - "raw.githubusercontent.com"
+        - raw.githubusercontent.com
+    force-http-engine:
+        - raw.githubusercontent.com
     header-rewrite:
-        # 修改 github 仓库文件类型
         - https://raw.githubusercontent.com/.*.js[^/]*$ response-del content-type
         - https://raw.githubusercontent.com/.*.js[^/]*$ response-add content-type application/javascript;charset=utf-8
         - https://raw.githubusercontent.com/.*.gif[^/]*$ response-del content-type

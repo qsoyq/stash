@@ -6,11 +6,10 @@ desc: |-
 category: tile
 icon: https://api.exchangerate-api.com/favicon.ico
 tiles:
-    - name: currency-exchange-rate
-      argument: |-
-          {"icon":"theatermasks.circle.fill", "color":"#D4AF37"}
-      backgroundColor: "#D4AF37"
-      interval: 3600
+    -   name: currency-exchange-rate
+        argument: '{"icon":"theatermasks.circle.fill", "color":"#D4AF37"}'
+        backgroundColor: '#D4AF37'
+        interval: 3600
 script-providers:
     currency-exchange-rate:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/tile/currency-exchange-rate.js

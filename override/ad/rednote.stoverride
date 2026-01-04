@@ -6,5 +6,7 @@ icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/rednote.png
 http:
     mitm:
         - edith.xiaohongshu.com
+    force-http-engine:
+        - edith.xiaohongshu.com
     body-rewrite:
         - ^https?://edith.xiaohongshu.com/api/sns/v6/homefeed[^/]*$ response-jq if .data != null then .data |= map(select(.is_ads!=true)) end

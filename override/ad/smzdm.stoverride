@@ -12,12 +12,14 @@ http:
         - app-api.smzdm.com
         - haojia-api.smzdm.com
         - adx-api.zdmimg.com
+    force-http-engine:
+        - adx-api.zdmimg.com
+        - app-api.smzdm.com
+        - haojia-api.smzdm.com
+        - homepage-api.smzdm.com
     url-rewrite:
-        - https://app-api.smzdm.com/util/loading - reject # 开屏广告
-        - https://app-api.smzdm.com/util/update - reject # 弹窗广告 + (热更新?)
+        - https://app-api.smzdm.com/util/loading - reject
+        - https://app-api.smzdm.com/util/update - reject
     body-rewrite:
-        # 首页推荐广告
         - https://homepage-api.smzdm.com/v3/home response-jq if .data.component[4].zz_content != null then .data.component[4].zz_content|=map(select(.tag!="广告")) end
-
-        # 好价 ｜ banner
         - https://haojia-api.smzdm.com/home/list response-jq .data.banner_v2|=map(select(.cell_type!="23003"))

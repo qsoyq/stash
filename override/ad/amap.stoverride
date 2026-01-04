@@ -19,32 +19,22 @@ http:
         - faas-image.amap.com
         - center.amap.com
         - info.amap.com
-
+    force-http-engine:
+        - ai.amap.com
+        - center.amap.com
+        - faas-image.amap.com
+        - info.amap.com
+        - m5.amap.com
     url-rewrite:
         - https://ai.amap.com/v1/ai_rec/home_qs - reject
-
     body-rewrite:
-        # 开屏广告
         - https://m5.amap.com/ws/valueadded/alimama/splash_screen response-jq .data.ad=[]
-
-        # 首页卡片
         - https://m5.amap.com/ws/faas/amap-navigation/main-page response-jq .data.cardList=[]
-
-        # 首页顶部提醒
         - https://m5.amap.com/ws/faas/amap-navigation/main-page-assets response-jq .data.pull3={}
-
-        # 查找推荐关键词
         - https://m5.amap.com/ws/shield/scene/recommend response-jq .data.wordInbox.words=[]
         - https://m5.amap.com/ws/shield/scene/recommend response-jq .data.wordInbox.discovery_words=[]
         - https://m5.amap.com/ws/shield/scene/recommend response-jq .data.shadingWords.data.modules.searchFind.data=[]
         - https://m5.amap.com/ws/shield/scene/recommend response-jq .data.shadingWords.data.modules.wordInBox.data=[]
-
-        # - https://m5.amap.com/ws/faas/amap-navigation/main-page-aiqs response-jq .data.mapBizList|=map(select(.cardName!="UserAssetsVirtualCard"))
-        # - https://m5.amap.com/ws/faas/amap-navigation/main-page-aiqs response-jq .data.mapBizList|=map(select(.cardName!="SmartMapBubbleVirtualCard"))
-
-        # 底部导航栏红字
         - https://center.amap.com/ws/message/notice/list response-jq .data.noticeList=[]
         - https://m5.amap.com/ws/message/notice/list response-jq .data.noticeList=[]
-
-        # 搜索
         - https://info.amap.com/ws/c3frontend/af-search/search response-jq .data.modules.quickLink.data.list=[]

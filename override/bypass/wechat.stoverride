@@ -1,8 +1,7 @@
 name: 微信分流直连
-desc: |-
+desc: ""
 category: ruleset
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/wechat.png
-
 rule-providers:
     domain.wechat:
         behavior: domain
@@ -10,15 +9,13 @@ rule-providers:
         interval: 86400
         type: http
         url: https://raw.githubusercontent.com/qsoyq/stash/main/ruleset/domain.wechat.yaml
-
     ip.wechat:
         behavior: ipcidr
         format: yaml
         interval: 86400
         type: http
         url: https://raw.githubusercontent.com/qsoyq/stash/main/ruleset/ip.wechat.yaml
-
 rules:
-    - DOMAIN,dns.weixin.qq.com.cn,DIRECT # 部分去广告规则屏蔽微信DNS导致启动加载慢
+    - DOMAIN,dns.weixin.qq.com.cn,DIRECT
     - RULE-SET,ip.wechat,DIRECT,no-resolve,no-track
     - RULE-SET,domain.wechat,DIRECT,no-resolve,no-track

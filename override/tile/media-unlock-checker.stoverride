@@ -7,62 +7,49 @@ desc: |-
     - youtube premium
 category: tile
 icon: https://raw.githubusercontent.com/qsoyq/shell/main/assets/icon/override.png
-
 tiles:
-    - name: bilibili-unlock-checker
-      backgroundColor: "#178BD8"
-      interval: 1800
-      collapsed: true
-      title: 哔哩哔哩港澳台
-      content: 加载中
-      argument: |-
-          {"name": "bilibili"}
-
-    - name: chatgpt-region-unlock-checker
-      backgroundColor: "#178BD8"
-      interval: 1800
-      collapsed: true
-      title: ChatGPT Region
-      content: 加载中
-      argument: |-
-          {"name": "chatgptLoc"}
-
-    - name: chatgpt-web-unlock-checker
-      backgroundColor: "#178BD8"
-      interval: 1800
-      collapsed: true
-      title: ChatGPT Web
-      content: 加载中
-      argument: |-
-          {"name": "chatgptWeb"}
-
-    - name: chatgpt-ios-unlock-checker
-      backgroundColor: "#178BD8"
-      interval: 1800
-      collapsed: true
-      title: ChatGPT iOS
-      content: 加载中
-      argument: |-
-          {"name": "chatgptIOS"}
-
-    - name: youtube-unlock-checker
-      backgroundColor: "#178BD8"
-      interval: 1800
-      collapsed: true
-      title: YouTube Premium
-      content: 加载中
-      argument: |-
-          {"name": "youtube"}
-
-    - name: gemini-unlock-checker
-      backgroundColor: "#178BD8"
-      interval: 1800
-      collapsed: true
-      title: Gemini
-      content: 加载中
-      argument: |-
-          {"name": "gemini"}
-
+    -   name: bilibili-unlock-checker
+        backgroundColor: '#178BD8'
+        interval: 1800
+        collapsed: true
+        title: 哔哩哔哩港澳台
+        content: 加载中
+        argument: '{"name": "bilibili"}'
+    -   name: chatgpt-region-unlock-checker
+        backgroundColor: '#178BD8'
+        interval: 1800
+        collapsed: true
+        title: ChatGPT Region
+        content: 加载中
+        argument: '{"name": "chatgptLoc"}'
+    -   name: chatgpt-web-unlock-checker
+        backgroundColor: '#178BD8'
+        interval: 1800
+        collapsed: true
+        title: ChatGPT Web
+        content: 加载中
+        argument: '{"name": "chatgptWeb"}'
+    -   name: chatgpt-ios-unlock-checker
+        backgroundColor: '#178BD8'
+        interval: 1800
+        collapsed: true
+        title: ChatGPT iOS
+        content: 加载中
+        argument: '{"name": "chatgptIOS"}'
+    -   name: youtube-unlock-checker
+        backgroundColor: '#178BD8'
+        interval: 1800
+        collapsed: true
+        title: YouTube Premium
+        content: 加载中
+        argument: '{"name": "youtube"}'
+    -   name: gemini-unlock-checker
+        backgroundColor: '#178BD8'
+        interval: 1800
+        collapsed: true
+        title: Gemini
+        content: 加载中
+        argument: '{"name": "gemini"}'
 script-providers:
     MediaUnlockChecker:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/tile/media-unlock-checker.js

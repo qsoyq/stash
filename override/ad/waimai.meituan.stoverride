@@ -7,7 +7,9 @@ http:
     mitm:
         - img.meituan.net
         - s3plus.meituan.net
+    force-http-engine:
+        - img.meituan.net
+        - s3plus.meituan.net
     url-rewrite:
-        # 美团外卖开屏广告
         - ^https?://img.meituan.net/bizad/bizad_brandCpt_\d+\.jpg\.webp - reject
         - ^https?://s3plus.meituan.net/v1/\w+/brandcpt-vedio/.*$ - reject

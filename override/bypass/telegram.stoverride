@@ -9,9 +9,8 @@ desc: |-
     分流策略组 -> TelegramDC5
 category: ruleset
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/telegram.png
-
 rules:
-    - IP-CIDR,91.108.56.107/32,REJECT,no-resolve # https://t.me/QVQ_Channel/3781
+    - IP-CIDR,91.108.56.107/32,REJECT,no-resolve
     - IP-CIDR,95.161.76.100/31,REJECT,no-resolve
     - IP-CIDR,5.28.192.0/18,TelegramDC4,no-resolve
     - IP-ASN,59930,TelegramDC1,no-resolve
@@ -28,7 +27,6 @@ rules:
     - DOMAIN-SUFFIX,telegram.tools,Telegram
     - geosite,telegram,Telegram
     - RULE-SET,ip.telegram,Telegram,no-resolve
-
 rule-providers:
     ip.telegram:
         behavior: ipcidr

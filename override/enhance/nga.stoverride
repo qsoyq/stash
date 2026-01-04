@@ -9,29 +9,30 @@ desc: |-
         - App 阅读
         - 移除外链确认弹窗
     - 页脚备案信息
-
 category: enhance
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/nga.png
 http:
     mitm:
-        - "bbs.nga.cn"
-        - "ngabbs.com"
+        - bbs.nga.cn
+        - ngabbs.com
+    force-http-engine:
+        - bbs.nga.cn
+        - ngabbs.com
     url-rewrite:
         - https://img4.nga.178.com/common_res/js_box.js https://raw.githubusercontent.com/qsoyq/shell/main/tampermonkey/nga/js_box.js transparent
     body-rewrite:
         - https://ngabbs.com/app_api.php\?__lib=favor&__act=all response-jq .result.data|=map(select(.postdate!=0))
     script:
-        - name: nga
-          binary-mode: true
-          match: https://bbs.nga.cn/
-          max-size: 2097152
-          require-body: true
-          timeout: 10
-          argument: ""
-          type: response
-          debug: false
-
+        -   name: nga
+            binary-mode: true
+            match: https://bbs.nga.cn/
+            max-size: 2097152
+            require-body: true
+            timeout: 10
+            argument: ''
+            type: response
+            debug: false
 script-providers:
-    "nga":
+    nga:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/enhance/nga.js
         interval: 86400

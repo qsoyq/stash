@@ -1,8 +1,7 @@
 name: QUIC 屏蔽
-desc: |-
+desc: ""
 category: ruleset
 icon: https://stash.wiki/favicon.ico
-
 rules:
     - PROTOCOL,QUIC,REJECT,no-track
     - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT,no-track

@@ -7,8 +7,10 @@ http:
         - i.111666.best
         - img4.nga.178.com
         - www.nodeseek.com
-
+    force-http-engine:
+        - i.111666.best
+        - img4.nga.178.com
+        - www.nodeseek.com
     header-rewrite:
         - https://i.111666.best/ request-add Referer https://www.nodeseek.com/
-
         - https://img4.nga.178.com/ request-add Referer https://bbs.nga.cn/

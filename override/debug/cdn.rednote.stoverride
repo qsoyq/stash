@@ -1,9 +1,11 @@
 name: 小红书图床浏览器预览
-desc: |-
+desc: ""
 category: debug
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/rednote.png
 http:
     mitm:
-        - "*.xhscdn.com"
+        - '*.xhscdn.com'
+    force-http-engine:
+        - '*.xhscdn.com'
     header-rewrite:
         - ^https?://.*.xhscdn.com response-add Content-Disposition inline

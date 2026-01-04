@@ -6,5 +6,7 @@ icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/bilbee.png
 http:
     mitm:
         - cvsnotify-api.blibee.com
+    force-http-engine:
+        - cvsnotify-api.blibee.com
     body-rewrite:
         - ^https?://cvsnotify-api.blibee.com/cvs/notify/app/banner/v4 response-jq .data.HomeLoadNew.adItems=[]

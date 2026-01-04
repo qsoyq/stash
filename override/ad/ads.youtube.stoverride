@@ -1,54 +1,31 @@
 name: YouTube
-desc: |-
-    - 页脚
-    - Web 端首页
-        - 赞助商广告
-        - 短视频
-        - 你对这个视频的看法
-        - 会员订阅介绍: 6 位家庭成员，1 笔费用，超实惠
-        - 合辑视频
-    - Web 端播放页
-        - 赞助商广告
-        - 下拉自动翻译评论
-        - 画质自动选择｜自动选择不包含 8k｜当前画质 8k 时不会自动切换        
-            - 画质自动选择来源: https://greasyfork.org/zh-CN/scripts/544945-youtube-%E8%87%AA%E5%8A%A8%E9%80%89%E6%8B%A9%E6%9C%80%E9%AB%98%E7%94%BB%E8%B4%A8-%E8%87%AA%E5%8A%A8%E8%B7%B3%E8%BF%87%E5%B9%BF%E5%91%8A
-    - Web 端搜索页
-        - 赞助商广告
-        - 网格短视频
-
+desc: "- 页脚\n- Web 端首页\n    - 赞助商广告\n    - 短视频\n    - 你对这个视频的看法\n    - 会员订阅介绍: 6 位家庭成员，1 笔费用，超实惠\n    - 合辑视频\n- Web 端播放页\n    - 赞助商广告\n    - 下拉自动翻译评论\n    - 画质自动选择｜自动选择不包含 8k｜当前画质 8k 时不会自动切换        \n        - 画质自动选择来源: https://greasyfork.org/zh-CN/scripts/544945-youtube-%E8%87%AA%E5%8A%A8%E9%80%89%E6%8B%A9%E6%9C%80%E9%AB%98%E7%94%BB%E8%B4%A8-%E8%87%AA%E5%8A%A8%E8%B7%B3%E8%BF%87%E5%B9%BF%E5%91%8A\n- Web 端搜索页\n    - 赞助商广告\n    - 网格短视频"
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/youtube.png
 category: ad
 http:
+    mitm:
+        - www.youtube.com
     force-http-engine:
-        - "www.youtube.com"
+        - www.youtube.com
     body-rewrite:
-        # 首页下拉加载
         - https://www.youtube.com/youtubei/v1/browse response-jq walk(if type == "object" and has("continuationItems") then .continuationItems|=map(select(.richItemRenderer?.content?.adSlotRenderer==null)) else . end)
         - https://www.youtube.com/youtubei/v1/browse response-jq walk(if type == "object" and has("richShelfRenderer") then .richShelfRenderer.contents|=map(select(.richItemRenderer?.content?.shortsLockupViewModel==null)) else . end)
-
-        # 回到首页
         - https://www.youtube.com/youtubei/v1/browse response-jq walk(if type == "object" and has("tabRenderer") then .tabRenderer.content.richGridRenderer.contents|=map(select(.richItemRenderer?.content?.adSlotRenderer==null)) else . end)
         - https://www.youtube.com/youtubei/v1/browse response-jq walk(if type == "object" and has("richShelfRenderer") then .richShelfRenderer.contents|=map(select(.richItemRenderer?.content?.shortsLockupViewModel==null)) else . end)
-
         - https://www.youtube.com/youtubei/v1/search response-jq walk(if type == "object" and has("ads") then .ads = [] else . end)
         - https://www.youtube.com/youtubei/v1/search response-jq walk(if type == "object" and has("adSlotRenderer") then .adSlotRenderer = {} else . end)
-
-        # 短视频
         - https://www.youtube.com/youtubei/v1/search response-jq walk(if type == "object" and has("itemSectionRenderer") then .itemSectionRenderer.contents|=map(select(.gridShelfViewModel==null)) else . end)
-    mitm:
-        - "www.youtube.com"
     script:
-        - name: youtube
-          binary-mode: false
-          match: https://www.youtube.com/
-          max-size: 2097152
-          require-body: true
-          timeout: 10
-          type: response
-          argument: ""
-          debug: false
-
+        -   name: youtube
+            binary-mode: false
+            match: https://www.youtube.com/
+            max-size: 2097152
+            require-body: true
+            timeout: 10
+            type: response
+            argument: ''
+            debug: false
 script-providers:
-    "youtube":
+    youtube:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/youtube.js
         interval: 86400
