@@ -1,0 +1,13 @@
+[project]
+name = "stash"
+version = "0.1.0"
+description = "Stash resource repository"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "ghi",
+    "pre-commit>=4.5.1",
+]
+
+[tool.uv.sources]
+ghi = { git = "https://github.com/qsoyq/ghi.git" }
