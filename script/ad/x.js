@@ -505,10 +505,22 @@ function parseDocument(body) {
 
 function removeAdsCode() {
     function removeElements() {
-        const queryList = [
-            // 时间线
-            "div[aria-label='Home timeline'] div[role='progressbar'] + div", // 时间线快捷发帖组件
+        // 时间线元素不容易定位, 增加页面 url 进行判断
+        let url = new URL(window.location.href)
+        if (url.pathname.includes("/home")) {
+            let queryList = [
+                "div[aria-label='Home timeline'] div[role='progressbar'] + div", // 时间线快捷发帖组件
+            ]
+            queryList.forEach(query => {
+                let tag = document.querySelector(query)
+                if (tag) {
+                    tag.remove()
+                    console.log(`remove ${query}`)
+                }
+            })
 
+        }
+        const queryList = [
             // 右侧导航栏
             "div[data-testid='super-upsell-UpsellCardRenderProperties']",   // 订阅提醒
             "div[data-testid='chat-drawer-main']", // 右侧聊天组件
