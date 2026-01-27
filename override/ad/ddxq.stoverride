@@ -24,33 +24,32 @@ icon: https://wx.m.ddxq.mobi/favicon.ico
 http:
     mitm:
         - maicai.api.ddxq.mobi
-        - 212.129.229.168
     force-http-engine:
-        - 212.129.229.168
         - maicai.api.ddxq.mobi
     body-rewrite:
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/advert/getAd response-jq .data={}
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/advert/startUpScreen response-jq .data={}
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/advert/getPreloadAd response-jq .data={}
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/advert/startUpScreen response-jq .data={}
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/advert/getPreloadAd response-jq .data={}
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/vip/getVipAd response-jq .data={}
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/getAdvertTagInfo response-jq .data={}
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/getHomeAdPop response-jq .data={}
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/newDetails response-jq .data.suspension=[]
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/newDetails response-jq .data.top_advert_data=[]
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/newDetails response-jq .data.list|=map(select(.type!=28))
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/newDetails response-jq .data.list|=map(select(.type!=5))
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/bottomNavi response-jq .data.adId=null
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/bottomNavi response-jq .data.bottom_list[].badgePopText=""
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/bottomNavi response-jq .data.bottom_list|=map(select(.name!="分类"))
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/bottomNavi response-jq .data.bottom_list|=map(select(.type!="eatwhat"))
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/homeFlowDetail response-jq .data.list|=map(select(.recommend_cate!=12))
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/homeApi/homeFlowDetail response-jq .data.list|=map(select(.recommend_cate!=3))
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/coupon/unused response-jq .data.ad_info={}
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/search/rollHotKeyword response-jq .data.keywords=[]
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/search/hotKeyword response-jq .data.new_keywords=[]
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/search/rankingList response-jq .data.topic_list=[]
-        - https://(maicai.api.ddxq.mobi|212.129.229.168)/search/rankingList response-jq .data.ranking_lists=[]
+        - https://maicai.api.ddxq.mobi/advert/getAd response-jq .data={}
+        - https://maicai.api.ddxq.mobi/advert/startUpScreen response-jq .data={}
+        - https://maicai.api.ddxq.mobi/advert/getPreloadAd response-jq .data={}
+        - https://maicai.api.ddxq.mobi/advert/startUpScreen response-jq .data={}
+        - https://maicai.api.ddxq.mobi/advert/getPreloadAd response-jq .data={}
+        - https://maicai.api.ddxq.mobi/vip/getVipAd response-jq .data={}
+        - https://maicai.api.ddxq.mobi/homeApi/getAdvertTagInfo response-jq .data={}
+        - https://maicai.api.ddxq.mobi/homeApi/getHomeAdPop response-jq .data={}
+        - https://maicai.api.ddxq.mobi/homeApi/newDetails response-jq .data.suspension=[]
+        - https://maicai.api.ddxq.mobi/homeApi/newDetails response-jq .data.top_advert_data=[]
+        - https://maicai.api.ddxq.mobi/homeApi/newDetails response-jq .data.list|=map(select(.type!=28))
+        - https://maicai.api.ddxq.mobi/homeApi/newDetails response-jq .data.list|=map(select(.type!=5))
+        - https://maicai.api.ddxq.mobi/homeApi/bottomNavi response-jq .data.adId=null
+        - https://maicai.api.ddxq.mobi/homeApi/bottomNavi response-jq .data.bottom_list[].badgePopText=""
+        - https://maicai.api.ddxq.mobi/homeApi/bottomNavi response-jq .data.bottom_list|=map(select(.name!="分类"))
+        - https://maicai.api.ddxq.mobi/homeApi/bottomNavi response-jq .data.bottom_list|=map(select(.type!="eatwhat"))
+        - https://maicai.api.ddxq.mobi/homeApi/bottomNavi response-jq .data.bottom_list|=map(select(.type!="aichat"))
+        - https://maicai.api.ddxq.mobi/homeApi/homeFlowDetail response-jq .data.list|=map(select(.recommend_cate!=12))
+        - https://maicai.api.ddxq.mobi/homeApi/homeFlowDetail response-jq .data.list|=map(select(.recommend_cate!=3))
+        - https://maicai.api.ddxq.mobi/coupon/unused response-jq .data.ad_info={}
+        - https://maicai.api.ddxq.mobi/search/rollHotKeyword response-jq .data.keywords=[]
+        - https://maicai.api.ddxq.mobi/search/hotKeyword response-jq .data.new_keywords=[]
+        - https://maicai.api.ddxq.mobi/search/rankingList response-jq .data.topic_list=[]
+        - https://maicai.api.ddxq.mobi/search/rankingList response-jq .data.ranking_lists=[]
 rules:
     - IP-CIDR,119.29.29.90/32,REJECT-DROP,no-resolve
