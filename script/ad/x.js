@@ -507,10 +507,11 @@ function removeAdsCode() {
     function removeElements() {
         const queryList = [
             // 时间线
-            "div[role='progressbar'] + div", // 时间线快捷发帖组件
+            "div[aria-label='Home timeline'] div[role='progressbar'] + div", // 时间线快捷发帖组件
 
             // 右侧导航栏
             "div[data-testid='super-upsell-UpsellCardRenderProperties']",   // 订阅提醒
+            "div[data-testid='chat-drawer-main']", // 右侧聊天组件
             "div[aria-label='Trending']", // 右侧 Trending
 
             // 左侧导航栏
@@ -567,7 +568,7 @@ function removeAdsCode() {
     }
     setInterval(() => {
         removeElements()
-    }, 150)
+    }, 500)
 
 
     ///////////////////////////////////////////////////////////
@@ -575,7 +576,6 @@ function removeAdsCode() {
         console.log("removeAdsCode")
         let url = new URL(window.location.href)
         console.log(`path: ${url.pathname}`)
-
     });
 }
 
