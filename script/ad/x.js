@@ -520,8 +520,14 @@ function removeAdsCode() {
             })
 
         }
+
         const queryList = [
+            // 顶部 banner
+            "div[data-testid='TopNavBar']", // 顶部用户头像所在banner
+            "header[role='banner']", // 顶部 banner
+
             // 右侧导航栏
+            "a[href='/i/premium_sign_up']", // Subscribe button 订阅提醒按钮
             "div[data-testid='super-upsell-UpsellCardRenderProperties']",   // 订阅提醒
             "div[data-testid='chat-drawer-main']", // 右侧聊天组件
             "div[aria-label='Trending']", // 右侧 Trending
@@ -544,9 +550,13 @@ function removeAdsCode() {
         ]
         queryList.forEach(query => {
             let tag = document.querySelector(query)
-            if (tag) {
-                tag.remove()
-                console.log(`remove ${query}`)
+            // 当 css 可见性不为 none 时, 修改为 none
+            // @ts-ignore
+            if (tag && tag.style.display !== 'none') {
+                // @ts-ignore
+                tag.style.display = 'none'
+                // tag.remove()
+                console.log(`modify display to none ${query}`)
             }
         })
 
@@ -558,6 +568,8 @@ function removeAdsCode() {
                 console.log(span);
             }
         });
+
+        //
 
         // 文本内容匹配移除
         document.querySelectorAll('span').forEach(span => {

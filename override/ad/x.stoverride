@@ -20,6 +20,8 @@ desc: |-
         - 用户页面
         - 回复标签页 | Who to follow | suggest_who_to_follow
     - 页面元素移除
+        - 顶部 banner
+            - 顶部用户头像所在banner
         - 时间线
             - 快捷发帖组件
         - 页面浮标
