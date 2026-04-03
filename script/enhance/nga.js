@@ -649,6 +649,19 @@ function runtimeCode() {
          * @type {number}
          */
         let startX
+        /**
+         * @param {string[]} selectors
+         */
+        function jumpToPage(selectors) {
+            for (const selector of selectors) {
+                const tag = document.querySelector(selector)
+                const href = tag?.getAttribute('href')
+                if (href) {
+                    window.location.href = href
+                    return
+                }
+            }
+        }
         let tag = document.querySelector("#mmc")
         if (tag) {
             document.addEventListener('touchstart', (event) => {
@@ -663,13 +676,17 @@ function runtimeCode() {
                 console.log(`distance: ${distance}`)
                 if (distance > 200) {
                     console.log('Swiped Right!');
+                    jumpToPage([
+                        "a[title='加载上一页']",
+                        "a[title='上一页']",
+                    ])
                 } else if (distance < -200) {
                     // 向左滑动
                     console.log('Swiped Left!');
-                    let tag = document.querySelector("a[title='加载下一页']")
-                    if (tag) {
-                        window.location.href = tag.attributes['href'].textContent
-                    }
+                    jumpToPage([
+                        "a[title='加载下一页']",
+                        "a[title='下一页']",
+                    ])
                 }
             });
             console.log("add mmc touchend listener")
