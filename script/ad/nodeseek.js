@@ -508,6 +508,48 @@ function removeAdsCode() {
         console.log("removeAdsCode")
         let url = new URL(window.location.href)
 
+        function swipe() {
+            /**
+             * @type {number}
+             */
+            let startX
+
+            function jumpToPreviousPage() {
+                const tag = document.querySelector('.pager-prev a')
+                if (tag instanceof HTMLElement) {
+                    tag.click()
+                }
+            }
+
+            function jumpToNextPage() {
+                const tag = document.querySelector('.pager-next a')
+                if (tag instanceof HTMLElement) {
+                    tag.click()
+                }
+            }
+
+            document.addEventListener('touchstart', (event) => {
+                // @ts-ignore
+                startX = event.touches[0].clientX;
+            });
+            document.addEventListener('touchend', (event) => {
+                // @ts-ignore
+                const endX = event.changedTouches[0].clientX;
+                const distance = endX - startX;
+                console.log(`distance: ${distance}`)
+                if (distance > 200) {
+                    console.log('Swiped Right!');
+                    jumpToPreviousPage()
+                } else if (distance < -200) {
+                    console.log('Swiped Left!');
+                    jumpToNextPage()
+                }
+            });
+            console.log("add touch listener")
+        }
+
+        swipe()
+
         // 板块导航增加内版
         let isMobileNav = false
         Array.from(document.querySelectorAll('ul[class="mobile-nav"]')).forEach(e => {
