@@ -10,6 +10,9 @@ desc: |-
     - 外链自动重定向
     - 导航｜增加内版模块
     - 支持 NetNewsWire 访问头像
+    - 移动端详情页手势做操
+        - 左滑跳转下一页
+        - 右滑跳转上一页
 category: ad
 icon: https://www.nodeseek.com/static/image/favicon/favicon-32x32.png
 http:
