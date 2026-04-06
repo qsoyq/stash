@@ -515,15 +515,17 @@ function removeAdsCode() {
             let startX
 
             function jumpToPreviousPage() {
-                const tag = document.querySelector('.pager-prev a')
-                if (tag instanceof HTMLElement) {
+                const tag = document.querySelector('a.pager-prev')
+                if (tag) {
+                    // @ts-ignore
                     tag.click()
                 }
             }
 
             function jumpToNextPage() {
-                const tag = document.querySelector('.pager-next a')
-                if (tag instanceof HTMLElement) {
+                const tag = document.querySelector('a.pager-next')
+                if (tag) {
+                    // @ts-ignore
                     tag.click()
                 }
             }
@@ -537,13 +539,14 @@ function removeAdsCode() {
                 const endX = event.changedTouches[0].clientX;
                 const distance = endX - startX;
                 console.log(`distance: ${distance}`)
-                if (distance > 200) {
+                if (distance > 150) {
                     console.log('Swiped Right!');
                     jumpToPreviousPage()
-                } else if (distance < -200) {
+                } else if (distance < -150) {
                     console.log('Swiped Left!');
                     jumpToNextPage()
                 }
+
             });
             console.log("add touch listener")
         }
