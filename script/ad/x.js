@@ -504,6 +504,23 @@ function parseDocument(body) {
 }
 
 function removeAdsCode() {
+    // 注入 CSS 强制隐藏右侧栏并让主内容区撑满
+    function injectStyle() {
+
+        if (document.getElementById('x-ad-blocker-style')) return
+        let style = document.createElement('style')
+        style.id = 'x-ad-blocker-style'
+        style.textContent = `
+            div[data-testid='sidebarColumn'] { display: none !important; }
+            div[data-testid='primaryColumn'] { max-width: 100% !important; width: 100% !important; flex: 1 !important; }
+            div[data-testid='primaryColumn'] > div > div { max-width: 100% !important; }
+            main[role='main'] > div { max-width: 100% !important; width: 100% !important; }
+            main[role='main'] > div > div { max-width: 100% !important; width: 100% !important; }
+        `
+        document.head.appendChild(style)
+    }
+    injectStyle()
+
     function removeElements() {
         // 时间线元素不容易定位, 增加页面 url 进行判断
         let url = new URL(window.location.href)
@@ -514,8 +531,9 @@ function removeAdsCode() {
             queryList.forEach(query => {
                 let tag = document.querySelector(query)
                 if (tag) {
-                    tag.remove()
-                    console.log(`remove ${query}`)
+                    // @ts-ignore
+                    tag.style.display = 'none'
+                    console.log(`modify display to none ${query}`)
                 }
             })
 
@@ -526,11 +544,8 @@ function removeAdsCode() {
             "div[data-testid='TopNavBar']", // 顶部用户头像所在banner
             "header[role='banner']", // 顶部 banner
 
-            // 右侧导航栏
-            "a[href='/i/premium_sign_up']", // Subscribe button 订阅提醒按钮
-            "div[data-testid='super-upsell-UpsellCardRenderProperties']",   // 订阅提醒
-            "div[data-testid='chat-drawer-main']", // 右侧聊天组件
-            "div[aria-label='Trending']", // 右侧 Trending
+            // 浮窗
+            "div[data-testid='chat-drawer-main']", // 右侧底部聊天组件
 
             // 左侧导航栏
             "a[aria-label='Grok']",
@@ -564,7 +579,7 @@ function removeAdsCode() {
         document.querySelectorAll('span').forEach(span => {
             if (span.textContent === "Automated") {
                 // @ts-ignore
-                span.parentNode.parentNode.parentNode.parentNode.remove()
+                span.parentNode.parentNode.parentNode.parentNode.style.display = 'none'
                 console.log(span);
             }
         });
@@ -576,7 +591,7 @@ function removeAdsCode() {
             let blockedWords = ["Show probable spam"]
             for (const words of blockedWords) {
                 if (span.textContent === words) {
-                    span.remove()
+                    span.style.display = 'none'
                     console.log(span);
                     break
                 }
@@ -586,7 +601,7 @@ function removeAdsCode() {
         // Translate post
         let btn = document.querySelector('button[aria-label="Translate post"]')
         if (btn) {
-            btn.parentElement?.remove()
+            if (btn.parentElement) btn.parentElement.style.display = 'none'
         }
 
     }
