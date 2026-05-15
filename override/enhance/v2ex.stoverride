@@ -1,0 +1,24 @@
+name: V2ex
+category: enhance
+icon: https://v2ex.com/favicon.ico
+desc: |-
+    - 签到页支持 Safari AutoFill 填充用户名密码
+http:
+    mitm:
+        - v2ex.com
+    force-http-engine:
+        - v2ex.com
+    script:
+        -   name: v2ex
+            binary-mode: true
+            match: https://v2ex.com/signin
+            max-size: 2097152
+            require-body: true
+            timeout: 10
+            argument: ''
+            type: response
+            debug: false
+script-providers:
+    v2ex:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/enhance/v2ex.js
+        interval: 86400

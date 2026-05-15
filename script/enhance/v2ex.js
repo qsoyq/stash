@@ -1,14 +1,14 @@
-/** @namespace base */
+/** @namespace v2ex */
 
 /**
- * @typedef {Object} base.HTTPResponse
+ * @typedef {Object} v2ex.HTTPResponse
  * @property {string|null} error - 错误信息，如果没有错误则为 null
  * @property {object} response - HTTP 响应对象
  * @property {string|null} data - 返回的数据，如果没有数据则为 null
  */
 
 /**
- * @typedef {function(Error|string|null, Object, string|null): void} base.HTTPCallback
+ * @typedef {function(Error|string|null, Object, string|null): void} v2ex.HTTPCallback
  * 回调函数类型，接受错误、响应和数据作为参数。
  * @param {Error|string|null} error - 错误信息，可以是 Error 对象、字符串或者 null
  * @param {Object} response - HTTP 响应对象
@@ -16,18 +16,18 @@
  */
 
 /**
- * @typedef {function(Object, base.HTTPCallback): base.HTTPResponse} base.HTTPMethod
+ * @typedef {function(Object, v2ex.HTTPCallback): v2ex.HTTPResponse} v2ex.HTTPMethod
  */
 
 /**
- * @typedef {Object} base.HttpClient
- * @property {base.HTTPMethod} get - 发送 GET 请求
- * @property {base.HTTPMethod} post - 发送 POST 请求
- * @property {base.HTTPMethod} put - 发送 PUT 请求
- * @property {base.HTTPMethod} delete - 发送 DELETE 请求
+ * @typedef {Object} v2ex.HttpClient
+ * @property {v2ex.HTTPMethod} get - 发送 GET 请求
+ * @property {v2ex.HTTPMethod} post - 发送 POST 请求
+ * @property {v2ex.HTTPMethod} put - 发送 PUT 请求
+ * @property {v2ex.HTTPMethod} delete - 发送 DELETE 请求
  */
 
-/** @type {base.HttpClient} */
+/** @type {v2ex.HttpClient} */
 var $httpClient;
 
 var $request, $response, $notification, $argument, $persistentStore, $script
@@ -39,12 +39,12 @@ var $done
  * 对异步回调的 HTTP 调用包装成 async 函数
  * @param {'GET'|'POST'|'PUT'|'DELETE'} method - HTTP 方法类型，支持 GET、POST、PUT 和 DELETE
  * @param {Object} params - 请求参数对象，包含请求所需的各类信息
- * @returns {Promise<base.HTTPResponse>} 返回一个 Promise，解析为包含 error、response 和 data 的对象
+ * @returns {Promise<v2ex.HTTPResponse>} 返回一个 Promise，解析为包含 error、response 和 data 的对象
  * @throws {Error} 如果请求失败，Promise 会被拒绝并返回错误信息
  */
 async function request(method, params) {
     return new Promise((resolve, reject) => {
-        /** @type {base.HTTPMethod} */
+        /** @type {v2ex.HTTPMethod} */
         const httpMethod = $httpClient[method.toLowerCase()]; // 通过 HTTP 方法选择对应的请求函数
         httpMethod(params, (error, response, data) => {
             if (error) {
@@ -60,7 +60,7 @@ async function request(method, params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<base.HTTPResponse>}
+ * @returns {Promise<v2ex.HTTPResponse>}
  */
 async function get(params) {
     return request('GET', params);
@@ -69,7 +69,7 @@ async function get(params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<base.HTTPResponse>}
+ * @returns {Promise<v2ex.HTTPResponse>}
  */
 async function post(params) {
     return request('POST', params);
@@ -78,7 +78,7 @@ async function post(params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<base.HTTPResponse>}
+ * @returns {Promise<v2ex.HTTPResponse>}
  */
 async function put(params) {
     return request('PUT', params);
@@ -87,7 +87,7 @@ async function put(params) {
 /**
  * 请求封装
  * @param {object} params
- * @returns {Promise<base.HTTPResponse>}
+ * @returns {Promise<v2ex.HTTPResponse>}
  */
 async function delete_(params) {
     return request('DELETE', params);
@@ -529,6 +529,82 @@ function addRuntimeCode(document) {
     document['body'].appendChild(script);
 }
 
+/**
+ * 跨桌面/移动两种登录页布局定位用户名输入框:
+ * 1. 桌面版有 placeholder="Username or Email"
+ * 2. 移动版 input 无 placeholder, 靠同行 <td>用户名</td> 当 label
+ * @param {Document} document
+ * @returns {Element|null}
+ */
+function findV2exUsernameInput(document) {
+    let input = document.querySelector('input[placeholder="Username or Email"]')
+    if (input) return input
+
+    input = document.querySelector('input[placeholder*="用户名"]')
+    if (input) return input
+
+    const rows = document.querySelectorAll('tr')
+    for (const tr of rows) {
+        const tds = tr.querySelectorAll('td')
+        if (tds.length < 2) continue
+        const label = (tds[0].textContent || '').trim()
+        if (label === '用户名' || /^(username|email)/i.test(label)) {
+            const candidate = tds[1].querySelector('input[type="text"]')
+            if (candidate) return candidate
+        }
+    }
+    return null
+}
+
+/**
+ * 把 V2EX 登录页用户名输入框改成 Safari AutoFill 可识别的形式。
+ * 原始 name 是随机 hash（反爬），改名会让表单提交失败,
+ * 因此插入一个 hidden 字段承载原始 name,并在 submit 时镜像值过去。
+ * @param {Document} document
+ * @returns {boolean} 是否做了改动
+ */
+function patchV2exUsernameInput(document) {
+    const input = findV2exUsernameInput(document)
+    if (!input) {
+        return false
+    }
+    const originalName = input.getAttribute('name')
+    if (!originalName || originalName === 'username') {
+        return false
+    }
+
+    input.setAttribute('name', 'username')
+    input.setAttribute('autocomplete', 'username')
+    input.setAttribute('data-original-name', originalName)
+
+    const hidden = document.createElement('input')
+    hidden.setAttribute('type', 'hidden')
+    hidden.setAttribute('name', originalName)
+    hidden.setAttribute('id', '__v2ex_username_mirror')
+    if (input.parentNode) {
+        input.parentNode.insertBefore(hidden, input.nextSibling)
+    }
+
+    const script = document.createElement('script')
+    script.textContent = `
+        (function () {
+            var real = document.querySelector('input[name="username"][data-original-name]');
+            var mirror = document.getElementById('__v2ex_username_mirror');
+            if (!real || !mirror) return;
+            var sync = function () { mirror.value = real.value; };
+            real.addEventListener('input', sync);
+            real.addEventListener('change', sync);
+            var form = real.closest('form');
+            if (form) form.addEventListener('submit', sync, true);
+            sync();
+        })();
+    `
+    document.body.appendChild(script)
+
+    echo(`[v2ex] patched username input, original name: ${originalName}`)
+    return true
+}
+
 async function main() {
     switch (getScriptType()) {
         case "response":
@@ -538,6 +614,12 @@ async function main() {
             if (ct && ct.includes("text/html") && body) {
                 echo(`url: ${url}, path: ${url.pathname}`)
                 const document = new DOMParser().parseFromString(body, 'text/html')
+                const patched = patchV2exUsernameInput(document)
+                if (patched) {
+                    const newBody = '<!DOCTYPE html>\n' + document.documentElement.outerHTML
+                    $done({ body: newBody })
+                    return
+                }
                 $done({})
                 break
             }
