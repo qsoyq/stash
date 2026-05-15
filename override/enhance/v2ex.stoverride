@@ -2,7 +2,7 @@ name: V2ex
 category: enhance
 icon: https://v2ex.com/favicon.ico
 desc: |-
-    - 签到页支持 Safari AutoFill 填充用户名密码
+    - 支持 Safari AutoFill 填充用户名密码
 http:
     mitm:
         - v2ex.com
