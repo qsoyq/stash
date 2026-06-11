@@ -1,0 +1,14 @@
+# Default owner for all repository changes.
+* @qsoyq
+
+# Stash configuration and routing resources.
+/config/ @qsoyq
+/override/ @qsoyq
+/ruleset/ @qsoyq
+/script/ @qsoyq
+
+# Repository governance and automation.
+/.github/ @qsoyq
+/CLAUDE.md @qsoyq
+/CONTRIBUTING.md @qsoyq
+/SECURITY.md @qsoyq
