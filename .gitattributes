@@ -1,0 +1,14 @@
+# Normalize text files for cross-platform collaboration.
+* text=auto eol=lf
+
+# Keep binary assets untouched.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+
+# Preserve shell script executability expectations through review.
+*.sh text eol=lf
