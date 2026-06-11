@@ -1,0 +1,29 @@
+# Desired repository settings for GitHub Settings / Probot Settings or manual review.
+# This file documents the expected state; GitHub platform state must still be
+# confirmed through the UI or API.
+repository:
+    name: stash
+    description: Stash proxy configuration, override scripts, and routing rulesets.
+    private: false
+    has_issues: true
+    has_projects: true
+    has_wiki: false
+    default_branch: main
+
+branches:
+    - name: main
+      protection:
+          required_pull_request_reviews:
+              required_approving_review_count: 1
+              require_code_owner_reviews: true
+              dismiss_stale_reviews: true
+              require_last_push_approval: true
+          required_status_checks:
+              strict: true
+              contexts:
+                  - Pre-commit validation
+          enforce_admins: false
+          required_conversation_resolution: true
+          restrictions: null
+          allow_force_pushes: false
+          allow_deletions: false
