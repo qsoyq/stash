@@ -1146,27 +1146,29 @@ async function main() {
       };
     }
 
-    logLiteLLMContent(
-      "LiteLLMReqContent",
-      type,
-      collectContentFields(data.request.body, "", { onlyLastArrayContent: true })
-        .filter((item) => item.path.includes("message"))
-        .filter((item) => !["tool_result", "tool_use"].includes(item.content?.type))
-        .slice(-3),
-      {
-        request: {
-          url: data.request.url,
-          method: data.request.method,
-          path: data.request.path,
-          body: summarizeBodyFields(data.request.body, {
-            keepSystem: keepRequestSystem,
-            keepTools: keepRequestTools,
-          }),
+    if (type === "request") {
+      logLiteLLMContent(
+        "LiteLLMReqContent",
+        type,
+        collectContentFields(data.request.body, "", { onlyLastArrayContent: true })
+          .filter((item) => item.path.includes("message"))
+          .filter((item) => !["tool_result", "tool_use"].includes(item.content?.type))
+          .slice(-3),
+        {
+          request: {
+            url: data.request.url,
+            method: data.request.method,
+            path: data.request.path,
+            body: summarizeBodyFields(data.request.body, {
+              keepSystem: keepRequestSystem,
+              keepTools: keepRequestTools,
+            }),
+          },
         },
-      },
-    );
+      );
+    }
 
-    if (typeof data.response !== "undefined") {
+    if (type === "response" && typeof data.response !== "undefined") {
       logLiteLLMContent(
         "LiteLLMResContent",
         type,
