@@ -248,16 +248,19 @@ function visitAll(body, prefix = "", visited = new WeakSet()) {
 /**
  * 解析 json 字符串， 失败返回 null
  * @param {*} string
+ * @param {{logInvalid?: boolean}} [options]
  * @returns
  */
-function parseJsonBody(string) {
+function parseJsonBody(string, options = {}) {
   if (string === null || typeof string === "undefined" || string === "") {
     return null;
   }
   try {
     return JSON.parse(string);
   } catch (e) {
-    console.log(`[Warn] invalid json: ${e}, json: ${string}`);
+    if (options.logInvalid !== false) {
+      console.log(`[Warn] invalid json: ${e}, length: ${String(string).length}`);
+    }
     return null;
   }
 }
@@ -1018,35 +1021,114 @@ function summarizeLiteLLMResponse(body, headers) {
   return body;
 }
 
-function removeContentFromSummary(value) {
+function removeContentFromSummary(value, options = {}) {
+  if (Array.isArray(value)) {
+    return value.map((item) => removeContentFromSummary(item, options));
+  }
+
   if (!isObject(value)) {
     return value;
   }
 
   let result = {};
   Object.entries(value).forEach(([key, item]) => {
-    if (key === "content") {
+    if (["content", "messages"].includes(key)) {
       return;
     }
-    if (Array.isArray(item)) {
-      result[key] = item.map(removeContentFromSummary);
-    } else if (isObject(item)) {
-      result[key] = removeContentFromSummary(item);
-    } else {
-      result[key] = item;
+    if (key === "system" && !options.keepSystem) {
+      return;
     }
+    if (key === "tools" && !options.keepTools) {
+      return;
+    }
+    if (key === "body" && typeof item === "string") {
+      result[key] = `[raw:${item.length} chars]`;
+      return;
+    }
+    result[key] = removeContentFromSummary(item, options);
   });
   return result;
+}
+
+function summarizeContentField(content, options = {}) {
+  if (options.onlyLastArrayContent && Array.isArray(content)) {
+    if (!content.length) {
+      return [];
+    }
+    return summarizeContentBlock(content[content.length - 1]);
+  }
+  return summarizeContent(content);
+}
+
+function collectContentFields(value, path = "", options = {}) {
+  let result = [];
+
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => {
+      result = result.concat(collectContentFields(item, `${path}[${index}]`, options));
+    });
+    return result;
+  }
+
+  if (!isObject(value)) {
+    return result;
+  }
+
+  Object.entries(value).forEach(([key, item]) => {
+    let currentPath = path ? `${path}.${key}` : key;
+    if (key === "content") {
+      result.push({
+        path: currentPath,
+        content: summarizeContentField(item, options),
+      });
+      return;
+    }
+    result = result.concat(collectContentFields(item, currentPath, options));
+  });
+
+  return result;
+}
+
+function summarizeBodyFields(body, options = {}) {
+  if (typeof body === "string") {
+    return `[raw:${body.length} chars]`;
+  }
+  return removeContentFromSummary(body, options);
+}
+
+function logLiteLLMContent(prefix, scriptType, contentFields, extra = {}) {
+  if (!contentFields.length && !Object.keys(extra).length) {
+    return;
+  }
+
+  console.log(
+    `[${prefix}]:${JSON.stringify(
+      {
+        scriptType,
+        ...extra,
+        content: contentFields,
+      },
+      null,
+      4,
+    )}`,
+  );
+}
+
+function isTruthyArgument(value) {
+  return value === true || value === "true" || value === 1 || value === "1";
 }
 
 async function main() {
   let type = getScriptType();
   let ts = Math.floor(Date.now() / 1000);
   if (["request", "response"].includes(type)) {
+    let keepRequestSystem = isTruthyArgument(getScriptArgument("keepRequestSystem"));
+    let keepRequestTools = isTruthyArgument(getScriptArgument("keepRequestTools"));
     let requestBody = getBody($request.body);
-    let requestJson = parseJsonBody(requestBody);
+    let requestJson = parseJsonBody(requestBody, { logInvalid: false });
     let data = {
       type: "litellm",
+      scriptType: type,
       timestamp: ts,
       request: {
         url: $request.url,
@@ -1064,12 +1146,33 @@ async function main() {
       };
     }
 
-    let summary = removeContentFromSummary(data);
-    console.log(`[LiteLLM]:${JSON.stringify(summary)}`);
+    logLiteLLMContent(
+      "LiteLLMReqContent",
+      type,
+      collectContentFields(data.request.body, "", { onlyLastArrayContent: true })
+        .filter((item) => item.path.includes("message"))
+        .filter((item) => !["tool_result", "tool_use"].includes(item.content?.type))
+        .slice(-3),
+      {
+        request: {
+          url: data.request.url,
+          method: data.request.method,
+          path: data.request.path,
+          body: summarizeBodyFields(data.request.body, {
+            keepSystem: keepRequestSystem,
+            keepTools: keepRequestTools,
+          }),
+        },
+      },
+    );
 
-    let content = data.response?.body?.content;
-    if (typeof content !== "undefined") {
-      console.log(`[LiteLLMContent]:${JSON.stringify(content, null, 4)}`);
+    if (typeof data.response !== "undefined") {
+      logLiteLLMContent(
+        "LiteLLMResContent",
+        type,
+        collectContentFields(data.response.body),
+        { body: summarizeBodyFields(data.response.body) },
+      );
     }
   }
 }
