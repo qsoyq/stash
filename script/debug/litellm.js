@@ -692,6 +692,262 @@ function summarizeTool(tool) {
   return tool;
 }
 
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.trim() !== "";
+}
+
+function isClaudeModel(model) {
+  if (!isNonEmptyString(model)) {
+    return false;
+  }
+
+  return /(^|[/.:])claude(?:[-._]|$)/.test(model.toLowerCase());
+}
+
+function inferFunctionToolShape(body) {
+  if (!Array.isArray(body?.tools)) {
+    return "responses";
+  }
+
+  if (
+    body.tools.some(
+      (tool) => tool?.type === "function" && isObject(tool.function),
+    )
+  ) {
+    return "chat";
+  }
+  if (
+    body.tools.some(
+      (tool) => tool?.type === "function" && isNonEmptyString(tool.name),
+    )
+  ) {
+    return "responses";
+  }
+  if (Array.isArray(body.input)) {
+    return "responses";
+  }
+
+  return "chat";
+}
+
+function normalizeFunctionParameters(parameters) {
+  if (!isObject(parameters)) {
+    return parameters;
+  }
+
+  if (isNonEmptyString(parameters.type)) {
+    return parameters;
+  }
+
+  return {
+    type: "object",
+    ...parameters,
+  };
+}
+
+function canConvertNamespaceTool(tool) {
+  return (
+    isObject(tool) &&
+    tool.type === "namespace" &&
+    isNonEmptyString(tool.name) &&
+    isNonEmptyString(tool.description) &&
+    isObject(tool.parameters)
+  );
+}
+
+function namespaceToolToFunctionTool(tool, shape) {
+  let functionTool = {
+    name: tool.name,
+    description: tool.description,
+    parameters: normalizeFunctionParameters(tool.parameters),
+  };
+
+  if (shape === "chat") {
+    return {
+      type: "function",
+      function: functionTool,
+    };
+  }
+
+  return {
+    type: "function",
+    ...functionTool,
+  };
+}
+
+function getFunctionToolName(tool) {
+  if (!isObject(tool) || tool.type !== "function") {
+    return;
+  }
+
+  if (isNonEmptyString(tool.name)) {
+    return tool.name;
+  }
+  if (isNonEmptyString(tool.function?.name)) {
+    return tool.function.name;
+  }
+}
+
+function getToolChoiceName(toolChoice) {
+  if (!isObject(toolChoice)) {
+    return;
+  }
+
+  if (isNonEmptyString(toolChoice.name)) {
+    return toolChoice.name;
+  }
+  if (isNonEmptyString(toolChoice.function?.name)) {
+    return toolChoice.function.name;
+  }
+}
+
+function getToolName(tool) {
+  if (!isObject(tool)) {
+    return;
+  }
+
+  if (isNonEmptyString(tool.name)) {
+    return tool.name;
+  }
+  if (isNonEmptyString(tool.function?.name)) {
+    return tool.function.name;
+  }
+}
+
+function getToolType(tool) {
+  if (!isObject(tool)) {
+    return;
+  }
+
+  if (isNonEmptyString(tool.type)) {
+    return tool.type;
+  }
+}
+
+function removeInvalidToolChoice(body, tools) {
+  if (typeof body.tool_choice === "undefined") {
+    return false;
+  }
+
+  if (!tools.length) {
+    delete body.tool_choice;
+    delete body.parallel_tool_calls;
+    return true;
+  }
+
+  let toolChoiceName = getToolChoiceName(body.tool_choice);
+  if (!toolChoiceName) {
+    return false;
+  }
+
+  let availableToolNames = tools.map(getFunctionToolName).filter(Boolean);
+  if (availableToolNames.includes(toolChoiceName)) {
+    return false;
+  }
+
+  delete body.tool_choice;
+  return true;
+}
+
+function recordSkippedTool(summary, tool) {
+  let type = getToolType(tool) || "[unknown]";
+  let name = getToolName(tool) || type;
+
+  summary.skipped += 1;
+  summary.skippedTools.push({ type, name });
+  summary.skippedTypes[type] = (summary.skippedTypes[type] || 0) + 1;
+}
+
+function createClaudeRequestSummary(body, enabled) {
+  return {
+    model: body.model,
+    enabled,
+    shape: Array.isArray(body.tools) ? inferFunctionToolShape(body) : undefined,
+    converted: 0,
+    skipped: 0,
+    convertedNames: [],
+    skippedTools: [],
+    skippedTypes: {},
+    remainingTools: 0,
+    removedToolChoice: false,
+    removedFields: [],
+  };
+}
+
+function removeClaudeUnsupportedFields(body, summary) {
+  ["metadata", "client_metadata"].forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(body, field)) {
+      delete body[field];
+      summary.removedFields.push(field);
+    }
+  });
+}
+
+function adaptClaudeUnsupportedTools(body, enabled) {
+  if (!enabled || !isObject(body) || !isClaudeModel(body.model)) {
+    return null;
+  }
+
+  let result = {
+    ...body,
+  };
+  let summary = createClaudeRequestSummary(body, enabled);
+
+  removeClaudeUnsupportedFields(result, summary);
+
+  if (!Array.isArray(body.tools)) {
+    if (!summary.removedFields.length) {
+      return null;
+    }
+
+    return {
+      body: result,
+      summary,
+    };
+  }
+
+  let tools = [];
+
+  body.tools.forEach((tool) => {
+    if (!isObject(tool)) {
+      tools.push(tool);
+      return;
+    }
+
+    if (tool.type === "function") {
+      tools.push(tool);
+      return;
+    }
+
+    if (tool.type === "namespace" && canConvertNamespaceTool(tool)) {
+      tools.push(namespaceToolToFunctionTool(tool, summary.shape));
+      summary.converted += 1;
+      summary.convertedNames.push(tool.name);
+      return;
+    }
+
+    recordSkippedTool(summary, tool);
+  });
+
+  if (!summary.converted && !summary.skipped && !summary.removedFields.length) {
+    return null;
+  }
+
+  if (tools.length) {
+    result.tools = tools;
+  } else {
+    delete result.tools;
+  }
+  let removedToolChoice = removeInvalidToolChoice(result, tools);
+  summary.remainingTools = tools.length;
+  summary.removedToolChoice = removedToolChoice;
+
+  return {
+    body: result,
+    summary,
+  };
+}
+
 function summarizeLiteLLMRequest(body) {
   if (!isObject(body)) {
     return body;
@@ -1122,10 +1378,29 @@ async function main() {
   let type = getScriptType();
   let ts = Math.floor(Date.now() / 1000);
   if (["request", "response"].includes(type)) {
-    let keepRequestSystem = isTruthyArgument(getScriptArgument("keepRequestSystem"));
-    let keepRequestTools = isTruthyArgument(getScriptArgument("keepRequestTools"));
+    let keepRequestSystem = isTruthyArgument(
+      getScriptArgument("keepRequestSystem"),
+    );
+    let keepRequestTools = isTruthyArgument(
+      getScriptArgument("keepRequestTools"),
+    );
+    let filterClaudeNamespaceTools = isTruthyArgument(
+      getScriptArgument("filterClaudeNamespaceTools"),
+    );
+    let filterClaudeUnsupportedTools =
+      filterClaudeNamespaceTools ||
+      isTruthyArgument(getScriptArgument("filterClaudeUnsupportedTools"));
     let requestBody = getBody($request.body);
     let requestJson = parseJsonBody(requestBody, { logInvalid: false });
+    let claudeToolsResult =
+      type === "request"
+        ? adaptClaudeUnsupportedTools(requestJson, filterClaudeUnsupportedTools)
+        : null;
+    if (claudeToolsResult) {
+      requestJson = claudeToolsResult.body;
+      requestBody = JSON.stringify(requestJson);
+    }
+
     let data = {
       type: "litellm",
       scriptType: type,
@@ -1150,9 +1425,13 @@ async function main() {
       logLiteLLMContent(
         "LiteLLMReqContent",
         type,
-        collectContentFields(data.request.body, "", { onlyLastArrayContent: true })
+        collectContentFields(data.request.body, "", {
+          onlyLastArrayContent: true,
+        })
           .filter((item) => item.path.includes("message"))
-          .filter((item) => !["tool_result", "tool_use"].includes(item.content?.type))
+          .filter(
+            (item) => !["tool_result", "tool_use"].includes(item.content?.type),
+          )
           .slice(-3),
         {
           request: {
@@ -1164,6 +1443,7 @@ async function main() {
               keepTools: keepRequestTools,
             }),
           },
+          claudeTools: claudeToolsResult?.summary,
         },
       );
     }
@@ -1176,13 +1456,19 @@ async function main() {
         { body: summarizeBodyFields(data.response.body) },
       );
     }
+
+    if (claudeToolsResult) {
+      return { body: requestBody };
+    }
   }
+
+  return {};
 }
 
 (async () => {
   main()
-    .then((_) => {
-      $done({});
+    .then((result) => {
+      $done(result || {});
     })
     .catch((error) => {
       console.log(`[Error]: ${error?.message || error}`);
