@@ -993,6 +993,96 @@ function summarizeLiteLLMRequest(body) {
   return result;
 }
 
+/**
+ * 判断请求路径是否为 OpenAI 兼容的 models 列表接口
+ * @param {string} pathname
+ * @returns {boolean}
+ */
+function isModelsPath(pathname) {
+  if (typeof pathname !== "string") {
+    return false;
+  }
+  return pathname === "/models" || pathname.endsWith("/v1/models");
+}
+
+/**
+ * 将 OpenAI 风格的 model 条目映射为 Codex ModelInfo 的最小合法形状。
+ *
+ * 字段来源（serde 必填字段，缺失会导致 Codex `missing field` 解码失败）：
+ * - https://github.com/openai/codex/blob/rust-v0.142.5/codex-rs/protocol/src/openai_models.rs
+ * - https://github.com/openai/codex/blob/main/codex-rs/codex-api/src/endpoint/models.rs
+ * @param {object} item OpenAI 风格 model 条目，如 { id, object, owned_by }
+ * @returns {object|null} 映射失败（缺少字符串 id）时返回 null
+ */
+function openaiModelToCodexModelInfo(item) {
+  if (!isObject(item) || typeof item.id !== "string" || !item.id) {
+    return null;
+  }
+
+  return {
+    slug: item.id,
+    display_name: item.id,
+    description: null,
+    supported_reasoning_levels: [],
+    shell_type: "default",
+    visibility: "list",
+    supported_in_api: true,
+    priority: 0,
+    availability_nux: null,
+    upgrade: null,
+    base_instructions: "",
+    supports_reasoning_summaries: false,
+    support_verbosity: false,
+    default_verbosity: null,
+    apply_patch_tool_type: null,
+    truncation_policy: { mode: "tokens", limit: 10000 },
+    supports_parallel_tool_calls: false,
+    experimental_supported_tools: [],
+  };
+}
+
+/**
+ * 将 OpenAI 风格 /v1/models 响应适配为 Codex ModelsResponse（issue #20）。
+ *
+ * 由 `.data` 映射生成 `.models`，原有字段保留。
+ * @param {string} pathname 请求路径
+ * @param {object|null} body 响应 JSON
+ * @param {boolean} enabled 开关
+ * @returns {{body: object, summary: object}|null} 未命中时返回 null
+ */
+function adaptModelsResponseBody(pathname, body, enabled) {
+  if (!enabled || !isModelsPath(pathname) || !isObject(body)) {
+    return null;
+  }
+  if (!Array.isArray(body.data) || typeof body.models !== "undefined") {
+    return null;
+  }
+
+  let models = [];
+  let skipped = 0;
+  body.data.forEach((item) => {
+    let modelInfo = openaiModelToCodexModelInfo(item);
+    if (modelInfo) {
+      models.push(modelInfo);
+    } else {
+      skipped += 1;
+    }
+  });
+
+  return {
+    body: {
+      ...body,
+      models,
+    },
+    summary: {
+      path: pathname,
+      total: body.data.length,
+      mapped: models.length,
+      skipped,
+    },
+  };
+}
+
 function summarizeChoice(choice) {
   let result = takePresentFields(choice, [
     "index",
@@ -1390,6 +1480,9 @@ async function main() {
     let filterClaudeUnsupportedTools =
       filterClaudeNamespaceTools ||
       isTruthyArgument(getScriptArgument("filterClaudeUnsupportedTools"));
+    let adaptModelsResponse = isTruthyArgument(
+      getScriptArgument("adaptModelsResponse"),
+    );
     let requestBody = getBody($request.body);
     let requestJson = parseJsonBody(requestBody, { logInvalid: false });
     let claudeToolsResult =
@@ -1400,6 +1493,7 @@ async function main() {
       requestJson = claudeToolsResult.body;
       requestBody = JSON.stringify(requestJson);
     }
+    let requestPath = new URL($request.url).pathname;
 
     let data = {
       type: "litellm",
@@ -1408,13 +1502,25 @@ async function main() {
       request: {
         url: $request.url,
         method: $request.method,
-        path: new URL($request.url).pathname,
+        path: requestPath,
         body: summarizeLiteLLMRequest(requestJson || requestBody),
       },
     };
 
+    let modelsResult = null;
     if (typeof $response !== "undefined") {
       let responseBody = getBody($response.body);
+      modelsResult =
+        type === "response"
+          ? adaptModelsResponseBody(
+              requestPath,
+              parseJsonBody(responseBody, { logInvalid: false }),
+              adaptModelsResponse,
+            )
+          : null;
+      if (modelsResult) {
+        responseBody = JSON.stringify(modelsResult.body);
+      }
       data.response = {
         status: $response.status,
         body: summarizeLiteLLMResponse(responseBody, $response.headers),
@@ -1453,8 +1559,15 @@ async function main() {
         "LiteLLMResContent",
         type,
         collectContentFields(data.response.body),
-        { body: summarizeBodyFields(data.response.body) },
+        {
+          body: summarizeBodyFields(data.response.body),
+          modelsAdapt: modelsResult?.summary,
+        },
       );
+    }
+
+    if (modelsResult) {
+      return { body: JSON.stringify(modelsResult.body) };
     }
 
     if (claudeToolsResult) {
