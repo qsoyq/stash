@@ -505,82 +505,321 @@ function parseDocument(body) {
 
 
 function runtimeCode() {
+    const loginModalSelector = ".signFlowModal, .Modal--default.signFlowModal"
+    const modalWrapperSelector = ".Modal-wrapper, .Modal-enter-done"
+    const manualActionPattern = /(登录|注册|收藏|关注|赞同|点赞|评论|写回答|sign.?in|log.?in|register)/i
+    const floatingLoginActionSelector = "button, a, [role='button']"
+    const floatingLoginActionText = "立即登录/注册"
+    const floatingLoginHeadingParts = ["登录即可查看", "超5亿", "专业优质内容"]
+    const runtimeStyleId = "stash-zhihu-auto-login-style"
+    const manualLoginAttribute = "data-stash-zhihu-manual-login"
 
-    function isModelOpenAppReadFull(document) {
-        for (const node of Array.from(document.querySelectorAll("div"))) {
-            if (node?.textContent === "是否在知乎 App 内阅读全文") {
-                return true
-            }
+    let manualLoginUntil = 0
+    let manualModalOpen = false
+    let cleanupScheduled = false
+
+    function hasLoginModal() {
+        return Boolean(document.querySelector(loginModalSelector))
+    }
+
+    function isLoginModal(node) {
+        if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+            return false
         }
-        return false
+        if (node.matches(loginModalSelector)) {
+            return true
+        }
+        if (node.querySelector && node.querySelector(loginModalSelector)) {
+            return true
+        }
+        const text = node.textContent || ""
+        return /登录知乎|问答干货一键收藏|验证码登录|密码登录/.test(text)
     }
-    function blockNode() {
-        const observer = new MutationObserver(function (mutationsList) {
-            for (const mutation of mutationsList) {
-                if (mutation.type === 'childList') {
-                    mutation.addedNodes.forEach(node => {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            // console.log('新元素被创建:', node, node.textContent);
-                            // @ts-ignore
-                            if (node.querySelector(".MobileModal-wrapper")) {
-                                if (isModelOpenAppReadFull(node)) {
-                                    // @ts-ignore
-                                    // 是否在知乎 App 内阅读全文
-                                    node.querySelector(".MobileModal-wrapper").querySelector(".button").click()
-                                }
-                            }
-                        }
-                    });
-                }
+
+    function manualLoginAllowed() {
+        return Boolean(
+            document.documentElement.hasAttribute(manualLoginAttribute) &&
+            (Date.now() < manualLoginUntil || manualModalOpen)
+        )
+    }
+
+    function resetManualLoginState() {
+        if (hasLoginModal()) {
+            if (Date.now() < manualLoginUntil) {
+                manualModalOpen = true
             }
-        });
-
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
+            return
+        }
+        manualModalOpen = false
+        if (Date.now() >= manualLoginUntil) {
+            document.documentElement.removeAttribute(manualLoginAttribute)
+        }
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    function markManualLoginAction() {
+        manualLoginUntil = Date.now() + 5000
+        document.documentElement.setAttribute(manualLoginAttribute, "true")
+        setTimeout(resetManualLoginState, 5500)
+    }
 
-    blockNode()
-    setInterval(() => {
-        const queryList = [
-            ".OpenInAppButton", //在 App 内打开
-            "div.css-wfkf2m>button", //顶部菜单栏 -> 打开 App
-        ]
-        queryList.forEach(query => {
-            let tag = document.querySelector(query)
-            if (tag) {
-                tag.remove()
-                console.log(`remove ${query}`)
+    function getActionElement(node) {
+        if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+            return null
+        }
+        if (node.matches("button, a, [role='button']")) {
+            return node
+        }
+        return node.closest("button, a, [role='button']")
+    }
+
+    function isManualLoginAction(event) {
+        const path = typeof event.composedPath === "function" ? event.composedPath() : [event.target]
+        return path.some(node => {
+            const action = getActionElement(node)
+            if (!action) {
+                return false
+            }
+            const label = [
+                action.getAttribute("aria-label"),
+                action.getAttribute("title"),
+                action.textContent,
+            ].filter(Boolean).join(" ").replace(/\s+/g, "")
+            return manualActionPattern.test(label)
+        })
+    }
+
+    function restoreScroll() {
+        document.documentElement.style.removeProperty("overflow")
+        document.documentElement.style.removeProperty("margin-right")
+        if (document.body) {
+            document.body.style.removeProperty("overflow")
+            document.body.style.removeProperty("position")
+        }
+    }
+
+    function normalizeText(value) {
+        return String(value || "").replace(/\s+/g, "")
+    }
+
+    function hasFloatingLoginPromptText(node) {
+        if (!node) {
+            return false
+        }
+        const text = normalizeText(node.textContent)
+        return text.includes(floatingLoginActionText) ||
+            floatingLoginHeadingParts.every(part => text.includes(part))
+    }
+
+    function getFloatingLoginPromptContainer(action) {
+        if (!action || !action.isConnected || normalizeText(action.textContent) !== floatingLoginActionText) {
+            return null
+        }
+
+        let node = action
+        while (node && node !== document.documentElement) {
+            const text = normalizeText(node.textContent)
+            if (getComputedStyle(node).position === "fixed" &&
+                floatingLoginHeadingParts.every(part => text.includes(part))) {
+                return node
+            }
+            node = node.parentElement
+        }
+        return null
+    }
+
+    function removeFloatingLoginPrompt() {
+        let removed = false
+        document.querySelectorAll(floatingLoginActionSelector).forEach(action => {
+            const container = getFloatingLoginPromptContainer(action)
+            if (container) {
+                container.remove()
+                removed = true
             }
         })
-    }, 100);
+        return removed
+    }
+
+    function removeAppEntryButtons() {
+        const queryList = [
+            ".OpenInAppButton",
+            "div.css-wfkf2m>button",
+        ]
+        queryList.forEach(query => {
+            document.querySelectorAll(query).forEach(node => node.remove())
+        })
+    }
+
+    function blockMobileAppReadModal() {
+        document.querySelectorAll(".MobileModal-wrapper").forEach(node => {
+            if (!/是否在知乎 App 内阅读全文/.test(node.textContent || "")) {
+                return
+            }
+            const button = node.querySelector(".button")
+            if (button) {
+                button.click()
+            }
+        })
+    }
+
+    function removeAutoLoginModal() {
+        removeFloatingLoginPrompt()
+
+        if (manualLoginAllowed()) {
+            return
+        }
+
+        document.querySelectorAll(modalWrapperSelector).forEach(node => {
+            if (isLoginModal(node)) {
+                node.remove()
+            }
+        })
+        document.querySelectorAll(loginModalSelector).forEach(node => node.remove())
+        document.querySelectorAll(".Modal-backdrop").forEach(node => {
+            if (!node.closest(".Modal-wrapper")) {
+                node.remove()
+            }
+        })
+        restoreScroll()
+        removeAppEntryButtons()
+        blockMobileAppReadModal()
+    }
+
+    function scheduleCleanup() {
+        if (cleanupScheduled) {
+            return
+        }
+        cleanupScheduled = true
+        const run = () => {
+            cleanupScheduled = false
+            injectStyle()
+            removeAutoLoginModal()
+            resetManualLoginState()
+        }
+        setTimeout(run, 0)
+    }
+
+    function injectStyle() {
+        if (document.getElementById(runtimeStyleId)) {
+            return
+        }
+        const style = document.createElement("style")
+        style.id = runtimeStyleId
+        style.textContent = `
+            html:not([${manualLoginAttribute}]) .Modal-wrapper:has(.signFlowModal),
+            html:not([${manualLoginAttribute}]) .Modal-enter-done:has(.signFlowModal),
+            html:not([${manualLoginAttribute}]) .signFlowModal {
+                display: none !important;
+            }
+        `
+        ;(document.head || document.documentElement).appendChild(style)
+    }
+
+    function watchDom() {
+        const observer = new MutationObserver(mutations => {
+            let shouldCleanup = false
+            for (const mutation of mutations) {
+                if (mutation.type === "attributes") {
+                    if (mutation.target === document.documentElement && mutation.attributeName === "style") {
+                        shouldCleanup = true
+                        break
+                    }
+                    if (mutation.attributeName === "class" &&
+                        (mutation.target.matches(loginModalSelector) ||
+                            mutation.target.closest(".Modal-wrapper"))) {
+                        shouldCleanup = true
+                        break
+                    }
+                }
+                if (mutation.type === "childList" &&
+                    (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0)) {
+                    const addedElements = [...mutation.addedNodes].map(node =>
+                        node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement
+                    ).filter(Boolean)
+                    if (addedElements.some(hasFloatingLoginPromptText)) {
+                        removeFloatingLoginPrompt()
+                        shouldCleanup = true
+                    }
+
+                    const changedNodes = [...mutation.addedNodes, ...mutation.removedNodes]
+                    for (const node of changedNodes) {
+                        if (node.nodeType !== Node.ELEMENT_NODE) {
+                            continue
+                        }
+                        if (node.matches(
+                            `${modalWrapperSelector}, .Modal-backdrop, ${loginModalSelector}, .MobileModal-wrapper, .OpenInAppButton, div.css-wfkf2m>button`
+                        ) || node.querySelector(
+                            `${modalWrapperSelector}, .Modal-backdrop, ${loginModalSelector}, .MobileModal-wrapper, .OpenInAppButton, div.css-wfkf2m>button`
+                        )) {
+                            shouldCleanup = true
+                            break
+                        }
+                    }
+                    if (shouldCleanup) {
+                        break
+                    }
+                }
+            }
+            if (shouldCleanup) {
+                scheduleCleanup()
+            }
+        })
+
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ["class", "style"],
+            childList: true,
+            subtree: true,
+        })
+    }
+
+    function watchUrlChanges() {
+        const originalPushState = history.pushState
+        const originalReplaceState = history.replaceState
+        history.pushState = function () {
+            const result = originalPushState.apply(this, arguments)
+            scheduleCleanup()
+            return result
+        }
+        history.replaceState = function () {
+            const result = originalReplaceState.apply(this, arguments)
+            scheduleCleanup()
+            return result
+        }
+        window.addEventListener("popstate", scheduleCleanup)
+        window.addEventListener("hashchange", scheduleCleanup)
+    }
+
+    injectStyle()
+    watchDom()
+    watchUrlChanges()
+    document.addEventListener("click", event => {
+        if (isManualLoginAction(event)) {
+            markManualLoginAction()
+            scheduleCleanup()
+        }
+    }, true)
+    window.addEventListener("scroll", scheduleCleanup, { passive: true })
+    window.addEventListener("pageshow", scheduleCleanup)
+    scheduleCleanup()
+    setTimeout(scheduleCleanup, 100)
+    setTimeout(scheduleCleanup, 500)
+    setTimeout(scheduleCleanup, 1000)
 }
 
 
 
 
 function runtime(document) {
-    let code = `
-    ${runtimeCode.toString()};
-    runtimeCode();
-    `
+    let code = `(${runtimeCode.toString()})();`
     let script = document.createElement('script');
     script.textContent = code
-    document['body'].appendChild(script);
+    script.setAttribute("data-stash-zhihu-runtime", "true")
+    if (document.head) {
+        document.head.insertBefore(script, document.head.firstChild)
+    } else {
+        document.documentElement.appendChild(script)
+    }
     echo("注入代码以移除广告")
-    const queryList = [
-
-    ]
-    queryList.forEach(query => {
-        let tag = document.querySelector(query)
-        if (tag) {
-            tag.remove()
-            console.log(`remove ${query}`)
-        }
-    })
 }
 
 
@@ -595,12 +834,14 @@ async function main() {
             if (body?.includes("zhihu://")) {
                 console.log(`ppp: ${url.pathname}`)
             }
-            let ct = $response.headers['Content-Type']
-            if (ct && ct.includes("text/html") && body) {
+            let contentTypeHeader = Object.keys($response.headers || {}).find(key => key.toLowerCase() === "content-type")
+            let ct = contentTypeHeader ? $response.headers[contentTypeHeader] : ""
+            if (typeof ct === "string" && /text\/html/i.test(ct) && body) {
 
                 const document = new DOMParser().parseFromString(body, 'text/html')
                 runtime(document)
-                body = document.documentElement.outerHTML
+                let doctype = body.match(/^\s*(<!doctype[^>]*>)/i)?.[1] || "<!DOCTYPE html>"
+                body = `${doctype}\n${document.documentElement.outerHTML}`
                 $done({ body: body })
                 break
             }
