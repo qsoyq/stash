@@ -508,6 +508,9 @@ function runtimeCode() {
     const loginModalSelector = ".signFlowModal, .Modal--default.signFlowModal"
     const modalWrapperSelector = ".Modal-wrapper, .Modal-enter-done"
     const manualActionPattern = /(登录|注册|收藏|关注|赞同|点赞|评论|写回答|sign.?in|log.?in|register)/i
+    const floatingLoginActionSelector = "button, a, [role='button']"
+    const floatingLoginActionText = "立即登录/注册"
+    const floatingLoginHeadingParts = ["登录即可查看", "超5亿", "专业优质内容"]
     const runtimeStyleId = "stash-zhihu-auto-login-style"
     const manualLoginAttribute = "data-stash-zhihu-manual-login"
 
@@ -594,6 +597,48 @@ function runtimeCode() {
         }
     }
 
+    function normalizeText(value) {
+        return String(value || "").replace(/\s+/g, "")
+    }
+
+    function hasFloatingLoginPromptText(node) {
+        if (!node) {
+            return false
+        }
+        const text = normalizeText(node.textContent)
+        return text.includes(floatingLoginActionText) ||
+            floatingLoginHeadingParts.every(part => text.includes(part))
+    }
+
+    function getFloatingLoginPromptContainer(action) {
+        if (!action || !action.isConnected || normalizeText(action.textContent) !== floatingLoginActionText) {
+            return null
+        }
+
+        let node = action
+        while (node && node !== document.documentElement) {
+            const text = normalizeText(node.textContent)
+            if (getComputedStyle(node).position === "fixed" &&
+                floatingLoginHeadingParts.every(part => text.includes(part))) {
+                return node
+            }
+            node = node.parentElement
+        }
+        return null
+    }
+
+    function removeFloatingLoginPrompt() {
+        let removed = false
+        document.querySelectorAll(floatingLoginActionSelector).forEach(action => {
+            const container = getFloatingLoginPromptContainer(action)
+            if (container) {
+                container.remove()
+                removed = true
+            }
+        })
+        return removed
+    }
+
     function removeAppEntryButtons() {
         const queryList = [
             ".OpenInAppButton",
@@ -617,6 +662,8 @@ function runtimeCode() {
     }
 
     function removeAutoLoginModal() {
+        removeFloatingLoginPrompt()
+
         if (manualLoginAllowed()) {
             return
         }
@@ -685,6 +732,14 @@ function runtimeCode() {
                 }
                 if (mutation.type === "childList" &&
                     (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0)) {
+                    const addedElements = [...mutation.addedNodes].map(node =>
+                        node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement
+                    ).filter(Boolean)
+                    if (addedElements.some(hasFloatingLoginPromptText)) {
+                        removeFloatingLoginPrompt()
+                        shouldCleanup = true
+                    }
+
                     const changedNodes = [...mutation.addedNodes, ...mutation.removedNodes]
                     for (const node of changedNodes) {
                         if (node.nodeType !== Node.ELEMENT_NODE) {
