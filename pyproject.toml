@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "ghi",
-    "pre-commit>=4.6.0",
+    "pre-commit>=4.6.1",
 ]
 
 [tool.uv.sources]
