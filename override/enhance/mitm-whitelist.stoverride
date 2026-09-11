@@ -17,8 +17,6 @@ http:
         - -*.icloud-content.com
         - -*.icloud.com
         - -gspe1-ssl.ls.apple.com
-        - -*.douyinvod.com
-        - -*.douyinpic.com
         - -*.amemv.com
         - -*api5-normal-sinfonlineb.fqnovel.com
         - -*fqnovelpic.com
