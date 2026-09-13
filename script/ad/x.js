@@ -590,6 +590,20 @@ function removeAdsCode() {
     function removeElements() {
         // 时间线元素不容易定位, 增加页面 url 进行判断
         let url = new URL(window.location.href)
+        let searchHeaderQueries = [
+            "div[data-testid='TopNavBar']",
+            "header[role='banner']",
+        ]
+        let preserveMobileSearchHeader = window.innerWidth < 1000 && url.pathname.startsWith('/explore')
+
+        // 移动端底部搜索会进入 /explore，顶部搜索框位于这些容器内。
+        // 站内跳转前若曾隐藏过它们，此处还需恢复内联样式。
+        if (preserveMobileSearchHeader) {
+            searchHeaderQueries.forEach(query => {
+                document.querySelectorAll(query).forEach(tag => tag.style.removeProperty('display'))
+            })
+        }
+
         if (url.pathname.includes("/home")) {
             // 使用稳定的测试标识而非会随语言变化的时间线 aria-label。
             let composer = document.querySelector("div[data-testid='tweetTextarea_0']")
@@ -605,8 +619,7 @@ function removeAdsCode() {
 
         const queryList = [
             // 顶部 banner
-            "div[data-testid='TopNavBar']", // 顶部用户头像所在banner
-            "header[role='banner']", // 顶部 banner
+            ...searchHeaderQueries,
 
             // 浮窗
             "div[data-testid='chat-drawer-main']", // 右侧底部聊天组件
@@ -628,6 +641,8 @@ function removeAdsCode() {
 
         ]
         queryList.forEach(query => {
+            if (preserveMobileSearchHeader && searchHeaderQueries.includes(query)) return
+
             let tag = document.querySelector(query)
             // 当 css 可见性不为 none 时, 修改为 none
             // @ts-ignore
