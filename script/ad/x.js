@@ -523,11 +523,45 @@ function removeAdsCode() {
                     max-width: 55vw !important;
                     flex: 0 1 55vw !important;
                 }
+                html.x-ad-home-layout div[data-testid='primaryColumn'] {
+                    width: 60vw !important;
+                    max-width: 60vw !important;
+                    flex-basis: 60vw !important;
+                }
             }
         `
         document.head.appendChild(style)
     }
     injectStyle()
+
+    function applyPageLayout() {
+        let isHome = new URL(window.location.href).pathname.startsWith('/home')
+        document.documentElement.classList.toggle('x-ad-home-layout', isHome)
+    }
+    applyPageLayout()
+
+    function isStatusPage() {
+        return /^\/[^/]+\/status\/\d+(?:\/|$)/.test(new URL(window.location.href).pathname)
+    }
+
+    // X 的返回按钮最终也是通过浏览器 history 回退路由；直接调用它可避免模拟点击。
+    function registerStatusEscapeBack() {
+        if (window.__xAdEscapeBackRegistered) return
+        window.__xAdEscapeBackRegistered = true
+
+        document.addEventListener('keydown', event => {
+            if (event.key !== 'Escape' || event.isComposing || event.repeat || !isStatusPage()) return
+
+            let target = event.target
+            if (target instanceof Element && target.closest('input, textarea, select, [contenteditable="true"]')) return
+
+            event.preventDefault()
+            event.stopPropagation()
+            console.log('[x-ad] Escape: history.back()')
+            window.history.back()
+        }, true)
+    }
+    registerStatusEscapeBack()
 
     // X 的主内容父容器不是完整视口，CSS 自动外边距无法让阅读列视觉居中。
     // 以实际渲染位置计算偏移，避免依赖易变的 X 容器层级。
@@ -639,6 +673,7 @@ function removeAdsCode() {
     }
     setInterval(() => {
         removeElements()
+        applyPageLayout()
         centerPrimaryColumn()
     }, 500)
 
