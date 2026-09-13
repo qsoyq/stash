@@ -504,7 +504,7 @@ function parseDocument(body) {
 }
 
 function removeAdsCode() {
-    // 注入 CSS 强制隐藏右侧栏并让主内容区撑满
+    // 隐藏右侧栏，但保留 X 的桌面阅读列宽；媒体卡片会随主列宽度自适应。
     function injectStyle() {
 
         if (document.getElementById('x-ad-blocker-style')) return
@@ -512,14 +512,39 @@ function removeAdsCode() {
         style.id = 'x-ad-blocker-style'
         style.textContent = `
             div[data-testid='sidebarColumn'] { display: none !important; }
-            div[data-testid='primaryColumn'] { max-width: 100% !important; width: 100% !important; flex: 1 !important; }
-            div[data-testid='primaryColumn'] > div > div { max-width: 100% !important; }
-            main[role='main'] > div { max-width: 100% !important; width: 100% !important; }
-            main[role='main'] > div > div { max-width: 100% !important; width: 100% !important; }
+            div[data-testid='primaryColumn'] {
+                width: 100% !important;
+                max-width: 600px !important;
+                flex: 0 1 600px !important;
+            }
         `
         document.head.appendChild(style)
     }
     injectStyle()
+
+    // X 的主内容父容器不是完整视口，CSS 自动外边距无法让阅读列视觉居中。
+    // 以实际渲染位置计算偏移，避免依赖易变的 X 容器层级。
+    function centerPrimaryColumn() {
+        let column = document.querySelector("div[data-testid='primaryColumn']")
+        if (!column) return
+
+        if (window.innerWidth < 1000) {
+            column.style.removeProperty('transform')
+            delete column.dataset.xCenterLayout
+            return
+        }
+
+        let layoutKey = `${window.innerWidth}:${column.offsetWidth}`
+        if (column.dataset.xCenterLayout === layoutKey) return
+
+        column.style.removeProperty('transform')
+        let rect = column.getBoundingClientRect()
+        let offset = (window.innerWidth - rect.width) / 2 - rect.left
+        column.style.setProperty('transform', `translateX(${offset}px)`, 'important')
+        column.dataset.xCenterLayout = layoutKey
+    }
+
+    window.addEventListener('resize', centerPrimaryColumn)
 
     function removeElements() {
         // 时间线元素不容易定位, 增加页面 url 进行判断
@@ -607,6 +632,7 @@ function removeAdsCode() {
     }
     setInterval(() => {
         removeElements()
+        centerPrimaryColumn()
     }, 500)
 
 
