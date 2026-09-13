@@ -504,7 +504,7 @@ function parseDocument(body) {
 }
 
 function removeAdsCode() {
-    // 注入 CSS 强制隐藏右侧栏并让主内容区撑满
+    // 隐藏右侧栏，但保留 X 的桌面阅读列宽；媒体卡片会随主列宽度自适应。
     function injectStyle() {
 
         if (document.getElementById('x-ad-blocker-style')) return
@@ -512,37 +512,114 @@ function removeAdsCode() {
         style.id = 'x-ad-blocker-style'
         style.textContent = `
             div[data-testid='sidebarColumn'] { display: none !important; }
-            div[data-testid='primaryColumn'] { max-width: 100% !important; width: 100% !important; flex: 1 !important; }
-            div[data-testid='primaryColumn'] > div > div { max-width: 100% !important; }
-            main[role='main'] > div { max-width: 100% !important; width: 100% !important; }
-            main[role='main'] > div > div { max-width: 100% !important; width: 100% !important; }
+            div[data-testid='primaryColumn'] {
+                width: 100% !important;
+                max-width: 100% !important;
+                flex: 0 1 100% !important;
+            }
+            @media (min-width: 1000px) {
+                div[data-testid='primaryColumn'] {
+                    width: 55vw !important;
+                    max-width: 55vw !important;
+                    flex: 0 1 55vw !important;
+                }
+                html.x-ad-home-layout div[data-testid='primaryColumn'] {
+                    width: 65vw !important;
+                    max-width: 65vw !important;
+                    flex-basis: 65vw !important;
+                }
+            }
         `
         document.head.appendChild(style)
     }
     injectStyle()
 
+    function applyPageLayout() {
+        let isHome = new URL(window.location.href).pathname.startsWith('/home')
+        document.documentElement.classList.toggle('x-ad-home-layout', isHome)
+    }
+    applyPageLayout()
+
+    function isStatusPage() {
+        return /^\/[^/]+\/status\/\d+(?:\/|$)/.test(new URL(window.location.href).pathname)
+    }
+
+    // X 的返回按钮最终也是通过浏览器 history 回退路由；直接调用它可避免模拟点击。
+    function registerStatusEscapeBack() {
+        if (window.__xAdEscapeBackRegistered) return
+        window.__xAdEscapeBackRegistered = true
+
+        document.addEventListener('keydown', event => {
+            if (event.key !== 'Escape' || event.isComposing || event.repeat || !isStatusPage()) return
+
+            let target = event.target
+            if (target instanceof Element && target.closest('input, textarea, select, [contenteditable="true"]')) return
+
+            event.preventDefault()
+            event.stopPropagation()
+            console.log('[x-ad] Escape: history.back()')
+            window.history.back()
+        }, true)
+    }
+    registerStatusEscapeBack()
+
+    // X 的主内容父容器不是完整视口，CSS 自动外边距无法让阅读列视觉居中。
+    // 以实际渲染位置计算偏移，避免依赖易变的 X 容器层级。
+    function centerPrimaryColumn() {
+        let column = document.querySelector("div[data-testid='primaryColumn']")
+        if (!column) return
+
+        if (window.innerWidth < 1000) {
+            column.style.removeProperty('transform')
+            delete column.dataset.xCenterLayout
+            return
+        }
+
+        let layoutKey = `${window.innerWidth}:${column.offsetWidth}`
+        if (column.dataset.xCenterLayout === layoutKey) return
+
+        column.style.removeProperty('transform')
+        let rect = column.getBoundingClientRect()
+        let offset = (window.innerWidth - rect.width) / 2 - rect.left
+        column.style.setProperty('transform', `translateX(${offset}px)`, 'important')
+        column.dataset.xCenterLayout = layoutKey
+    }
+
+    window.addEventListener('resize', centerPrimaryColumn)
+
     function removeElements() {
         // 时间线元素不容易定位, 增加页面 url 进行判断
         let url = new URL(window.location.href)
-        if (url.pathname.includes("/home")) {
-            let queryList = [
-                "div[aria-label='Home timeline'] div[role='progressbar'] + div", // 时间线快捷发帖组件
-            ]
-            queryList.forEach(query => {
-                let tag = document.querySelector(query)
-                if (tag) {
-                    // @ts-ignore
-                    tag.style.display = 'none'
-                    console.log(`modify display to none ${query}`)
-                }
+        let searchHeaderQueries = [
+            "div[data-testid='TopNavBar']",
+            "header[role='banner']",
+        ]
+        let preserveMobileSearchHeader = window.innerWidth < 1000 && url.pathname.startsWith('/explore')
+
+        // 移动端底部搜索会进入 /explore，顶部搜索框位于这些容器内。
+        // 站内跳转前若曾隐藏过它们，此处还需恢复内联样式。
+        if (preserveMobileSearchHeader) {
+            searchHeaderQueries.forEach(query => {
+                document.querySelectorAll(query).forEach(tag => tag.style.removeProperty('display'))
             })
+        }
+
+        if (url.pathname.includes("/home")) {
+            // 使用稳定的测试标识而非会随语言变化的时间线 aria-label。
+            let composer = document.querySelector("div[data-testid='tweetTextarea_0']")
+            let composerCell = composer && composer.closest("div[data-testid='cellInnerDiv']")
+            // 部分 X 页面将快捷发帖块置于时间线首个进度节点之后，而非 cellInnerDiv 内。
+            if (!composerCell) composerCell = document.querySelector("div[role='progressbar'] + div")
+            if (composerCell && composerCell.style.display !== 'none') {
+                composerCell.style.display = 'none'
+                console.log('hide home timeline composer')
+            }
 
         }
 
         const queryList = [
             // 顶部 banner
-            "div[data-testid='TopNavBar']", // 顶部用户头像所在banner
-            "header[role='banner']", // 顶部 banner
+            ...searchHeaderQueries,
 
             // 浮窗
             "div[data-testid='chat-drawer-main']", // 右侧底部聊天组件
@@ -564,6 +641,8 @@ function removeAdsCode() {
 
         ]
         queryList.forEach(query => {
+            if (preserveMobileSearchHeader && searchHeaderQueries.includes(query)) return
+
             let tag = document.querySelector(query)
             // 当 css 可见性不为 none 时, 修改为 none
             // @ts-ignore
@@ -607,6 +686,8 @@ function removeAdsCode() {
     }
     setInterval(() => {
         removeElements()
+        applyPageLayout()
+        centerPrimaryColumn()
     }, 500)
 
 
