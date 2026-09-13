@@ -524,9 +524,9 @@ function removeAdsCode() {
                     flex: 0 1 55vw !important;
                 }
                 html.x-ad-home-layout div[data-testid='primaryColumn'] {
-                    width: 60vw !important;
-                    max-width: 60vw !important;
-                    flex-basis: 60vw !important;
+                    width: 65vw !important;
+                    max-width: 65vw !important;
+                    flex-basis: 65vw !important;
                 }
             }
         `
