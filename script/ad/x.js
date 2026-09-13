@@ -591,17 +591,15 @@ function removeAdsCode() {
         // 时间线元素不容易定位, 增加页面 url 进行判断
         let url = new URL(window.location.href)
         if (url.pathname.includes("/home")) {
-            let queryList = [
-                "div[aria-label='Home timeline'] div[role='progressbar'] + div", // 时间线快捷发帖组件
-            ]
-            queryList.forEach(query => {
-                let tag = document.querySelector(query)
-                if (tag) {
-                    // @ts-ignore
-                    tag.style.display = 'none'
-                    console.log(`modify display to none ${query}`)
-                }
-            })
+            // 使用稳定的测试标识而非会随语言变化的时间线 aria-label。
+            let composer = document.querySelector("div[data-testid='tweetTextarea_0']")
+            let composerCell = composer && composer.closest("div[data-testid='cellInnerDiv']")
+            // 部分 X 页面将快捷发帖块置于时间线首个进度节点之后，而非 cellInnerDiv 内。
+            if (!composerCell) composerCell = document.querySelector("div[role='progressbar'] + div")
+            if (composerCell && composerCell.style.display !== 'none') {
+                composerCell.style.display = 'none'
+                console.log('hide home timeline composer')
+            }
 
         }
 
