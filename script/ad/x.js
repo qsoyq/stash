@@ -514,8 +514,15 @@ function removeAdsCode() {
             div[data-testid='sidebarColumn'] { display: none !important; }
             div[data-testid='primaryColumn'] {
                 width: 100% !important;
-                max-width: 600px !important;
-                flex: 0 1 600px !important;
+                max-width: 100% !important;
+                flex: 0 1 100% !important;
+            }
+            @media (min-width: 1000px) {
+                div[data-testid='primaryColumn'] {
+                    width: 55vw !important;
+                    max-width: 55vw !important;
+                    flex: 0 1 55vw !important;
+                }
             }
         `
         document.head.appendChild(style)
