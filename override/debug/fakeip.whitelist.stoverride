@@ -1,0 +1,29 @@
+name: fake-ip 白名单
+category: debug
+icon: https://raw.githubusercontent.com/qsoyq/shell/main/assets/icon/debug.png
+dns:
+    fake-ip-filter:
+        - +.stun.*.*
+        - +.stun.*.*.*
+        - +.stun.*.*.*.*
+        - +.stun.*.*.*.*.*
+        - lens.l.google.com
+        - '*.n.n.srv.nintendo.net'
+        - +.stun.playstation.net
+        - xbox.*.*.microsoft.com
+        - '*.*.xboxlive.com'
+        - '*.msftncsi.com'
+        - '*.msftconnecttest.com'
+        - '*.mcdn.bilivideo.cn'
+        - live-push.bilivideo.com
+        - stunserver2024.stunprotocol.org
+        - localhost.weixin.qq.com
+        - localhost.ptlogin2.qq.com
+        - localhost.sec.qq.com
+        - +.docker.localhost
+        - mbp.19940731.xyz
+        - '*.orb.local'
+        - +.unknowntec.com
+        - +.argotunnel.com
+        - +.apple.com
+        - controlplane.tailscale.com
