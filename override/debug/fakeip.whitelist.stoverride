@@ -27,3 +27,4 @@ dns:
         - +.argotunnel.com
         - +.apple.com
         - controlplane.tailscale.com
+        - derp1.tailscale.com
