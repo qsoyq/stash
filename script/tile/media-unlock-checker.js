@@ -594,12 +594,25 @@ async function parseChatGPTWeb() {
 
 async function parseGemini() {
     let url = 'https://gemini.google.com'
-    let res = await get(url)
+    let res
+    try {
+        res = await get({ url, timeout: 15 })
+    } catch (e) {
+        // Gemini 首页响应头约 26KB，Stash $httpClient 会直接报 client error (SendRequest)
+        // 用响应头较小的静态资源确认网络可达，区分“无法检测”与“网络失败”
+        try {
+            await get({ url: 'https://gemini.google.com/_/BardChatUi/manifest.json', timeout: 15 })
+            return 'Unknown（响应头过大，无法检测）'
+        } catch (_) {
+            return `Failed: ${e?.error || e}`
+        }
+    }
 
     if (typeof res.data !== 'string') {
         return 'Failed'
     }
-    let isOk = res.data.includes('45631641,null,true') ? "Yes" : "";
+    // 兼容旧格式 45631641,null,true 与新格式 \"45631641\":true
+    let isOk = /45631641(?:,null,true|\\?"\s*:\s*true)/.test(res.data) ? "Yes" : "";
 
     // Equivalent of grep -o ',2,1,200,"[A-Z]\{3\}"' | sed 's/,2,1,200,"//;s/"//' || echo ""
     let countrycode = "";
@@ -608,7 +621,7 @@ async function parseGemini() {
     let result = isOk ? "Yes" : "No"
     if (match) {
         countrycode = match[1];  // Extract the country code (3-letter code)
-        return ` ${result}, Region: ${countryCodeToEmoji(countrycode)}${countrycode}`
+        return `${result}, Region: ${countryCodeToEmoji(countrycode)}${countrycode}`
     } else {
         return `${result}`
     }
@@ -703,6 +716,6 @@ async function main() {
             error = JSON.stringify(error)
         }
         echo(`[Error]: ${error?.message || error}`)
-        $done({})
+        $done({ content: 'Failed' })
     })
 })();
