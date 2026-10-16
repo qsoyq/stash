@@ -77,6 +77,8 @@ Scripts run in the Stash JavaScript environment with these globals:
 - `$persistentStore` - Persistent key-value storage
 - `$argument` - Override argument string
 
+Stash executes each script as the body of an async function (same as Surge / Quantumult X / Loon), so top-level `return` and `await` are allowed. **Never declare these injected globals at the top level** (e.g. `var $httpClient`, `var $request, $response, ...`, `var $done`): inside a function body such `var`s become hoisted locals initialized to `undefined` and shadow the injected values, so the script crashes and never calls `$done`. Use `typeof $x === 'undefined'` to check for optional globals.
+
 `script/base.js` wraps `$httpClient` callbacks into async/await via `request()` and provides utility functions (cookie parsing, notifications, etc.).
 
 ### Script-to-Override Binding
