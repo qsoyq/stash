@@ -496,7 +496,7 @@ function parseDocument(body) {
 }
 
 async function main() {
-    echo(`[Argument] ${$argument}`)
+    echo(`[Argument] ${typeof $argument === "undefined" ? "" : $argument}`)
     let endpoints = getScriptArgument("endpoints") || []
     let limit = getScriptArgument("limit") || 3
     for (const endpoint of endpoints) {

@@ -496,7 +496,7 @@ function parseDocument(body) {
 }
 
 async function main() {
-    echo(`[Argument] ${$argument}`)
+    echo(`[Argument] ${typeof $argument === "undefined" ? "" : $argument}`)
 }
 
 

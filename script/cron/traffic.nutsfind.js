@@ -615,7 +615,7 @@ function getAuthorizationCache() {
 
 
 async function main() {
-    echo(`[Argument] ${$argument}`)
+    echo(`[Argument] ${typeof $argument === "undefined" ? "" : $argument}`)
     let type = getScriptType()
     switch (type) {
         case 'request':

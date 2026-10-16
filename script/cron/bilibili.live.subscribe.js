@@ -526,7 +526,7 @@ function unescapeHtml(text) {
 
 
 async function main() {
-    echo(`[Argument] ${$argument}`)
+    echo(`[Argument] ${typeof $argument === "undefined" ? "" : $argument}`)
     let rooms = getScriptArgument("rooms") || []
     if (!rooms) {
         return
