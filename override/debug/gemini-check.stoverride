@@ -1,0 +1,15 @@
+name: Gemini 检测验证
+desc: |-
+    - 临时调试：验证 Gemini 解锁检测 SendRequest 失败是否与响应头过大有关
+category: debug
+icon: https://raw.githubusercontent.com/qsoyq/shell/main/assets/icon/debug.png
+tiles:
+    -   name: gemini-check
+        backgroundColor: '#178BD8'
+        interval: 1800
+        title: Gemini 验证
+        content: 加载中
+script-providers:
+    gemini-check:
+        url: https://raw.githubusercontent.com/qsoyq/stash/analyze-gemini-media-unlock-checker-failure/script/debug/gemini-check.js
+        interval: 86400
