@@ -10,18 +10,67 @@ desc: |-
     - 外链自动重定向
     - 导航｜增加内版模块
     - 支持 NetNewsWire 访问头像
-    - 移动端详情页手势做操
+    - 移动端详情页手势翻页
         - 左滑跳转下一页
         - 右滑跳转上一页
+    - 可在覆写详情 → 参数中分别开关，默认全部开启
+    - 参数功能需要 Stash iOS/tvOS 3.7+ 或 macOS 4.4+（Beta）
 category: ad
 icon: https://www.nodeseek.com/static/image/favicon/favicon-32x32.png
+arguments-version: 1
+arguments:
+    block_ads:
+        type: switch
+        title: 屏蔽推广广告
+        description: 清空推广接口返回的广告列表
+        default: true
+    hide_carousel:
+        type: switch
+        title: 隐藏首页置顶轮播
+        default: true
+    hide_sidebar_panels:
+        type: switch
+        title: 隐藏侧栏面板
+        description: 整体隐藏侧栏面板，包括所有板块、用户统计和欢迎新用户
+        default: true
+    hide_fast_nav:
+        type: switch
+        title: 隐藏快捷功能区
+        default: true
+    hide_signature:
+        type: switch
+        title: 隐藏用户签名
+        default: true
+    hide_footer:
+        type: switch
+        title: 隐藏页脚
+        default: true
+    direct_external_links:
+        type: switch
+        title: 外链直接跳转
+        description: 将页面中的跳转链接替换为实际目标地址
+        default: true
+    show_inside_nav:
+        type: switch
+        title: 添加内版导航
+        default: true
+    enable_swipe:
+        type: switch
+        title: 启用手势翻页
+        description: 左滑超过 150px 跳到下一页，右滑超过 150px 跳到上一页
+        default: true
+    fix_nnw_avatar:
+        type: switch
+        title: 修复 NetNewsWire 头像访问
+        description: 为 NetNewsWire 头像请求替换 User-Agent
+        default: true
 http:
     mitm:
         - www.nodeseek.com
     force-http-engine:
         - www.nodeseek.com
     body-rewrite:
-        - https://www.nodeseek.com/api/promotion/list response-jq .data=[]
+        - https://www.nodeseek.com/api/promotion/list response-jq if ${args.block_ads|json} then .data=[] else . end
     script:
         -   name: nodeseek
             binary-mode: false
@@ -31,6 +80,7 @@ http:
             timeout: 20
             type: request
             debug: false
+            argument: '{"fix_nnw_avatar":${args.fix_nnw_avatar|json}}'
         -   name: nodeseek
             binary-mode: false
             match: https://www.nodeseek.com/(post-.*|categories.*|space.*|$)
@@ -39,7 +89,8 @@ http:
             timeout: 20
             type: response
             debug: false
+            argument: '{"hide_carousel":${args.hide_carousel|json},"hide_sidebar_panels":${args.hide_sidebar_panels|json},"hide_fast_nav":${args.hide_fast_nav|json},"hide_signature":${args.hide_signature|json},"hide_footer":${args.hide_footer|json},"direct_external_links":${args.direct_external_links|json},"show_inside_nav":${args.show_inside_nav|json},"enable_swipe":${args.enable_swipe|json}}'
 script-providers:
     nodeseek:
-        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/nodeseek.js
+        url: https://raw.githubusercontent.com/qsoyq/stash/search-stash-wiki-override-params/script/ad/nodeseek.js
         interval: 86400

@@ -495,7 +495,37 @@ function parseDocument(body) {
     return domParser.parseFromString(body, 'text/html');
 }
 
-function removeAdsCode() {
+function getNodeSeekOptions() {
+    const options = {
+        hide_carousel: true,
+        hide_sidebar_panels: true,
+        hide_fast_nav: true,
+        hide_signature: true,
+        hide_footer: true,
+        direct_external_links: true,
+        show_inside_nav: true,
+        enable_swipe: true,
+        fix_nnw_avatar: true,
+    }
+    if (typeof $argument === 'undefined') {
+        return options
+    }
+
+    const supplied = parseJsonBody($argument)
+    if (supplied === null || typeof supplied !== 'object' || Array.isArray(supplied)) {
+        console.log('[Warn] NodeSeek 参数必须为 JSON 对象，使用默认设置')
+        return options
+    }
+
+    for (const key of Object.keys(options)) {
+        if (typeof supplied[key] === 'boolean') {
+            options[key] = supplied[key]
+        }
+    }
+    return options
+}
+
+function removeAdsCode(options) {
     document.addEventListener('DOMContentLoaded', (event) => {
         console.log("removeAdsCode")
         let url = new URL(window.location.href)
@@ -543,7 +573,12 @@ function removeAdsCode() {
             console.log("add touch listener")
         }
 
-        swipe()
+        if (options.enable_swipe) {
+            swipe()
+        }
+        if (!options.show_inside_nav) {
+            return
+        }
 
         // 板块导航增加内版
         let isMobileNav = false
@@ -577,69 +612,63 @@ function removeAdsCode() {
     });
 }
 
-function removeAds(document) {
-    let code = `
-    ${removeAdsCode.toString()};
-    removeAdsCode();
-    `
-    let script = document.createElement('script');
-    script.textContent = code
-    document['body'].appendChild(script);
-
-    Array.from(document.querySelectorAll("a")).forEach(e => {
-        let href = e.attributes["href"]?.textContent
-        if (href && href.indexOf("/jump?to=") === 0) {
-            let target = href.substring(9)
-            let url = decodeURIComponent(target)
-            e.href = url
-            console.log(`replace ${href} to ${url}`)
+function removeAds(document, options) {
+    if (options.enable_swipe || options.show_inside_nav) {
+        const browserOptions = {
+            enable_swipe: options.enable_swipe,
+            show_inside_nav: options.show_inside_nav,
         }
-    })
+        const script = document.createElement('script');
+        script.textContent = `
+        ${removeAdsCode.toString()};
+        removeAdsCode(${JSON.stringify(browserOptions)});
+        `
+        document.body.appendChild(script);
+    }
 
-    addCSS(document)
+    if (options.direct_external_links) {
+        Array.from(document.querySelectorAll("a")).forEach(e => {
+            let href = e.attributes["href"]?.textContent
+            if (href && href.indexOf("/jump?to=") === 0) {
+                let target = href.substring(9)
+                let url = decodeURIComponent(target)
+                e.href = url
+                console.log(`replace ${href} to ${url}`)
+            }
+        })
+    }
+
+    addCSS(document, options)
 }
 
 
-function addCSS(document) {
-    let style = document.createElement("style")
+function addCSS(document, options) {
+    const selectors = {
+        hide_carousel: 'div.topic-carousel-wrapper',
+        hide_sidebar_panels: 'div.nsk-panel',
+        hide_fast_nav: 'div#fast-nav-button-group',
+        hide_signature: 'div.signature',
+        hide_footer: 'footer',
+    }
+    const enabledSelectors = Object.entries(selectors)
+        .filter(([key]) => options[key])
+        .map(([, selector]) => selector)
+    if (enabledSelectors.length === 0) {
+        return
+    }
+
+    const style = document.createElement("style")
     style.type = 'text/css';
-    style.innerHTML = `
-        div.topic-carousel-wrapper{
-            display: none;
-        }
-
-        div.nsk-panel{
-            display: none;
-        }
-
-        div.nsk-panel.category-list{
-            display: none;
-        }
-
-        footer{
-            display: none;
-        }
-
-        ##back-to-parent{
-            display: none;
-        }
-
-        div.signature{
-            display: none;
-        }
-
-        div#fast-nav-button-group {
-            display: none;
-        }
-    `
+    style.textContent = `${enabledSelectors.join(',\n')} { display: none; }`
     document.head.appendChild(style)
 }
 
 async function main() {
+    const options = getNodeSeekOptions()
     let url = (new URL($request.url))
     switch (getScriptType()) {
         case "request":
-            if (/\/avatar\/.*/g.test(url.pathname)) {
+            if (options.fix_nnw_avatar && /\/avatar\/.*/g.test(url.pathname)) {
                 let headers = $request.headers
                 if (/NetNewsWire/g.test(headers["User-Agent"])) {
                     headers['User-Agent'] = "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/605.1.15"
@@ -664,14 +693,14 @@ async function main() {
                     // 已经在页面中替换 href
                     // 此部分代码实际已不会生效
                     let to = url.searchParams.get("to")
-                    if (to) {
+                    if (options.direct_external_links && to) {
                         echo(`跳转url: ${to}`)
                         $done({ "status": 307, "headers": { "Location": to }, "body": "" })
                         break
                     }
                 } else {
                     const document = new DOMParser().parseFromString(body, 'text/html')
-                    removeAds(document)
+                    removeAds(document, options)
                     $done({ body: document.documentElement.outerHTML })
                     break
                 }
