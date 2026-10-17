@@ -17,14 +17,14 @@ try {
     const run = new Function('document', 'window', `${source.slice(start, end)}; return removeAdsCode;`);
     const original = ['日常', '技术', '情报', '测评', '交易', '拼车', '推广', 'DF'];
     let passed = 0;
-    function check({ all = true, enabled = true, order, expected, path = '/categories/life', both = false }) {
+    function check({ all = true, enabled = true, order, expected, path = '/categories/life' }) {
         const doc = document.implementation.createHTMLDocument('fixture');
         const items = (all ? ['全部', ...original] : original).map(name => {
             const href = name === '全部' ? '/' : name === 'DF' ? 'https://www.deepflood.com/' : `/categories/${name}`;
             return `<li data-original="${name}"><a href="${href}">${name}</a></li>`;
         }).join('');
         const nav = className => `<ul class="${className} extra">${items}</ul>`;
-        doc.body.innerHTML = nav(all ? 'mobile-nav' : 'nav-menu') + (both ? nav('nav-menu') : '') + `
+        doc.body.innerHTML = nav(all ? 'mobile-nav' : 'nav-menu') + `
             <div class="nsk-panel category-list" style="display:none">
                 <a href="/categories/life"><svg></svg><span>生活</span></a>
                 <a href="/categories/dev">Dev</a>
@@ -57,7 +57,43 @@ try {
         assert(doc.querySelector('.category-list').innerHTML === panel, 'Sidebar links were moved');
         passed++;
     }
-    check({ order: ['日常', '技术', '情报', '生活', '内版'], expected: ['全部', '日常', '技术', '情报', '生活', '内版'], both: true });
+    // Mobile .nav-menu is a toolbar, not a second category list.
+    {
+        const doc = document.implementation.createHTMLDocument('mobile toolbar');
+        doc.body.innerHTML = `
+            <header><ul class="nav-menu">
+                <li id="toggle-left-panel" class="meta-button"><a href="javascript:void(0)">菜单</a></li>
+                <li style="margin-right:auto"><a class="logo-link" href="/">NodeSeek</a></li>
+                <li id="mobile-search" class="right-button-group"><a href="javascript:void(0)">搜索</a></li>
+                <li class="right-button-group color-theme-switcher">主题</li>
+            </ul></header>
+            <ul class="mobile-nav"><li><a href="/">全部</a></li>
+                <li><a href="/categories/daily">日常</a></li>
+                <li class="current-category"><a href="/categories/info">情报</a></li>
+                <li><a href="/categories/trade">交易</a></li>
+            </ul>`;
+        const toolbar = doc.querySelector('.nav-menu');
+        const before = toolbar.innerHTML;
+        const nodes = Array.from(toolbar.childNodes);
+        let clicks = 0;
+        doc.querySelector('#mobile-search a').addEventListener('click', () => clicks++);
+        run(doc, { location: { href: 'https://www.nodeseek.com/categories/info' } })({
+            show_inside_nav: true, enable_swipe: false,
+            navigation_order: ['日常', '情报', '生活', '内版'],
+        });
+        doc.dispatchEvent(new Event('DOMContentLoaded'));
+        if (toolbar.innerHTML !== before || nodes.some((node, i) => toolbar.childNodes[i] !== node)) {
+            throw new Error('Mobile toolbar was replaced by category links');
+        }
+        doc.querySelector('#mobile-search a').click();
+        if (clicks !== 1) throw new Error('Mobile toolbar listeners were lost');
+        const actual = Array.from(doc.querySelectorAll('.mobile-nav a'), link => link.textContent);
+        if (actual.join(',') !== '全部,日常,情报,生活,内版') throw new Error(`Mobile order: ${actual}`);
+        if (doc.querySelectorAll('header a[href^="/categories/"]').length) throw new Error('Duplicate category bar in header');
+        if (!doc.querySelector('.mobile-nav .current-category').textContent.includes('情报')) throw new Error('Selected category lost');
+        passed++;
+    }
+    check({ order: ['日常', '技术', '情报', '生活', '内版'], expected: ['全部', '日常', '技术', '情报', '生活', '内版'] });
     check({ all: false, order: ['生活', '日常', '内版'], expected: ['生活', '日常', '内版'] });
     check({ order: ['Dev', '贴图', '曝光', '无意义', '沙盒'], expected: ['全部', 'Dev', '贴图', '曝光', '无意义', '沙盒'] });
     check({ order: ['不存在', '错误入口', '生活'], expected: ['全部', '生活'] });

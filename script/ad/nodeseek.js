@@ -592,8 +592,23 @@ function removeAdsCode(options) {
             return
         }
 
-        // 分类面板可能被 CSS 隐藏，但其中的入口仍可用于自定义导航。
-        const categoryLinks = new Map([['内版', '/categories/inside']])
+        // 手机分类页可能没有分类面板，以首页核验过的地址兜底，页面链接优先。
+        const categoryLinks = new Map([
+            ['日常', '/categories/daily'],
+            ['技术', '/categories/tech'],
+            ['情报', '/categories/info'],
+            ['测评', '/categories/review'],
+            ['交易', '/categories/trade'],
+            ['拼车', '/categories/carpool'],
+            ['推广', '/categories/promotion'],
+            ['生活', '/categories/life'],
+            ['Dev', '/categories/dev'],
+            ['贴图', '/categories/photo-share'],
+            ['曝光', '/categories/expose'],
+            ['无意义', '/categories/meaningless'],
+            ['沙盒', '/categories/sandbox'],
+            ['内版', '/categories/inside'],
+        ])
         document.querySelectorAll('a[href^="/categories/"]').forEach(link => {
             const name = link.textContent.trim()
             const path = link.getAttribute('href')
@@ -602,7 +617,10 @@ function removeAdsCode(options) {
             }
         })
 
-        document.querySelectorAll('ul.mobile-nav, ul.nav-menu').forEach(nav => {
+        // 手机的 nav-menu 是菜单、Logo、搜索等工具栏，不能当作分类栏重建。
+        const mobileNavs = document.querySelectorAll('ul.mobile-nav')
+        const navs = mobileNavs.length ? mobileNavs : document.querySelectorAll('ul.nav-menu')
+        navs.forEach(nav => {
             const items = Array.from(nav.children)
             const all = items.find(item => item.querySelector('a')?.textContent.trim() === '全部')
             const categories = new Map()
