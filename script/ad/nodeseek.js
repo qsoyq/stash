@@ -592,13 +592,19 @@ function removeAdsCode(options) {
             return
         }
 
+        // 分类面板可能被 CSS 隐藏，但其中的入口仍可用于自定义导航。
+        const categoryLinks = new Map([['内版', '/categories/inside']])
+        document.querySelectorAll('a[href^="/categories/"]').forEach(link => {
+            const name = link.textContent.trim()
+            const path = link.getAttribute('href')
+            if (name && /^\/categories\/[a-z0-9-]+\/?$/.test(path)) {
+                categoryLinks.set(name, path)
+            }
+        })
+
         document.querySelectorAll('ul.mobile-nav, ul.nav-menu').forEach(nav => {
             const items = Array.from(nav.children)
             const all = items.find(item => item.querySelector('a')?.textContent.trim() === '全部')
-            if (!all) {
-                return
-            }
-
             const categories = new Map()
             for (const item of items) {
                 const name = item.querySelector('a')?.textContent.trim()
@@ -606,16 +612,17 @@ function removeAdsCode(options) {
                     categories.set(name, item)
                 }
             }
-            const ordered = [all]
+            const ordered = all ? [all] : []
             for (const name of options.navigation_order) {
                 let item = categories.get(name)
-                if (!item && name === '内版') {
+                const path = categoryLinks.get(name)
+                if (!item && path) {
                     item = document.createElement('li')
                     const link = document.createElement('a')
-                    link.href = '/categories/inside'
-                    link.textContent = '内版'
+                    link.href = path
+                    link.textContent = name
                     item.appendChild(link)
-                    if (url.pathname === '/categories/inside') {
+                    if (url.pathname.replace(/\/$/, '') === path.replace(/\/$/, '')) {
                         item.classList.add('current-category')
                     }
                 }

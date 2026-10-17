@@ -58,7 +58,7 @@ arguments:
     navigation_order:
         type: input
         title: 导航项目顺序
-        description: 填写 JSON 数组，例如 ["日常","技术","情报","拼车","内版"]；可选页面原有分类及内版，未列出的项目隐藏，[] 表示仅保留全部
+        description: 填写 JSON 数组，例如 ["日常","技术","情报","生活","内版"]；支持日常、技术、情报、测评、交易、拼车、推广、生活、Dev、贴图、曝光、无意义、沙盒及内版，未列出的项目隐藏，[] 表示仅保留全部
         default: '["日常","技术","情报","拼车","内版"]'
         max-length: 2048
     enable_swipe:
