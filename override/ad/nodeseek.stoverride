@@ -8,7 +8,7 @@ desc: |-
     - 用户签名
     - 页脚
     - 外链自动重定向
-    - 导航｜增加内版模块
+    - 导航｜保留全部，其余项目按自定义数组排序
     - 支持 NetNewsWire 访问头像
     - 移动端详情页手势翻页
         - 左滑跳转下一页
@@ -52,8 +52,15 @@ arguments:
         default: true
     show_inside_nav:
         type: switch
-        title: 添加内版导航
+        title: 自定义导航栏
+        description: 保留「全部」，其余项目按导航项目顺序显示；关闭后保留网站原导航
         default: true
+    navigation_order:
+        type: input
+        title: 导航项目顺序
+        description: 填写 JSON 数组，例如 ["日常","技术","情报","拼车","内版"]；可选页面原有分类及内版，未列出的项目隐藏，[] 表示仅保留全部
+        default: '["日常","技术","情报","拼车","内版"]'
+        max-length: 2048
     enable_swipe:
         type: switch
         title: 启用手势翻页
@@ -89,7 +96,7 @@ http:
             timeout: 20
             type: response
             debug: false
-            argument: '{"hide_carousel":${args.hide_carousel|json},"hide_sidebar_panels":${args.hide_sidebar_panels|json},"hide_fast_nav":${args.hide_fast_nav|json},"hide_signature":${args.hide_signature|json},"hide_footer":${args.hide_footer|json},"direct_external_links":${args.direct_external_links|json},"show_inside_nav":${args.show_inside_nav|json},"enable_swipe":${args.enable_swipe|json}}'
+            argument: '{"hide_carousel":${args.hide_carousel|json},"hide_sidebar_panels":${args.hide_sidebar_panels|json},"hide_fast_nav":${args.hide_fast_nav|json},"hide_signature":${args.hide_signature|json},"hide_footer":${args.hide_footer|json},"direct_external_links":${args.direct_external_links|json},"show_inside_nav":${args.show_inside_nav|json},"navigation_order":${args.navigation_order|json},"enable_swipe":${args.enable_swipe|json}}'
 script-providers:
     nodeseek:
         url: https://raw.githubusercontent.com/qsoyq/stash/search-stash-wiki-override-params/script/ad/nodeseek.js

@@ -506,6 +506,7 @@ function getNodeSeekOptions() {
         show_inside_nav: true,
         enable_swipe: true,
         fix_nnw_avatar: false,
+        navigation_order: ['日常', '技术', '情报', '拼车', '内版'],
     }
     if (typeof $argument === 'undefined') {
         return options
@@ -518,8 +519,19 @@ function getNodeSeekOptions() {
     }
 
     for (const key of Object.keys(options)) {
-        if (typeof supplied[key] === 'boolean') {
+        if (typeof options[key] === 'boolean' && typeof supplied[key] === 'boolean') {
             options[key] = supplied[key]
+        }
+    }
+    if (supplied.navigation_order !== undefined) {
+        const order = typeof supplied.navigation_order === 'string'
+            ? parseJsonBody(supplied.navigation_order)
+            : supplied.navigation_order
+        if (Array.isArray(order) && order.every(item => typeof item === 'string' && item.trim())) {
+            options.navigation_order = [...new Set(order.map(item => item.trim()))]
+                .filter(item => item !== '全部')
+        } else {
+            console.log('[Warn] 导航项目顺序必须为字符串数组，使用默认顺序')
         }
     }
     return options
@@ -580,35 +592,39 @@ function removeAdsCode(options) {
             return
         }
 
-        // 板块导航增加内版
-        let isMobileNav = false
-        Array.from(document.querySelectorAll('ul[class="mobile-nav"]')).forEach(e => {
-            isMobileNav = true
-            const li = document.createElement('li');
-            const a = document.createElement('a');
-            a.href = '/categories/inside'
-            a.textContent = '内版'
-            li.appendChild(a);
-            e.appendChild(li)
-
-            if (url.pathname === '/categories/inside') {
-                li.classList.add("current-category")
+        document.querySelectorAll('ul.mobile-nav, ul.nav-menu').forEach(nav => {
+            const items = Array.from(nav.children)
+            const all = items.find(item => item.querySelector('a')?.textContent.trim() === '全部')
+            if (!all) {
+                return
             }
-        })
-        if (isMobileNav === false) {
-            Array.from(document.querySelectorAll('ul[class="nav-menu"]')).forEach(e => {
-                const li = document.createElement('li');
-                const a = document.createElement('a');
-                a.href = '/categories/inside'
-                a.textContent = '内版'
-                li.appendChild(a);
-                e.appendChild(li)
 
-                if (url.pathname === '/categories/inside') {
-                    li.classList.add("current-category")
+            const categories = new Map()
+            for (const item of items) {
+                const name = item.querySelector('a')?.textContent.trim()
+                if (name && item !== all) {
+                    categories.set(name, item)
                 }
-            })
-        }
+            }
+            const ordered = [all]
+            for (const name of options.navigation_order) {
+                let item = categories.get(name)
+                if (!item && name === '内版') {
+                    item = document.createElement('li')
+                    const link = document.createElement('a')
+                    link.href = '/categories/inside'
+                    link.textContent = '内版'
+                    item.appendChild(link)
+                    if (url.pathname === '/categories/inside') {
+                        item.classList.add('current-category')
+                    }
+                }
+                if (item) {
+                    ordered.push(item)
+                }
+            }
+            nav.replaceChildren(...ordered)
+        })
     });
 }
 
@@ -617,11 +633,12 @@ function removeAds(document, options) {
         const browserOptions = {
             enable_swipe: options.enable_swipe,
             show_inside_nav: options.show_inside_nav,
+            navigation_order: options.navigation_order,
         }
         const script = document.createElement('script');
         script.textContent = `
         ${removeAdsCode.toString()};
-        removeAdsCode(${JSON.stringify(browserOptions)});
+        removeAdsCode(${JSON.stringify(browserOptions).replace(/</g, '\\u003c')});
         `
         document.body.appendChild(script);
     }
