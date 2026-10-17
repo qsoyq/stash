@@ -505,7 +505,7 @@ function getNodeSeekOptions() {
         direct_external_links: true,
         show_inside_nav: true,
         enable_swipe: true,
-        fix_nnw_avatar: true,
+        fix_nnw_avatar: false,
     }
     if (typeof $argument === 'undefined') {
         return options

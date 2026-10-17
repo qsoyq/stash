@@ -13,7 +13,7 @@ desc: |-
     - 移动端详情页手势翻页
         - 左滑跳转下一页
         - 右滑跳转上一页
-    - 可在覆写详情 → 参数中分别开关，默认全部开启
+    - 可在覆写详情 → 参数中分别开关，NetNewsWire 头像修复默认关闭，其余默认开启
     - 参数功能需要 Stash iOS/tvOS 3.7+ 或 macOS 4.4+（Beta）
 category: ad
 icon: https://www.nodeseek.com/static/image/favicon/favicon-32x32.png
@@ -63,7 +63,7 @@ arguments:
         type: switch
         title: 修复 NetNewsWire 头像访问
         description: 为 NetNewsWire 头像请求替换 User-Agent
-        default: true
+        default: false
 http:
     mitm:
         - www.nodeseek.com
