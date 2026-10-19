@@ -52,4 +52,4 @@ http:
         - https://.*\.api.ddxq.mobi/search/rankingList response-jq .data.topic_list=[]
         - https://.*\.api.ddxq.mobi/search/rankingList response-jq .data.ranking_lists=[]
 rules:
-    - IP-CIDR,119.29.29.90/32,REJECT-DROP,no-resolve
+    - IP-CIDR,119.29.29.90/32,REJECT-DROP,no-resolve,pre-matching
