@@ -27,14 +27,6 @@
  * @property {telegram.HTTPMethod} delete - 发送 DELETE 请求
  */
 
-/** @type {telegram.HttpClient} */
-var $httpClient;
-
-var $request, $response, $notification, $argument, $persistentStore, $script
-
-/** @type {function(Object):void} */
-var $done
-
 /**
  * 对异步回调的 HTTP 调用包装成 async 函数
  * @param {'GET'|'POST'|'PUT'|'DELETE'} method - HTTP 方法类型，支持 GET、POST、PUT 和 DELETE

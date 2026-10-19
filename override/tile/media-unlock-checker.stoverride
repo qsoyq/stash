@@ -4,6 +4,7 @@ desc: |-
     - chatgpt iOS
     - chatgpt web
     - gemini
+    - gemini v2（首页响应头过大时按地区推断）
     - youtube premium
 category: tile
 icon: https://raw.githubusercontent.com/qsoyq/shell/main/assets/icon/override.png
@@ -50,6 +51,13 @@ tiles:
         title: Gemini
         content: 加载中
         argument: '{"name": "gemini"}'
+    -   name: gemini-v2-unlock-checker
+        backgroundColor: '#178BD8'
+        interval: 1800
+        collapsed: true
+        title: Gemini v2
+        content: 加载中
+        argument: '{"name": "gemini-v2"}'
 script-providers:
     MediaUnlockChecker:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/tile/media-unlock-checker.js
@@ -70,5 +78,8 @@ script-providers:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/tile/media-unlock-checker.js
         interval: 86400
     gemini-unlock-checker:
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/tile/media-unlock-checker.js
+        interval: 86400
+    gemini-v2-unlock-checker:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/tile/media-unlock-checker.js
         interval: 86400
