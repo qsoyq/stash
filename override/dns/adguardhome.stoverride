@@ -16,4 +16,4 @@ dns:
     udp-nameserver:
         - 223.6.6.6:53
 rules:
-    - IP-CIDR,0.0.0.0/24,REJECT,no-resolve,no-track
+    - IP-CIDR,0.0.0.0/24,REJECT,no-resolve,no-track,pre-matching
