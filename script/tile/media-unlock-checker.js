@@ -27,14 +27,6 @@
  * @property {media.unlock.checker.HTTPMethod} delete - 发送 DELETE 请求
  */
 
-/** @type {media.unlock.checker.HttpClient} */
-var $httpClient;
-
-var $request, $response, $notification, $argument, $persistentStore, $script
-
-/** @type {function(Object):void} */
-var $done
-
 /**
  * 对异步回调的 HTTP 调用包装成 async 函数
  * @param {'GET'|'POST'|'PUT'|'DELETE'} method - HTTP 方法类型，支持 GET、POST、PUT 和 DELETE
@@ -317,19 +309,24 @@ function countryCodeToEmoji(countryCode) {
     }
     // 将代码转为大写
     countryCode = countryCode.toUpperCase();
-    // 如果是三位代码，转换为两位代码
+    // 如果是三位代码（ISO 3166-1 alpha-3），转换为两位代码
     const threeToTwo = {
-        'USA': 'US',
-        'CAN': 'CA',
-        'GBR': 'GB',
-        'FRA': 'FR',
-        'DEU': 'DE',
-        "KOR": "KR",
+        'USA': 'US', 'CAN': 'CA', 'GBR': 'GB', 'FRA': 'FR', 'DEU': 'DE', 'KOR': 'KR',
+        'CHN': 'CN', 'HKG': 'HK', 'TWN': 'TW', 'MAC': 'MO', 'JPN': 'JP', 'SGP': 'SG',
+        'MYS': 'MY', 'THA': 'TH', 'VNM': 'VN', 'PHL': 'PH', 'IDN': 'ID', 'IND': 'IN',
+        'AUS': 'AU', 'NZL': 'NZ', 'RUS': 'RU', 'UKR': 'UA', 'TUR': 'TR', 'ARE': 'AE',
+        'ISR': 'IL', 'NLD': 'NL', 'CHE': 'CH', 'AUT': 'AT', 'IRL': 'IE', 'ESP': 'ES',
+        'PRT': 'PT', 'ITA': 'IT', 'POL': 'PL', 'SWE': 'SE', 'NOR': 'NO', 'DNK': 'DK',
+        'FIN': 'FI', 'BRA': 'BR', 'ARG': 'AR', 'MEX': 'MX', 'CHL': 'CL', 'ZAF': 'ZA',
+        'IRN': 'IR', 'PRK': 'KP', 'CUB': 'CU', 'SYR': 'SY', 'BLR': 'BY',
     };
 
-    // 如果代码长度为3，尝试查找转换表
+    // 未收录的三位代码不显示国旗，避免截取前两位得到错误国旗（如 CHN -> CH 瑞士）
     if (countryCode.length === 3) {
-        countryCode = threeToTwo[countryCode] || countryCode.slice(0, 2);
+        countryCode = threeToTwo[countryCode];
+        if (!countryCode) {
+            return ""
+        }
     }
 
     // 将两位代码转换为相应的Unicode字符
@@ -600,26 +597,119 @@ async function parseChatGPTWeb() {
     }
 }
 
-async function parseGemini() {
-    let url = 'https://gemini.google.com'
-    let res = await get(url)
+// Gemini 不支持的地区（ISO 3166-1 alpha-3），仅在无法读取首页解锁标记时用于推断
+const GEMINI_UNSUPPORTED_REGIONS = ['CHN', 'RUS', 'BLR', 'IRN', 'PRK', 'CUB', 'SYR']
 
-    if (typeof res.data !== 'string') {
-        return 'Failed'
+// 与 gemini.google.com 同属 GEOSITE,google-gemini（v2fly google-deepmind）的站点，
+// 首页响应头较小，且包含与 Gemini 首页同源的 OneGoogle 地区字段 ,2,1,200,"XXX"
+const GEMINI_REGION_PROBE_HOSTS = ['jules.google.com', 'opal.google.com', 'flow.google.com']
+
+/**
+ * 通过与 Gemini 同分流规则的站点获取出口地区
+ * @returns {Promise<string>} 三位地区代码，失败返回空字符串
+ */
+async function getGeminiRegionByProbe() {
+    for (const host of GEMINI_REGION_PROBE_HOSTS) {
+        try {
+            const res = await get({ url: `https://${host}/`, timeout: 15 })
+            const match = typeof res.data === 'string' && res.data.match(/,2,1,200,"([A-Z]{3})"/)
+            if (match) {
+                return match[1]
+            }
+        } catch (_) {
+            // 尝试下一个站点
+        }
     }
-    let isOk = res.data.includes('45631641,null,true') ? "Yes" : "";
+    return ''
+}
+
+/**
+ * 调用 Gemini 前端 RPC（GetUserStatus），确认 Gemini 服务可用；响应头约 2KB
+ * @returns {Promise<boolean>}
+ */
+async function isGeminiServiceReachable() {
+    const rpcid = 'otAQ7b'
+    const res = await post({
+        url: `https://gemini.google.com/_/BardChatUi/data/batchexecute?rpcids=${rpcid}`,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: 'f.req=' + encodeURIComponent(JSON.stringify([[[rpcid, '[]', null, 'generic']]])),
+        timeout: 15,
+    })
+    return typeof res.data === 'string' && res.data.includes(`"wrb.fr","${rpcid}"`)
+}
+
+/**
+ * 解析 Gemini 首页：通过 45631641 标记判断是否解锁，并提取 OneGoogle 地区字段
+ * @param {string} data
+ * @returns {string}
+ */
+function parseGeminiHomepage(data) {
+    // 兼容旧格式 45631641,null,true 与新格式 \"45631641\":true
+    let isOk = /45631641(?:,null,true|\\?"\s*:\s*true)/.test(data) ? "Yes" : "";
 
     // Equivalent of grep -o ',2,1,200,"[A-Z]\{3\}"' | sed 's/,2,1,200,"//;s/"//' || echo ""
     let countrycode = "";
     const regex = /,2,1,200,"([A-Z]{3})"/;
-    const match = res.data.match(regex);
+    const match = data.match(regex);
     let result = isOk ? "Yes" : "No"
     if (match) {
         countrycode = match[1];  // Extract the country code (3-letter code)
-        return ` ${result}, Region: ${countryCodeToEmoji(countrycode)}${countrycode}`
+        return `${result}, Region: ${countryCodeToEmoji(countrycode)}${countrycode}`
     } else {
         return `${result}`
     }
+}
+
+async function parseGemini() {
+    let url = 'https://gemini.google.com'
+    let res
+    try {
+        res = await get({ url, timeout: 15 })
+    } catch (e) {
+        // Gemini 首页响应头约 26KB，Stash $httpClient 会直接报 client error (SendRequest)
+        // 用响应头较小的静态资源确认网络可达，区分“无法检测”与“网络失败”
+        try {
+            await get({ url: 'https://gemini.google.com/_/BardChatUi/manifest.json', timeout: 15 })
+            return 'Unknown（响应头过大，无法检测）'
+        } catch (_) {
+            return `Failed: ${e?.error || e}`
+        }
+    }
+
+    if (typeof res.data !== 'string') {
+        return 'Failed'
+    }
+    return parseGeminiHomepage(res.data)
+}
+
+/**
+ * Gemini 检测 v2：首页可读时与 parseGemini 一致；
+ * 首页因响应头过大不可读时，通过 RPC 确认服务可用，并通过同分流规则的站点获取地区，按地区推断是否解锁
+ */
+async function parseGeminiV2() {
+    let res
+    try {
+        res = await get({ url: 'https://gemini.google.com', timeout: 15 })
+    } catch (e) {
+        try {
+            if (!(await isGeminiServiceReachable())) {
+                return 'Failed'
+            }
+        } catch (err) {
+            return `Failed: ${err?.error || e?.error || err}`
+        }
+        const countrycode = await getGeminiRegionByProbe()
+        if (!countrycode) {
+            return 'Unknown（无法获取地区）'
+        }
+        const result = GEMINI_UNSUPPORTED_REGIONS.includes(countrycode) ? 'No' : 'Yes'
+        return `${result}, Region: ${countryCodeToEmoji(countrycode)}${countrycode}（按地区推断）`
+    }
+
+    if (typeof res.data !== 'string') {
+        return 'Failed'
+    }
+    return parseGeminiHomepage(res.data)
 }
 
 async function parseYoutubePremium() {
@@ -694,6 +784,9 @@ async function main() {
         case "gemini":
             content = await parseGemini()
             break
+        case "gemini-v2":
+            content = await parseGeminiV2()
+            break
         default:
             break
     }
@@ -711,6 +804,6 @@ async function main() {
             error = JSON.stringify(error)
         }
         echo(`[Error]: ${error?.message || error}`)
-        $done({})
+        $done({ content: 'Failed' })
     })
 })();

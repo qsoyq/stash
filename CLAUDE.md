@@ -66,6 +66,21 @@ script-providers:
         interval: 86400
 ```
 
+### Client-Configurable Override Parameters
+
+When adding or modifying override functionality, consult the official [override parameter documentation](https://stash.wiki/configuration/override#覆写参数) and expose user-selectable behavior through Stash's native parameter form. Feature switches and values that vary by user should be configurable in the client rather than requiring source edits.
+
+- Declare `arguments-version: 1` and top-level `arguments`. Choose `switch`, `select`, or `input` as appropriate, with clear Chinese titles/descriptions, correctly typed defaults, and input constraints where needed.
+- Keep existing behavior as the default when extending an override. Use stable parameter names, since client settings persist across remote updates.
+- Reference declared parameters in override values using `${args.parameter_name}`. Display metadata (`name`, `desc`, `category`, `icon`) and parameter declarations do not expand references.
+- Script `argument` is a string. Pass structured arguments as JSON using `${args.parameter_name|json}` for each value, then parse `$argument` once per execution. Preserve explicit `false` and `0`; use defaults for missing or invalid values so updated scripts remain compatible with older overrides.
+- Browser-injected scripts cannot access Stash's `$argument`. Explicitly serialize only the validated settings they need into the injected code.
+- Ensure every affected path honors its parameter, including jq rewrites, CSS, injected page behavior, and request/response scripts. Keep independent controls from overriding one another through broad selectors or unconditional rules.
+- Mention the client settings entry (override details → parameters) and required versions when introducing parameters: currently Beta, iOS/tvOS 3.7+ and macOS 4.4+. Recheck the official documentation as support changes.
+- Verify defaults, individual controls, all controls disabled, and missing/invalid script arguments, in addition to normal repository checks. Parameter substitution and client UI behavior require validation in a supported Stash version.
+
+Keep `AGENTS.md` and `CLAUDE.md` aligned when changing repository-wide instructions.
+
 ### Script Runtime
 
 Scripts run in the Stash JavaScript environment with these globals:
@@ -76,6 +91,8 @@ Scripts run in the Stash JavaScript environment with these globals:
 - `$notification` - Push notifications
 - `$persistentStore` - Persistent key-value storage
 - `$argument` - Override argument string
+
+Stash executes each script as the body of an async function (same as Surge / Quantumult X / Loon), so top-level `return` and `await` are allowed. **Never declare these injected globals at the top level** (e.g. `var $httpClient`, `var $request, $response, ...`, `var $done`): inside a function body such `var`s become hoisted locals initialized to `undefined` and shadow the injected values, so the script crashes and never calls `$done`. Use `typeof $x === 'undefined'` to check for optional globals.
 
 `script/base.js` wraps `$httpClient` callbacks into async/await via `request()` and provides utility functions (cookie parsing, notifications, etc.).
 

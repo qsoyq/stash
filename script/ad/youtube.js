@@ -27,32 +27,6 @@
  * @property {youtube.HTTPMethod} delete - 发送 DELETE 请求
  */
 
-/** @type {youtube.HttpClient} */
-var $httpClient;
-
-/**
- * @type {{ read: (arg0: string) => string; write: (arg0: string, arg1: string) => void; }}
- */
-/**
- * @type {{ post: (arg0: string, arg1: string, arg2: string, arg3: { url: string; } | { url?: undefined; }) => void; }}
- */
-/**
- * @type {{ headers: { [x: string]: any; }; url: string | URL; }}
- */
-/**
- * @type {any}
- */
-/**
- * @type {{ type: string; }}
- */
-/**
- * @type {{ body: AllowSharedBufferSource | undefined; headers: { [x: string]: any; }; }}
- */
-var $request, $response, $notification, $argument, $persistentStore, $script
-
-/** @type {function(Object):void} */
-var $done
-
 /**
  * 对异步回调的 HTTP 调用包装成 async 函数
  * @param {'GET'|'POST'|'PUT'|'DELETE'} method - HTTP 方法类型，支持 GET、POST、PUT 和 DELETE

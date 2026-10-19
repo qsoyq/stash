@@ -27,14 +27,6 @@
  * @property {nodeseek.HTTPMethod} delete - 发送 DELETE 请求
  */
 
-/** @type {nodeseek.HttpClient} */
-var $httpClient;
-
-var $request, $response, $notification, $argument, $persistentStore, $script
-
-/** @type {function(Object):void} */
-var $done
-
 /**
  * 对异步回调的 HTTP 调用包装成 async 函数
  * @param {'GET'|'POST'|'PUT'|'DELETE'} method - HTTP 方法类型，支持 GET、POST、PUT 和 DELETE
@@ -503,7 +495,49 @@ function parseDocument(body) {
     return domParser.parseFromString(body, 'text/html');
 }
 
-function removeAdsCode() {
+function getNodeSeekOptions() {
+    const options = {
+        hide_carousel: true,
+        hide_sidebar_panels: true,
+        hide_fast_nav: true,
+        hide_signature: true,
+        hide_footer: true,
+        direct_external_links: true,
+        show_inside_nav: true,
+        enable_swipe: true,
+        fix_nnw_avatar: false,
+        navigation_order: ['日常', '技术', '情报', '拼车', '内版'],
+    }
+    if (typeof $argument === 'undefined') {
+        return options
+    }
+
+    const supplied = parseJsonBody($argument)
+    if (supplied === null || typeof supplied !== 'object' || Array.isArray(supplied)) {
+        console.log('[Warn] NodeSeek 参数必须为 JSON 对象，使用默认设置')
+        return options
+    }
+
+    for (const key of Object.keys(options)) {
+        if (typeof options[key] === 'boolean' && typeof supplied[key] === 'boolean') {
+            options[key] = supplied[key]
+        }
+    }
+    if (supplied.navigation_order !== undefined) {
+        const order = typeof supplied.navigation_order === 'string'
+            ? parseJsonBody(supplied.navigation_order)
+            : supplied.navigation_order
+        if (Array.isArray(order) && order.every(item => typeof item === 'string' && item.trim())) {
+            options.navigation_order = [...new Set(order.map(item => item.trim()))]
+                .filter(item => item !== '全部')
+        } else {
+            console.log('[Warn] 导航项目顺序必须为字符串数组，使用默认顺序')
+        }
+    }
+    return options
+}
+
+function removeAdsCode(options) {
     document.addEventListener('DOMContentLoaded', (event) => {
         console.log("removeAdsCode")
         let url = new URL(window.location.href)
@@ -551,103 +585,132 @@ function removeAdsCode() {
             console.log("add touch listener")
         }
 
-        swipe()
+        if (options.enable_swipe) {
+            swipe()
+        }
+        if (!options.show_inside_nav) {
+            return
+        }
 
-        // 板块导航增加内版
-        let isMobileNav = false
-        Array.from(document.querySelectorAll('ul[class="mobile-nav"]')).forEach(e => {
-            isMobileNav = true
-            const li = document.createElement('li');
-            const a = document.createElement('a');
-            a.href = '/categories/inside'
-            a.textContent = '内版'
-            li.appendChild(a);
-            e.appendChild(li)
-
-            if (url.pathname === '/categories/inside') {
-                li.classList.add("current-category")
+        // 手机分类页可能没有分类面板，以首页核验过的地址兜底，页面链接优先。
+        const categoryLinks = new Map([
+            ['日常', '/categories/daily'],
+            ['技术', '/categories/tech'],
+            ['情报', '/categories/info'],
+            ['测评', '/categories/review'],
+            ['交易', '/categories/trade'],
+            ['拼车', '/categories/carpool'],
+            ['推广', '/categories/promotion'],
+            ['生活', '/categories/life'],
+            ['Dev', '/categories/dev'],
+            ['贴图', '/categories/photo-share'],
+            ['曝光', '/categories/expose'],
+            ['无意义', '/categories/meaningless'],
+            ['沙盒', '/categories/sandbox'],
+            ['内版', '/categories/inside'],
+        ])
+        document.querySelectorAll('a[href^="/categories/"]').forEach(link => {
+            const name = link.textContent.trim()
+            const path = link.getAttribute('href')
+            if (name && /^\/categories\/[a-z0-9-]+\/?$/.test(path)) {
+                categoryLinks.set(name, path)
             }
         })
-        if (isMobileNav === false) {
-            Array.from(document.querySelectorAll('ul[class="nav-menu"]')).forEach(e => {
-                const li = document.createElement('li');
-                const a = document.createElement('a');
-                a.href = '/categories/inside'
-                a.textContent = '内版'
-                li.appendChild(a);
-                e.appendChild(li)
 
-                if (url.pathname === '/categories/inside') {
-                    li.classList.add("current-category")
+        // 手机的 nav-menu 是菜单、Logo、搜索等工具栏，不能当作分类栏重建。
+        const mobileNavs = document.querySelectorAll('ul.mobile-nav')
+        const navs = mobileNavs.length ? mobileNavs : document.querySelectorAll('ul.nav-menu')
+        navs.forEach(nav => {
+            const items = Array.from(nav.children)
+            const all = items.find(item => item.querySelector('a')?.textContent.trim() === '全部')
+            const categories = new Map()
+            for (const item of items) {
+                const name = item.querySelector('a')?.textContent.trim()
+                if (name && item !== all) {
+                    categories.set(name, item)
                 }
-            })
-        }
+            }
+            const ordered = all ? [all] : []
+            for (const name of options.navigation_order) {
+                let item = categories.get(name)
+                const path = categoryLinks.get(name)
+                if (!item && path) {
+                    item = document.createElement('li')
+                    const link = document.createElement('a')
+                    link.href = path
+                    link.textContent = name
+                    item.appendChild(link)
+                    if (url.pathname.replace(/\/$/, '') === path.replace(/\/$/, '')) {
+                        item.classList.add('current-category')
+                    }
+                }
+                if (item) {
+                    ordered.push(item)
+                }
+            }
+            nav.replaceChildren(...ordered)
+        })
     });
 }
 
-function removeAds(document) {
-    let code = `
-    ${removeAdsCode.toString()};
-    removeAdsCode();
-    `
-    let script = document.createElement('script');
-    script.textContent = code
-    document['body'].appendChild(script);
-
-    Array.from(document.querySelectorAll("a")).forEach(e => {
-        let href = e.attributes["href"]?.textContent
-        if (href && href.indexOf("/jump?to=") === 0) {
-            let target = href.substring(9)
-            let url = decodeURIComponent(target)
-            e.href = url
-            console.log(`replace ${href} to ${url}`)
+function removeAds(document, options) {
+    if (options.enable_swipe || options.show_inside_nav) {
+        const browserOptions = {
+            enable_swipe: options.enable_swipe,
+            show_inside_nav: options.show_inside_nav,
+            navigation_order: options.navigation_order,
         }
-    })
+        const script = document.createElement('script');
+        script.textContent = `
+        ${removeAdsCode.toString()};
+        removeAdsCode(${JSON.stringify(browserOptions).replace(/</g, '\\u003c')});
+        `
+        document.body.appendChild(script);
+    }
 
-    addCSS(document)
+    if (options.direct_external_links) {
+        Array.from(document.querySelectorAll("a")).forEach(e => {
+            let href = e.attributes["href"]?.textContent
+            if (href && href.indexOf("/jump?to=") === 0) {
+                let target = href.substring(9)
+                let url = decodeURIComponent(target)
+                e.href = url
+                console.log(`replace ${href} to ${url}`)
+            }
+        })
+    }
+
+    addCSS(document, options)
 }
 
 
-function addCSS(document) {
-    let style = document.createElement("style")
+function addCSS(document, options) {
+    const selectors = {
+        hide_carousel: 'div.topic-carousel-wrapper',
+        hide_sidebar_panels: 'div.nsk-panel',
+        hide_fast_nav: 'div#fast-nav-button-group',
+        hide_signature: 'div.signature',
+        hide_footer: 'footer',
+    }
+    const enabledSelectors = Object.entries(selectors)
+        .filter(([key]) => options[key])
+        .map(([, selector]) => selector)
+    if (enabledSelectors.length === 0) {
+        return
+    }
+
+    const style = document.createElement("style")
     style.type = 'text/css';
-    style.innerHTML = `
-        div.topic-carousel-wrapper{
-            display: none;
-        }
-
-        div.nsk-panel{
-            display: none;
-        }
-
-        div.nsk-panel.category-list{
-            display: none;
-        }
-
-        footer{
-            display: none;
-        }
-
-        ##back-to-parent{
-            display: none;
-        }
-
-        div.signature{
-            display: none;
-        }
-
-        div#fast-nav-button-group {
-            display: none;
-        }
-    `
+    style.textContent = `${enabledSelectors.join(',\n')} { display: none; }`
     document.head.appendChild(style)
 }
 
 async function main() {
+    const options = getNodeSeekOptions()
     let url = (new URL($request.url))
     switch (getScriptType()) {
         case "request":
-            if (/\/avatar\/.*/g.test(url.pathname)) {
+            if (options.fix_nnw_avatar && /\/avatar\/.*/g.test(url.pathname)) {
                 let headers = $request.headers
                 if (/NetNewsWire/g.test(headers["User-Agent"])) {
                     headers['User-Agent'] = "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/605.1.15"
@@ -672,14 +735,14 @@ async function main() {
                     // 已经在页面中替换 href
                     // 此部分代码实际已不会生效
                     let to = url.searchParams.get("to")
-                    if (to) {
+                    if (options.direct_external_links && to) {
                         echo(`跳转url: ${to}`)
                         $done({ "status": 307, "headers": { "Location": to }, "body": "" })
                         break
                     }
                 } else {
                     const document = new DOMParser().parseFromString(body, 'text/html')
-                    removeAds(document)
+                    removeAds(document, options)
                     $done({ body: document.documentElement.outerHTML })
                     break
                 }
