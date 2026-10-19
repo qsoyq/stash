@@ -506,6 +506,7 @@ function getNodeSeekOptions() {
         show_inside_nav: true,
         enable_swipe: true,
         fix_nnw_avatar: false,
+        auto_checkin: 'off',
         navigation_order: ['日常', '技术', '情报', '拼车', '内版'],
     }
     if (typeof $argument === 'undefined') {
@@ -522,6 +523,9 @@ function getNodeSeekOptions() {
         if (typeof options[key] === 'boolean' && typeof supplied[key] === 'boolean') {
             options[key] = supplied[key]
         }
+    }
+    if (['off', 'fixed', 'random'].includes(supplied.auto_checkin)) {
+        options.auto_checkin = supplied.auto_checkin
     }
     if (supplied.navigation_order !== undefined) {
         const order = typeof supplied.navigation_order === 'string'
@@ -653,6 +657,42 @@ function removeAdsCode(options) {
     });
 }
 
+/**
+ * 在网页中执行的自动签到，仅在已登录且当天未签到时发起签到，成功后不做任何提示。
+ * @param {'fixed'|'random'} mode fixed 为鸡腿 x5，random 为试试手气
+ */
+async function autoCheckinCode(mode) {
+    const key = 'nodeseek_auto_checkin_last_check'
+    const interval = 5 * 60 * 1000
+    try {
+        const config = window.__config__
+        if (!config || !config.user) {
+            return
+        }
+        // 先写入检查时间，避免多个标签页同时检查；失败后也不会在短时间内反复请求。
+        const now = Date.now()
+        try {
+            if (now - (Number(localStorage.getItem(key)) || 0) < interval) {
+                return
+            }
+            localStorage.setItem(key, String(now))
+        } catch (e) { }
+        const response = await fetch('/api/attendance/board?page=1', { credentials: 'same-origin' })
+        if (!response.ok) {
+            return
+        }
+        const board = await response.json()
+        // 响应异常时宁可不签到；record 为 null 才表示今天还没有签到记录。
+        if (!board || board.success === false || !('record' in board) || board.record !== null) {
+            return
+        }
+        await fetch('/api/attendance?random=' + (mode === 'random' ? 'true' : 'false'), {
+            method: 'POST',
+            credentials: 'same-origin',
+        })
+    } catch (e) { }
+}
+
 function removeAds(document, options) {
     if (options.enable_swipe || options.show_inside_nav) {
         const browserOptions = {
@@ -664,6 +704,15 @@ function removeAds(document, options) {
         script.textContent = `
         ${removeAdsCode.toString()};
         removeAdsCode(${JSON.stringify(browserOptions).replace(/</g, '\\u003c')});
+        `
+        document.body.appendChild(script);
+    }
+
+    if (options.auto_checkin !== 'off') {
+        const script = document.createElement('script');
+        script.textContent = `
+        ${autoCheckinCode.toString()};
+        autoCheckinCode(${JSON.stringify(options.auto_checkin).replace(/</g, '\\u003c')});
         `
         document.body.appendChild(script);
     }
