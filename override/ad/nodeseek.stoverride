@@ -13,7 +13,8 @@ desc: |-
     - 移动端详情页手势翻页
         - 左滑跳转下一页
         - 右滑跳转上一页
-    - 可在覆写详情 → 参数中分别开关，NetNewsWire 头像修复默认关闭，其余默认开启
+    - 自动签到：已登录且当天未签到时，在首页、分类页和帖子页自动签到，可选鸡腿 x5 或试试手气
+    - 可在覆写详情 → 参数中分别开关，NetNewsWire 头像修复和自动签到默认关闭，其余默认开启
     - 参数功能需要 Stash iOS/tvOS 3.7+ 或 macOS 4.4+（Beta）
 category: ad
 icon: https://www.nodeseek.com/static/image/favicon/favicon-32x32.png
@@ -71,6 +72,18 @@ arguments:
         title: 修复 NetNewsWire 头像访问
         description: 为 NetNewsWire 头像请求替换 User-Agent
         default: false
+    auto_checkin:
+        type: select
+        title: 自动签到
+        description: 已登录且当天未签到时，访问首页、分类页或帖子页会自动签到；关闭时不注入任何签到代码
+        default: 'off'
+        options:
+            -   value: 'off'
+                label: 关闭
+            -   value: fixed
+                label: 鸡腿 x5
+            -   value: random
+                label: 试试手气
 http:
     mitm:
         - www.nodeseek.com
@@ -96,7 +109,7 @@ http:
             timeout: 20
             type: response
             debug: false
-            argument: '{"hide_carousel":${args.hide_carousel|json},"hide_sidebar_panels":${args.hide_sidebar_panels|json},"hide_fast_nav":${args.hide_fast_nav|json},"hide_signature":${args.hide_signature|json},"hide_footer":${args.hide_footer|json},"direct_external_links":${args.direct_external_links|json},"show_inside_nav":${args.show_inside_nav|json},"navigation_order":${args.navigation_order|json},"enable_swipe":${args.enable_swipe|json}}'
+            argument: '{"hide_carousel":${args.hide_carousel|json},"hide_sidebar_panels":${args.hide_sidebar_panels|json},"hide_fast_nav":${args.hide_fast_nav|json},"hide_signature":${args.hide_signature|json},"hide_footer":${args.hide_footer|json},"direct_external_links":${args.direct_external_links|json},"show_inside_nav":${args.show_inside_nav|json},"navigation_order":${args.navigation_order|json},"enable_swipe":${args.enable_swipe|json},"auto_checkin":${args.auto_checkin|json}}'
 script-providers:
     nodeseek:
         url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/nodeseek.js
