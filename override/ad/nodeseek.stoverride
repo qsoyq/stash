@@ -112,5 +112,5 @@ http:
             argument: '{"hide_carousel":${args.hide_carousel|json},"hide_sidebar_panels":${args.hide_sidebar_panels|json},"hide_fast_nav":${args.hide_fast_nav|json},"hide_signature":${args.hide_signature|json},"hide_footer":${args.hide_footer|json},"direct_external_links":${args.direct_external_links|json},"show_inside_nav":${args.show_inside_nav|json},"navigation_order":${args.navigation_order|json},"enable_swipe":${args.enable_swipe|json},"auto_checkin":${args.auto_checkin|json}}'
 script-providers:
     nodeseek:
-        url: https://raw.githubusercontent.com/qsoyq/stash/analyze-nodeseek-checkin-override/script/ad/nodeseek.js
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/nodeseek.js
         interval: 86400

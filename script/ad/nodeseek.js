@@ -658,39 +658,126 @@ function removeAdsCode(options) {
 }
 
 /**
- * 在网页中执行的自动签到，仅在已登录且当天未签到时发起签到，成功后不做任何提示。
+ * 在网页中执行的自动签到，仅在已登录且当天未签到时发起签到。
+ * 签到成功不弹窗；接口返回错误时弹窗提示。每个动作都会输出控制台日志。
+ * 防重复：跨标签页互斥锁 + 按站点日期（UTC+8）记录当天已完成 + 5 分钟尝试间隔。
  * @param {'fixed'|'random'} mode fixed 为鸡腿 x5，random 为试试手气
  */
 async function autoCheckinCode(mode) {
-    const key = 'nodeseek_auto_checkin_last_check'
+    const tag = '[NodeSeek 自动签到]'
+    const doneKey = 'nodeseek_auto_checkin_done'
+    const attemptKey = 'nodeseek_auto_checkin_last_attempt'
     const interval = 5 * 60 * 1000
-    try {
-        const config = window.__config__
-        if (!config || !config.user) {
-            return
-        }
-        // 先写入检查时间，避免多个标签页同时检查；失败后也不会在短时间内反复请求。
-        const now = Date.now()
+    const log = (...args) => console.log(tag, ...args)
+    const read = (key) => {
+        try { return localStorage.getItem(key) } catch (e) { return null }
+    }
+    const write = (key, value) => {
+        try { localStorage.setItem(key, value) } catch (e) { }
+    }
+    const alertError = (message) => {
+        const text = `NodeSeek 自动签到失败：${message}`
         try {
-            if (now - (Number(localStorage.getItem(key)) || 0) < interval) {
+            if (typeof mscAlert === 'function') {
+                mscAlert(text)
                 return
             }
-            localStorage.setItem(key, String(now))
         } catch (e) { }
-        const response = await fetch('/api/attendance/board?page=1', { credentials: 'same-origin' })
-        if (!response.ok) {
+        try { alert(text) } catch (e) { }
+    }
+
+    async function run() {
+        const config = window.__config__
+        if (!config || !config.user) {
+            log('未登录，跳过')
             return
         }
-        const board = await response.json()
+        // 站点以 UTC+8 零点作为新的一天；标记同时带上用户，避免同一浏览器切换账号后误判。
+        const day = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10)
+        const user = config.user
+        const done = `${day}:${user.member_id || user.id || ''}`
+        if (read(doneKey) === done) {
+            log('今天已签到，跳过')
+            return
+        }
+        const now = Date.now()
+        const last = Number(read(attemptKey)) || 0
+        if (now - last < interval) {
+            log(`距离上次尝试不足 ${interval / 60000} 分钟，跳过`)
+            return
+        }
+        write(attemptKey, String(now))
+
+        log('查询今日签到状态')
+        let board
+        try {
+            const response = await fetch('/api/attendance/board?page=1', { credentials: 'same-origin' })
+            if (!response.ok) {
+                log(`查询签到状态失败：HTTP ${response.status}，不签到`)
+                return
+            }
+            board = await response.json()
+        } catch (e) {
+            log(`查询签到状态异常：${e}，不签到`)
+            return
+        }
         // 响应异常时宁可不签到；record 为 null 才表示今天还没有签到记录。
-        if (!board || board.success === false || !('record' in board) || board.record !== null) {
+        if (!board || board.success === false || !('record' in board)) {
+            log('签到状态响应异常，不签到', JSON.stringify(board))
             return
         }
-        await fetch('/api/attendance?random=' + (mode === 'random' ? 'true' : 'false'), {
-            method: 'POST',
-            credentials: 'same-origin',
-        })
-    } catch (e) { }
+        if (board.record !== null) {
+            write(doneKey, done)
+            log('查询到今日签到记录，跳过')
+            return
+        }
+
+        const random = mode === 'random'
+        log(`今日未签到，发起签到：${random ? '试试手气' : '鸡腿 x5'}`)
+        let data = null
+        let status = 0
+        try {
+            const response = await fetch('/api/attendance?random=' + random, {
+                method: 'POST',
+                credentials: 'same-origin',
+            })
+            status = response.status
+            data = await response.json().catch(() => null)
+        } catch (e) {
+            log(`签到请求异常：${e}`)
+            alertError(String(e))
+            return
+        }
+        const message = data && data.message ? String(data.message) : `HTTP ${status}`
+        if (data && data.success === true) {
+            write(doneKey, done)
+            log(`签到成功：${message}`)
+        } else if (/已完成签到|已签到/.test(message)) {
+            // 其他标签页或设备已经签到，属于重复请求，不当作错误。
+            write(doneKey, done)
+            log(`今天已签到：${message}`)
+        } else {
+            log(`签到失败：${message}`, JSON.stringify(data))
+            alertError(message)
+        }
+    }
+
+    try {
+        if (typeof navigator !== 'undefined' && navigator.locks && navigator.locks.request) {
+            // 同源标签页互斥，拿不到锁说明另一个标签页正在处理。
+            await navigator.locks.request('nodeseek_auto_checkin', { ifAvailable: true }, async (lock) => {
+                if (!lock) {
+                    log('其他标签页正在签到，跳过')
+                    return
+                }
+                await run()
+            })
+        } else {
+            await run()
+        }
+    } catch (e) {
+        log(`执行异常：${e}`)
+    }
 }
 
 function removeAds(document, options) {
