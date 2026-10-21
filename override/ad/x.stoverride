@@ -1,61 +1,146 @@
 name: x
 desc: |-
-    - 删除 CSP 策略，允许在网页上执行内联代码
-    - 首页时间线
-        - 广告
-        - NewTweets | TimelineShowAlert
-        - Pinned by people you follow
-        - Discover new Communities
-        - Creators for you | suggest_who_to_subscribe
-        - Who to follow | suggest_who_to_follow
-        - Go ad-free with Premium+ | premium-plus-upsell-prompt
-        - 右侧聊天组件
-    - 详情页
-        - 评论广告
-        - Who can reply
-        - Grok actions
-        - Translate post button
-    - 用户页面
-        - 推文标签页 | Who to follow | suggest_who_to_follow
-        - 用户页面
-        - 回复标签页 | Who to follow | suggest_who_to_follow
-    - 页面元素移除
-        - 顶部 banner
-            - 顶部用户头像所在banner
-        - 时间线
-            - 快捷发帖组件
-        - 页面浮标
-            - PC端右侧Grok悬浮按钮
-            - 移动端网页右下角悬浮发帖按钮
-        - 右侧导航栏
-            - PC端右上角订阅提醒
-            - 趋势
-        - 左侧导航栏
-            - Grok
-            - Premium
-            - Verified Orgs
-            - Jobs
-            - Account menu
+    - 广告与推荐共用一个开关：过滤首页和评论广告、置顶/社区/创作者/关注推荐及 Premium 订阅推广
+    - 页面组件分别开关：新推文提示、顶部导航、快捷发帖、聊天、趋势、导航入口、浮动按钮和详情页组件
+    - 阅读与操作：阅读列宽度、居中、详情页 Esc 返回
+    - 高级设置：移除 CSP，允许网页执行注入代码
+    - 所有功能默认开启，可在覆写详情 → 参数中调整；修改后请刷新已打开的 X 页面
+    - 参数功能需要 Stash iOS/tvOS 3.7+ 或 macOS 4.4+（Beta）
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/x.png
+arguments-version: 1
+arguments:
+    block_ads_and_recommendations:
+        type: switch
+        title: 广告与推荐 · 屏蔽广告与推荐
+        description: 同时过滤首页和评论广告、置顶/社区/创作者/关注推荐，以及时间线和右侧栏的 Premium 订阅推广；不影响左侧 Premium 导航入口
+        default: true
+    hide_new_tweets_alert:
+        type: switch
+        title: 页面组件 · 隐藏新推文提示
+        default: true
+    hide_top_nav:
+        type: switch
+        title: 页面组件 · 隐藏顶部导航
+        description: 隐藏顶部导航组件，保留桌面左侧导航和移动端搜索页的搜索框
+        default: true
+    hide_home_composer:
+        type: switch
+        title: 页面组件 · 隐藏首页快捷发帖
+        default: true
+    hide_chat_drawer:
+        type: switch
+        title: 页面组件 · 隐藏聊天抽屉
+        default: true
+    hide_sidebar_trends:
+        type: switch
+        title: 页面组件 · 隐藏右侧趋势
+        description: 仅隐藏趋势组件，保留右侧栏的其他内容
+        default: true
+    hide_nav_grok:
+        type: switch
+        title: 页面组件 · 隐藏左侧 Grok 入口
+        default: true
+    hide_nav_premium:
+        type: switch
+        title: 页面组件 · 隐藏左侧 Premium 入口
+        default: true
+    hide_nav_verified_orgs:
+        type: switch
+        title: 页面组件 · 隐藏左侧 Verified Orgs 入口
+        default: true
+    hide_nav_jobs:
+        type: switch
+        title: 页面组件 · 隐藏左侧 Jobs 入口
+        default: true
+    hide_account_menu:
+        type: switch
+        title: 页面组件 · 隐藏账户菜单
+        default: true
+    hide_grok_drawer:
+        type: switch
+        title: 页面组件 · 隐藏 Grok 浮窗
+        default: true
+    hide_floating_post_button:
+        type: switch
+        title: 页面组件 · 隐藏移动端悬浮发帖按钮
+        default: true
+    hide_reply_permissions:
+        type: switch
+        title: 页面组件 · 隐藏回复权限提示
+        default: true
+    hide_grok_actions:
+        type: switch
+        title: 页面组件 · 隐藏推文 Grok 操作按钮
+        default: true
+    hide_translate_button:
+        type: switch
+        title: 页面组件 · 隐藏推文翻译按钮
+        default: true
+    hide_automated_content:
+        type: switch
+        title: 页面组件 · 隐藏 Automated 内容块
+        description: 隐藏 Automated 标记所在的推文内容块，不是仅隐藏标记文字
+        default: true
+    hide_probable_spam_prompt:
+        type: switch
+        title: 页面组件 · 隐藏垃圾回复展开提示
+        description: 隐藏 Show probable spam 提示，不自动展开回复
+        default: true
+    enable_custom_layout:
+        type: switch
+        title: 阅读与操作 · 自定义阅读列宽度
+        description: 桌面宽度至少 1000px 时使用下方比例，关闭后保留网站原有宽度
+        default: true
+    home_width_vw:
+        type: input
+        value-type: integer
+        title: 阅读与操作 · 首页阅读列宽度
+        description: 占视口宽度的百分比，仅在启用自定义阅读列宽度时生效；可用空间不足时自动收缩
+        default: 65
+        minimum: 30
+        maximum: 100
+    page_width_vw:
+        type: input
+        value-type: integer
+        title: 阅读与操作 · 其他页面阅读列宽度
+        description: 占视口宽度的百分比，仅在启用自定义阅读列宽度时生效；可用空间不足时自动收缩
+        default: 55
+        minimum: 30
+        maximum: 100
+    center_primary_column:
+        type: switch
+        title: 阅读与操作 · 阅读列居中
+        description: 桌面端右侧栏收起时将阅读列居中；右侧栏有可见内容时保留网站列布局，避免重叠
+        default: true
+    enable_escape_back:
+        type: switch
+        title: 阅读与操作 · 详情页 Esc 返回
+        description: 在推文详情按 Esc 返回上一页，输入框内不触发
+        default: true
+    csp_policy:
+        type: select
+        title: 高级设置 · CSP 策略
+        description: 保留 CSP 可能阻止页面组件隐藏、布局和 Esc 功能的注入代码；不影响接口广告与推荐过滤
+        default: ^https://x\.com/
+        options:
+            -   value: ^https://x\.com/
+                label: 移除 CSP（允许页面功能）
+            -   value: ^$
+                label: 保留 CSP
 http:
     mitm:
         - x.com
     force-http-engine:
         - x.com
     body-rewrite:
-        - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq if .data.home.home_timeline_urt.instructions[0].entries != null then .data.home.home_timeline_urt.instructions[0].entries|=map(select(.content?.itemContent?.promotedMetadata==null)) end
-        - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq .data.home.home_timeline_urt.instructions|=map(select(.alertType!="NewTweets"))
-        - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq if .data.home.home_timeline_urt.instructions[0].entries != null then .data.home.home_timeline_urt.instructions[0].entries|=map(select(.content?.clientEventInfo?.component!="for_you_pinned")) end
-        - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq if .data.home.home_timeline_urt.instructions[0].entries != null then .data.home.home_timeline_urt.instructions[0].entries|=map(select(.content?.clientEventInfo?.component!="community_to_join")) end
-        - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq if .data.home.home_timeline_urt.instructions[0].entries != null then .data.home.home_timeline_urt.instructions[0].entries|=map(select(.content?.clientEventInfo?.component!="suggest_who_to_subscribe")) end
-        - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq if .data.home.home_timeline_urt.instructions[0].entries != null then .data.home.home_timeline_urt.instructions[0].entries|=map(select(.content?.clientEventInfo?.component!="suggest_who_to_follow")) end
-        - https?://x.com/i/api/graphql/.+/HomeTimeline.*$ response-jq if .data.home.home_timeline_urt.instructions[0].entries != null then .data.home.home_timeline_urt.instructions[0].entries|=map(select(.content?.clientEventInfo?.component!="premium-plus-upsell-prompt")) end
-        - https?://x.com/i/api/graphql/.+/TweetDetail.*$ response-jq walk(if type == "object" and has("entries") then .entries|=map(select(.content?.items[0]?.item?.itemContent?.promotedMetadata==null)) else . end)
-        - https://x.com/i/api/graphql/.+/UserTweets response-jq walk(if type == "object" and has("entries") then .entries |=map(select(.content?.clientEventInfo?.component!="suggest_who_to_follow")) else . end)
-        - https://x.com/i/api/graphql/.+/UserTweetsAndReplies response-jq walk(if type == "object" and has("entries") then .entries |=map(select(.content?.clientEventInfo?.component!="suggest_who_to_follow")) else . end)
+        - ^https?://x\.com/i/api/graphql/[^/]+/HomeTimeline.*$ response-jq if ${args.block_ads_and_recommendations|json} and (.data.home.home_timeline_urt.instructions|type)=="array" then .data.home.home_timeline_urt.instructions |= map(if (.entries|type)=="array" then .entries |= map(select(.content?.itemContent?.promotedMetadata==null and (.content?.clientEventInfo?.component as $c | ["for_you_pinned","community_to_join","suggest_who_to_subscribe","suggest_who_to_follow","premium-plus-upsell-prompt"] | index($c) | not))) else . end) else . end
+        - ^https?://x\.com/i/api/graphql/[^/]+/HomeTimeline.*$ response-jq if ${args.hide_new_tweets_alert|json} and (.data.home.home_timeline_urt.instructions|type)=="array" then .data.home.home_timeline_urt.instructions |= map(select(.alertType!="NewTweets")) else . end
+        - ^https?://x\.com/i/api/graphql/[^/]+/TweetDetail.*$ response-jq if ${args.block_ads_and_recommendations|json} then walk(if type=="object" and (.entries|type)=="array" then .entries |= map(select(.content?.items[0]?.item?.itemContent?.promotedMetadata==null)) else . end) else . end
+        - ^https://x\.com/i/api/graphql/[^/]+/UserTweets(\?|$) response-jq if ${args.block_ads_and_recommendations|json} then walk(if type=="object" and (.entries|type)=="array" then .entries |= map(select(.content?.clientEventInfo?.component!="suggest_who_to_follow")) else . end) else . end
+        - ^https://x\.com/i/api/graphql/[^/]+/UserTweetsAndReplies(\?|$) response-jq if ${args.block_ads_and_recommendations|json} then walk(if type=="object" and (.entries|type)=="array" then .entries |= map(select(.content?.clientEventInfo?.component!="suggest_who_to_follow")) else . end) else . end
     header-rewrite:
-        - https://x.com/ response-del content-security-policy
+        - ${args.csp_policy} response-del content-security-policy
     script:
         -   name: x
             binary-mode: false
@@ -63,7 +148,7 @@ http:
             max-size: 2097152
             require-body: true
             timeout: 10
-            argument: ''
+            argument: '{"block_ads_and_recommendations":${args.block_ads_and_recommendations|json},"hide_top_nav":${args.hide_top_nav|json},"hide_home_composer":${args.hide_home_composer|json},"hide_chat_drawer":${args.hide_chat_drawer|json},"hide_sidebar_trends":${args.hide_sidebar_trends|json},"hide_nav_grok":${args.hide_nav_grok|json},"hide_nav_premium":${args.hide_nav_premium|json},"hide_nav_verified_orgs":${args.hide_nav_verified_orgs|json},"hide_nav_jobs":${args.hide_nav_jobs|json},"hide_account_menu":${args.hide_account_menu|json},"hide_grok_drawer":${args.hide_grok_drawer|json},"hide_floating_post_button":${args.hide_floating_post_button|json},"hide_reply_permissions":${args.hide_reply_permissions|json},"hide_grok_actions":${args.hide_grok_actions|json},"hide_translate_button":${args.hide_translate_button|json},"hide_automated_content":${args.hide_automated_content|json},"hide_probable_spam_prompt":${args.hide_probable_spam_prompt|json},"enable_custom_layout":${args.enable_custom_layout|json},"home_width_vw":${args.home_width_vw|json},"page_width_vw":${args.page_width_vw|json},"center_primary_column":${args.center_primary_column|json},"enable_escape_back":${args.enable_escape_back|json}}'
             type: response
             debug: false
 script-providers:
