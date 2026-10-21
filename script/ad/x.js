@@ -620,8 +620,16 @@ function removeAdsCode(options) {
             document.documentElement.classList.toggle('x-ad-home-layout', path.startsWith('/home'))
         }
         if (options.hide_top_nav) {
+            const preserveSearch = mobile && path.startsWith('/explore')
             document.querySelectorAll("[data-testid='TopNavBar']").forEach(element => {
-                element.classList.toggle(hiddenClass, !(mobile && path.startsWith('/explore')))
+                element.classList.toggle(hiddenClass, !preserveSearch)
+            })
+            // Mobile X renders the visible TopNavBar in a fixed layer and keeps an empty
+            // banner in document flow to reserve its height. Collapse only that spacer.
+            document.querySelectorAll("header[role='banner']").forEach(header => {
+                const hasNavigation = header.querySelector("nav, a, button, input, [data-testid='TopNavBar']") !== null
+                const collapse = mobile && !preserveSearch && !hasNavigation && !hasVisibleContent(header)
+                header.classList.toggle(hiddenClass, collapse)
             })
         }
         if (options.hide_home_composer && path === '/home') {

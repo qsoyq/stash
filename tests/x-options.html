@@ -38,11 +38,12 @@ try {
         hide_reply_permissions: 'reply', hide_grok_actions: 'actions', hide_translate_button: 'translate',
         hide_automated_content: 'automated', hide_probable_spam_prompt: 'spam',
     };
-    async function fixture(options, path = '/home', width = 1440, extraSidebar = '', standalone = false) {
+    async function fixture(options, path = '/home', width = 1440, extraSidebar = '', standalone = false, mobileHeader = false) {
         const frame = document.createElement('iframe');
         frame.style.width = '1440px';
         frame.srcdoc = `<!doctype html><html><head></head><body>
-            <header role="banner"><div data-testid="TopNavBar" id="top">Top</div><nav>
+            ${mobileHeader ? '<div style="position:fixed;top:0;left:0;width:420px;height:107px"><div data-testid="TopNavBar" id="top" style="height:107px">Top</div></div><header role="banner" id="mobile-spacer" style="height:106px"><div style="height:106px;opacity:0"></div></header><div id="refresh-indicator" style="position:absolute;top:46px;height:60px">Refresh</div>' : ''}
+            <header role="banner" id="desktop-banner">${mobileHeader ? '' : '<div data-testid="TopNavBar" id="top">Top</div>'}<nav>
                 <a aria-label="Home" id="home">Home</a><a aria-label="Grok" id="nav-grok">Grok</a>
                 <a aria-label="Premium" id="nav-premium">Premium</a><a aria-label="Verified Orgs" id="nav-orgs">Orgs</a>
                 <a aria-label="Jobs" id="nav-jobs">Jobs</a><button aria-label="Account menu" id="account">Account</button>
@@ -165,6 +166,24 @@ try {
         page.doc.body.appendChild(wrapper);
         page.timers.forEach(fn => fn());
         assert(!page.visible('alternate-composer') && page.visible('regular-content'), 'Alternate composer detection hid unrelated content');
+        page.frame.remove();
+    }
+    {
+        const page = await fixture({ ...disabled, hide_top_nav: true }, '/home', 420, '', true, true);
+        assert(!page.visible('top') && !page.visible('mobile-spacer'), 'Mobile header spacer remained visible');
+        assert(page.visible('desktop-banner') && page.visible('home') && page.visible('refresh-indicator'), 'Mobile header fix hid navigation or refresh content');
+        page.state.path = '/explore';
+        page.timers.forEach(fn => fn());
+        assert(page.visible('top') && page.visible('mobile-spacer'), 'Mobile search header was not restored');
+        page.state.path = '/home';
+        page.state.width = 1440;
+        page.timers.forEach(fn => fn());
+        assert(page.visible('mobile-spacer') && page.visible('desktop-banner'), 'Desktop banner was collapsed');
+        page.frame.remove();
+    }
+    {
+        const page = await fixture({ ...disabled, hide_top_nav: false }, '/home', 420, '', true, true);
+        assert(page.visible('top') && page.visible('mobile-spacer'), 'Disabled top navigation option collapsed header');
         page.frame.remove();
     }
     {
