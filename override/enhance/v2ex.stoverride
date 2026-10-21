@@ -2,7 +2,22 @@ name: V2ex
 category: enhance
 icon: https://v2ex.com/favicon.ico
 desc: |-
-    - 支持 Safari AutoFill 填充用户名密码
+    - 支持 Safari AutoFill 填充用户名密码（默认开启）
+    - 自动签到：已登录时访问首页、节点页、帖子页或签到页，检查今日奖励并自动领取（默认关闭）
+    - 可在覆写详情 → 参数中分别开关
+    - 参数功能需要 Stash iOS/tvOS 3.7+ 或 macOS 4.4+（Beta）
+arguments-version: 1
+arguments:
+    safari_autofill:
+        type: switch
+        title: Safari 自动填充
+        description: 修复登录页用户名字段，支持 Safari AutoFill 填充用户名密码
+        default: true
+    auto_checkin:
+        type: switch
+        title: 自动签到
+        description: 已登录时访问首页、节点页、帖子页或签到页，自动检查并领取每日铜币奖励；失败后至少间隔 5 分钟再尝试
+        default: false
 http:
     mitm:
         - v2ex.com
@@ -11,11 +26,11 @@ http:
     script:
         -   name: v2ex
             binary-mode: true
-            match: https://v2ex.com/signin
+            match: ^https://v2ex\.com/(signin/?([?].*)?$|([?].*)?$|t/[^?]+([?].*)?$|go/[^?]+([?].*)?$|mission/daily/?([?].*)?$)
             max-size: 2097152
             require-body: true
             timeout: 10
-            argument: ''
+            argument: '{"safari_autofill":${args.safari_autofill|json},"auto_checkin":${args.auto_checkin|json}}'
             type: response
             debug: false
 script-providers:

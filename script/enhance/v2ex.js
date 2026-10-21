@@ -597,37 +597,148 @@ function patchV2exUsernameInput(document) {
     return true
 }
 
-async function main() {
-    switch (getScriptType()) {
-        case "response":
-            let url = (new URL($request.url))
-            let body = getScriptResponseBody()
-            let ct = $response.headers['Content-Type']
-            if (ct && ct.includes("text/html") && body) {
-                echo(`url: ${url}, path: ${url.pathname}`)
-                const document = new DOMParser().parseFromString(body, 'text/html')
-                const patched = patchV2exUsernameInput(document)
-                if (patched) {
-                    const newBody = '<!DOCTYPE html>\n' + document.documentElement.outerHTML
-                    $done({ body: newBody })
-                    return
-                }
-                $done({})
+function getV2exOptions() {
+    const options = { safari_autofill: true, auto_checkin: false }
+    try {
+        const supplied = JSON.parse(typeof $argument === 'undefined' || !$argument ? '{}' : $argument)
+        if (!supplied || typeof supplied !== 'object' || Array.isArray(supplied)) return options
+        for (const key of Object.keys(options)) {
+            if (typeof supplied[key] === 'boolean') options[key] = supplied[key]
+        }
+    } catch (error) {
+        console.log('[V2EX] 参数无效，使用默认设置')
+    }
+    return options
+}
+
+/** 在浏览器执行，使用同源登录会话；只解析领取地址，不执行网页的 onclick。 */
+async function v2exAutoCheckinCode() {
+    const log = (...args) => console.log('[V2EX 自动签到]', ...args)
+    const origin = window.location.origin
+    const account = (doc) => doc.querySelector('#Top a[href^="/member/"]')?.getAttribute('href')
+    const user = account(document)
+    if (!user) return
+    // 每个账号独立节流；完成标记采用服务器提供的日期，不推断站点时区。
+    const prefix = `v2ex_auto_checkin:${user}:`
+    const read = (key) => {
+        try { return localStorage.getItem(prefix + key) } catch (error) { return null }
+    }
+    const write = (key, value) => {
+        try { localStorage.setItem(prefix + key, value) } catch (error) { }
+    }
+
+    function inspect(doc) {
+        const main = doc.querySelector('#Main')
+        const marker = Array.from(main?.querySelectorAll('code') || [])
+            .map(node => node.textContent.trim())
+            .find(text => /^v2ex:member:\d+:\d{8}$/.test(text))
+        let redeem = null
+        for (const node of main?.querySelectorAll('input[onclick],button[onclick],a[href]') || []) {
+            const onclick = node.getAttribute('onclick') || ''
+            const match = onclick.match(/^\s*location(?:\.href)?\s*=\s*(['"])(\/mission\/daily\/redeem\?once=\d+)\1\s*;?\s*$/)
+            const path = match ? match[2] : node.getAttribute('href')
+            if (path && /^\/mission\/daily\/redeem\?once=\d+$/.test(path)) {
+                redeem = path
                 break
             }
-        default:
-            $done({})
+        }
+        const text = main?.textContent || ''
+        const done = /每日登录奖励已领取|每日登入獎勵已領取|Daily (?:login )?reward (?:has been|already) (?:redeemed|claimed)|already (?:claimed|redeemed).*daily/i.test(text)
+        return { marker, redeem, done }
+    }
+
+    async function load(path) {
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 15000)
+        try {
+            const response = await fetch(path, {
+                credentials: 'same-origin',
+                cache: 'no-store',
+                referrer: `${origin}/mission/daily`,
+                signal: controller.signal,
+            })
+            const url = new URL(response.url)
+            if (!response.ok || url.origin !== origin || !/^\/mission\/daily(?:\/redeem)?\/?$/.test(url.pathname)
+                || !/text\/html/i.test(response.headers.get('content-type') || '')) {
+                throw new Error(`签到页面不可用（HTTP ${response.status}）`)
+            }
+            const doc = new DOMParser().parseFromString(await response.text(), 'text/html')
+            if (account(doc) !== user) throw new Error('登录状态已变化，跳过')
+            return doc
+        } finally {
+            clearTimeout(timer)
+        }
+    }
+
+    async function run() {
+        const now = Date.now()
+        const last = Number(read('attempt')) || 0
+        if (now - last < 5 * 60 * 1000) return
+        write('attempt', String(now))
+        // 总是读取新页面，避免浏览器历史缓存中的 once 或日期失效。
+        const state = inspect(await load('/mission/daily'))
+        if (!state.marker) {
+            log('无法识别今日签到状态，跳过')
+            return
+        }
+        if (state.done && !state.redeem) {
+            write('done', state.marker)
+            log('今日已签到')
+            return
+        }
+        // 没有明确的领取按钮就不发起请求，验证页或未知页面不算签到成功。
+        if (!state.redeem || read('done') === state.marker) return
+        log('今日未签到，领取铜币')
+        const result = inspect(await load(state.redeem))
+        const confirmed = result.done && !result.redeem ? result : inspect(await load('/mission/daily'))
+        if (confirmed.done && !confirmed.redeem && confirmed.marker === state.marker) {
+            write('done', state.marker)
+            log('签到成功')
+            // 签到页刷新显示领取结果；阅读帖子时保持当前位置。
+            if (/^\/mission\/daily\/?$/.test(window.location.pathname)) window.location.reload()
+        } else {
+            log('尚未确认签到成功，稍后访问时重试')
+        }
+    }
+
+    try {
+        if (navigator.locks?.request) {
+            await navigator.locks.request(`v2ex_auto_checkin:${user}`, { ifAvailable: true }, async lock => {
+                if (lock) await run()
+            })
+        } else {
+            await run()
+        }
+    } catch (error) {
+        log(String(error))
     }
 }
 
-(async () => {
-    main().then(_ => {
-        $done({})
-    }).catch(error => {
-        if (typeof error === 'object') {
-            error = error.toString()
-        }
-        echo(`[Error]: ${error}`)
-        $done({})
-    })
-})();
+async function main() {
+    const options = getV2exOptions()
+    if (getScriptType() !== 'response' || (!options.safari_autofill && !options.auto_checkin)) return {}
+    const url = new URL($request.url)
+    if (url.origin !== 'https://v2ex.com' || Number($response.status) !== 200) return {}
+    const isSignin = /^\/signin\/?$/.test(url.pathname)
+    const isCheckinPage = /^(?:\/|\/t\/[^/]+\/?|\/go\/[^/]+\/?|\/mission\/daily\/?)$/.test(url.pathname)
+    if (!(options.safari_autofill && isSignin) && !(options.auto_checkin && isCheckinPage)) return {}
+    const ct = Object.entries($response.headers || {}).find(([key]) => key.toLowerCase() === 'content-type')?.[1]
+    if (!/text\/html/i.test(ct || '')) return {}
+    const body = getScriptResponseBody()
+    if (!body) return {}
+    const document = new DOMParser().parseFromString(body, 'text/html')
+    let patched = options.safari_autofill && isSignin && patchV2exUsernameInput(document)
+    if (options.auto_checkin && isCheckinPage && document.querySelector('#Top a[href^="/member/"]')) {
+        const script = document.createElement('script')
+        script.id = '__v2ex_auto_checkin'
+        script.textContent = `(${v2exAutoCheckinCode.toString()})();`
+        document.body.appendChild(script)
+        patched = true
+    }
+    return patched ? { body: '<!DOCTYPE html>\n' + document.documentElement.outerHTML } : {}
+}
+
+main().then(result => $done(result)).catch(error => {
+    console.log(`[V2EX] ${String(error)}`)
+    $done({})
+});
