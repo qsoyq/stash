@@ -224,9 +224,10 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
         assert(page.doc.querySelector('[data-stash-layout-diagnostic-button]'), 'Browser diagnostics button missing');
         assert(page.timers.length === 1 && !page.doc.getElementById('x-ad-blocker-style'), 'Diagnostics-only mode enabled cleanup');
         assert(page.state.collectDiagnostics().standalone.navigator === false, 'Browser mode reported incorrectly');
-        page.run.removeAds(page.doc, { ...disabled, enable_layout_diagnostics: true });
-        assert(page.doc.querySelector('script[src]').src.endsWith('/add-x-stoverride-parameters/script/browser/layout-diagnostics.js'), 'Branch diagnostic source missing');
-        assert(JSON.parse(page.doc.querySelector('script[src]').getAttribute('data-layout-config')).site === 'x', 'External script configuration missing');
+        page.run.removeAds(page.doc, { ...disabled, enable_layout_diagnostics: true }, diagnosticSource);
+        const inlineDiagnostic = page.doc.querySelector('script[data-layout-config]');
+        assert(inlineDiagnostic && inlineDiagnostic.textContent.includes('function startLayoutDiagnostics'), 'Downloaded diagnostic source was not inlined');
+        assert(JSON.parse(inlineDiagnostic.getAttribute('data-layout-config')).site === 'x', 'Inline diagnostic configuration missing');
         page.frame.remove();
     }
     for (const enabled of [false, true]) {
@@ -245,6 +246,16 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
         });
         assert(typeof result.body === 'string' === expectedBody, `Unexpected response rewrite: ${argument}`);
         if (expectedBody) assert(result.body.includes('x-ad-hidden'), 'Response has no injection');
+    }
+    for (const success of [true, false]) {
+        const result = await new Promise(resolve => {
+            new Function('$argument', '$script', '$request', '$response', '$done', '$httpClient', source)(
+                JSON.stringify({ ...disabled, enable_layout_diagnostics: true }), { type: 'response' },
+                { url: 'https://x.com/home' }, { headers: { 'content-type': 'text/html' }, body: '<html><head></head><body>Original</body></html>' }, resolve,
+                { get: (_, callback) => callback(success ? null : 'network', { status: success ? 200 : 503 }, success ? diagnosticSource : null) },
+            );
+        });
+        assert(result.body.includes(success ? 'function startLayoutDiagnostics' : '诊断工具加载失败'), `Diagnostic response path failed: ${success}`);
     }
     await responseCheck(JSON.stringify(disabled), 'text/html', false);
     await responseCheck(undefined, 'text/html', true);

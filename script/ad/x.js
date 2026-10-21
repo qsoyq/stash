@@ -701,17 +701,40 @@ function removeAdsCode(options) {
     }
 }
 
-function removeAds(document, options) {
+const LAYOUT_DIAGNOSTICS_URL = 'https://raw.githubusercontent.com/qsoyq/stash/add-x-stoverride-parameters/script/browser/layout-diagnostics.js'
+
+async function loadLayoutDiagnosticsSource() {
+    try {
+        const result = await get({ url: LAYOUT_DIAGNOSTICS_URL, timeout: 5 })
+        const status = result.response?.status ?? result.response?.statusCode
+        if (status >= 200 && status < 300 && typeof result.data === 'string' && result.data.includes('function startLayoutDiagnostics')) {
+            return result.data
+        }
+        echo(`[Warn] 页面布局诊断脚本下载失败：HTTP ${status}`)
+    } catch (error) {
+        echo(`[Warn] 页面布局诊断脚本下载失败：${error.error || error}`)
+    }
+    return null
+}
+
+function addDiagnosticFailureNotice(document, container) {
+    const notice = document.createElement('script')
+    notice.textContent = "(function(){var b=document.createElement('button');b.textContent='诊断工具加载失败（点击关闭）';b.style.cssText='position:fixed;right:12px;bottom:calc(env(safe-area-inset-bottom) + 76px);z-index:2147483647;background:#b33;color:white;padding:8px';b.onclick=function(){b.remove()};document.body.appendChild(b)})();"
+    container.appendChild(notice)
+}
+
+function removeAds(document, options, diagnosticSource = null) {
     const enabled = Object.values(options).some(value => value === true)
     if (!enabled) return false
     const script = document.createElement('script')
     const container = document.body || document.documentElement
     const settings = JSON.stringify(options).replace(/</g, '\\u003c')
     script.textContent = `(${removeAdsCode.toString()})(${settings});`
-    if (options.enable_layout_diagnostics) {
+    if (options.enable_layout_diagnostics && !diagnosticSource) {
+        addDiagnosticFailureNotice(document, container)
+    } else if (options.enable_layout_diagnostics) {
         const diagnostic = document.createElement('script')
-        diagnostic.src = 'https://raw.githubusercontent.com/qsoyq/stash/add-x-stoverride-parameters/script/browser/layout-diagnostics.js'
-        diagnostic.defer = true
+        diagnostic.textContent = diagnosticSource.replace(/<\/script/gi, '<\\/script')
         diagnostic.setAttribute('data-layout-config', JSON.stringify({
             site: 'x',
             hiddenClass: 'x-ad-hidden',
@@ -731,7 +754,6 @@ function removeAds(document, options) {
                 center_primary_column: options.center_primary_column,
             },
         }))
-        diagnostic.setAttribute('onerror', "this.removeAttribute('onerror');var b=document.createElement('button');b.textContent='诊断工具加载失败（点击关闭）';b.style.cssText='position:fixed;right:12px;bottom:calc(env(safe-area-inset-bottom) + 76px);z-index:2147483647;background:#b33;color:white;padding:8px';b.onclick=function(){b.remove()};document.body.appendChild(b)")
         container.appendChild(diagnostic)
     }
     container.appendChild(script)
@@ -753,7 +775,8 @@ async function main() {
             if (ct && ct.toLowerCase().includes("text/html") && body) {
                 echo(`url: ${url}, path: ${url.pathname}`)
                 const document = new DOMParser().parseFromString(body, 'text/html')
-                if (!removeAds(document, options)) {
+                const diagnosticSource = options.enable_layout_diagnostics ? await loadLayoutDiagnosticsSource() : null
+                if (!removeAds(document, options, diagnosticSource)) {
                     $done({})
                     break
                 }
