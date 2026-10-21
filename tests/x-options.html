@@ -38,7 +38,7 @@ try {
         hide_reply_permissions: 'reply', hide_grok_actions: 'actions', hide_translate_button: 'translate',
         hide_automated_content: 'automated', hide_probable_spam_prompt: 'spam',
     };
-    async function fixture(options, path = '/home', width = 1440, extraSidebar = '') {
+    async function fixture(options, path = '/home', width = 1440, extraSidebar = '', standalone = false) {
         const frame = document.createElement('iframe');
         frame.style.width = '1440px';
         frame.srcdoc = `<!doctype html><html><head></head><body>
@@ -68,6 +68,8 @@ try {
         const timers = [];
         const state = { back: 0, width, path };
         const browser = {
+            navigator: { standalone },
+            matchMedia: query => ({ matches: standalone && query === '(display-mode: standalone)' }),
             get location() { return { href: `https://x.com${state.path}` }; },
             get innerWidth() { return state.width; },
             getComputedStyle: element => frame.contentWindow.getComputedStyle(element),
@@ -76,6 +78,7 @@ try {
         };
         const run = new Function('document', 'window', 'Element', `${functions}; return { removeAdsCode, removeAds };`)(doc, browser, frame.contentWindow.Element);
         run.removeAdsCode(options);
+        state.collectDiagnostics = browser.__xAdCollectLayoutDiagnostics;
         const visible = id => {
             const element = doc.getElementById(id);
             for (let node = element; node; node = node.parentElement) {
@@ -162,6 +165,25 @@ try {
         page.doc.body.appendChild(wrapper);
         page.timers.forEach(fn => fn());
         assert(!page.visible('alternate-composer') && page.visible('regular-content'), 'Alternate composer detection hid unrelated content');
+        page.frame.remove();
+    }
+    {
+        const page = await fixture(defaults, '/home', 500, '', true);
+        const button = page.doc.querySelector('[data-x-ad-diagnostic-button]');
+        assert(button, 'Standalone diagnostic button missing');
+        const report = JSON.stringify(page.state.collectDiagnostics());
+        assert(report.includes('"diagnosticVersion":1') && report.includes('"TopNavBar"'), 'Diagnostic layout data missing');
+        assert(report.includes('"route":"/home"') && !report.includes('Compose') && !report.includes('Suggested user'), 'Diagnostic report exposed page text');
+        page.frame.remove();
+    }
+    {
+        const page = await fixture(defaults, '/u/status/123', 500, '', true);
+        assert(page.state.collectDiagnostics().route === '[non-home route]', 'Diagnostic report exposed non-home route');
+        page.frame.remove();
+    }
+    {
+        const page = await fixture(defaults, '/home', 500);
+        assert(!page.doc.querySelector('[data-x-ad-diagnostic-button]'), 'Diagnostic button shown outside standalone mode');
         page.frame.remove();
     }
     // Execute the complete response entrypoint, including argument parsing and $done.
