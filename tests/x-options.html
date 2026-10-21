@@ -14,6 +14,8 @@ try {
     const end = source.indexOf('\nasync function main()', start);
     if (start < 0 || end < 0) throw new Error('Production functions not found');
     const functions = source.slice(start, end);
+    const diagnosticSource = await (await fetch('../script/browser/layout-diagnostics.js')).text();
+    const diagnosticFunction = diagnosticSource.slice(0, diagnosticSource.indexOf('// Classic external script:'));
     const parse = argument => new Function('$argument', `${functions}; return getXOptions();`)(argument);
     const defaults = parse(undefined);
     const disabled = Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, typeof value === 'boolean' ? false : value]));
@@ -77,10 +79,14 @@ try {
             addEventListener() {}, setInterval: fn => timers.push(fn),
             history: { back: () => state.back++ },
         };
-        const run = new Function('document', 'window', 'Element', `${functions}; return { removeAdsCode, removeAds, layoutDiagnosticsCode };`)(doc, browser, frame.contentWindow.Element);
+        const run = new Function('document', 'window', 'Element', `${functions}
+${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics };`)(doc, browser, frame.contentWindow.Element);
         run.removeAdsCode(options);
-        if (options.enable_layout_diagnostics) run.layoutDiagnosticsCode(options);
-        state.collectDiagnostics = browser.__xAdCollectLayoutDiagnostics;
+        if (options.enable_layout_diagnostics) run.startLayoutDiagnostics({
+            site: 'x', hiddenClass: 'x-ad-hidden', publicRoutes: ['/home'],
+            targets: { topNav: "[data-testid='TopNavBar']" }, settings: options,
+        });
+        state.collectDiagnostics = browser.__stashLayoutDiagnostics?.collect;
         const visible = id => {
             const element = doc.getElementById(id);
             for (let node = element; node; node = node.parentElement) {
@@ -189,37 +195,46 @@ try {
     }
     {
         const page = await fixture({ ...defaults, enable_layout_diagnostics: true }, '/home', 500, '', true);
-        const button = page.doc.querySelector('[data-x-ad-diagnostic-button]');
+        const button = page.doc.querySelector('[data-stash-layout-diagnostic-button]');
         assert(button, 'Standalone diagnostic button missing');
         const report = JSON.stringify(page.state.collectDiagnostics());
-        assert(report.includes('"diagnosticVersion":1') && report.includes('"TopNavBar"'), 'Diagnostic layout data missing');
+        assert(report.includes('"diagnosticVersion":2') && report.includes('"TopNavBar"'), 'Diagnostic layout data missing');
         assert(report.includes('"route":"/home"') && !report.includes('Compose') && !report.includes('Suggested user'), 'Diagnostic report exposed page text');
         page.frame.remove();
     }
     {
         const page = await fixture({ ...defaults, enable_layout_diagnostics: true }, '/u/status/123', 500, '', true);
-        assert(page.state.collectDiagnostics().route === '[non-home route]', 'Diagnostic report exposed non-home route');
+        assert(page.state.collectDiagnostics().route === '[other route]', 'Diagnostic report exposed non-home route');
         page.frame.remove();
     }
     {
         const page = await fixture(defaults, '/home', 500);
-        assert(!page.doc.querySelector('[data-x-ad-diagnostic-button]'), 'Diagnostic button shown outside standalone mode');
+        assert(!page.doc.querySelector('[data-stash-layout-diagnostic-button]'), 'Diagnostic button shown outside standalone mode');
         page.frame.remove();
     }
     for (const standalone of [false, true]) {
         const page = await fixture(defaults, '/home', 420, '', standalone);
-        assert(!page.state.collectDiagnostics && !page.doc.querySelector('[data-x-ad-diagnostic-button]'), 'Default diagnostics enabled');
+        assert(!page.state.collectDiagnostics && !page.doc.querySelector('[data-stash-layout-diagnostic-button]'), 'Default diagnostics enabled');
         page.run.removeAds(page.doc, defaults);
         assert(!page.doc.querySelector('script').textContent.includes('collectLayoutDiagnostics'), 'Disabled diagnostics code injected');
         page.frame.remove();
     }
     {
         const page = await fixture({ ...disabled, enable_layout_diagnostics: true }, '/home', 420);
-        assert(page.doc.querySelector('[data-x-ad-diagnostic-button]'), 'Browser diagnostics button missing');
+        assert(page.doc.querySelector('[data-stash-layout-diagnostic-button]'), 'Browser diagnostics button missing');
         assert(page.timers.length === 1 && !page.doc.getElementById('x-ad-blocker-style'), 'Diagnostics-only mode enabled cleanup');
         assert(page.state.collectDiagnostics().standalone.navigator === false, 'Browser mode reported incorrectly');
         page.run.removeAds(page.doc, { ...disabled, enable_layout_diagnostics: true });
-        assert(page.doc.querySelector('script').textContent.includes('collectLayoutDiagnostics'), 'Enabled diagnostics not serialized');
+        assert(page.doc.querySelector('script[src]').src.endsWith('/add-x-stoverride-parameters/script/browser/layout-diagnostics.js'), 'Branch diagnostic source missing');
+        assert(JSON.parse(page.doc.querySelector('script[src]').getAttribute('data-layout-config')).site === 'x', 'External script configuration missing');
+        page.frame.remove();
+    }
+    for (const enabled of [false, true]) {
+        const page = await fixture({ ...disabled, hide_bottom_grok: enabled, center_primary_column: true }, '/home', 420);
+        page.doc.body.insertAdjacentHTML('beforeend', '<nav data-testid="BottomBar"><a id="bottom-home" href="/home">Home</a><a id="bottom-grok" href="/i/grok">Grok</a><a id="bottom-search" href="/explore">Search</a></nav><article><a id="tweet-grok-link" href="/i/grok">Link</a></article>');
+        page.timers.forEach(fn => fn());
+        assert(page.visible('bottom-grok') === !enabled, 'Bottom Grok control ignored');
+        assert(page.visible('nav-grok') && page.visible('grok') && page.visible('bottom-home') && page.visible('bottom-search') && page.visible('tweet-grok-link'), 'Bottom Grok control affected other components');
         page.frame.remove();
     }
     // Execute the complete response entrypoint, including argument parsing and $done.

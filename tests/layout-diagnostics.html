@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>External layout diagnostics checks</title>
+<pre id="result">Running…</pre>
+<script type="module">
+// Serve the repository root over HTTP and open /tests/layout-diagnostics.html.
+const output = document.querySelector('#result');
+try {
+    let passed = 0;
+    const assert = (condition, message) => { if (!condition) throw new Error(message); passed++; };
+    const source = new URL('../script/browser/layout-diagnostics.js', location.href);
+    for (const site of ['x', 'another_site']) {
+        const frame = document.createElement('iframe');
+        const config = {
+            site, hiddenClass: 'fixture-hidden', targets: { content: '#content', missing: '#absent', invalid: '[' },
+            settings: { hide_top_nav: false, width: 65, secret: 'private-value' },
+        };
+        const attribute = JSON.stringify(config).replace(/&/g, '&amp;').replace(/'/g, '&#39;');
+        frame.srcdoc = `<!doctype html><html><body><div id="content">private-body</div><input value="private-input"><script src="${source}" data-layout-config='${attribute}'></scr` + 'ipt></body></html>';
+        const loaded = new Promise(resolve => frame.onload = resolve);
+        document.body.appendChild(frame);
+        await loaded;
+        const win = frame.contentWindow;
+        assert(win.__stashLayoutDiagnostics, 'External script did not initialize');
+        const report = win.__stashLayoutDiagnostics.collect();
+        assert(report.site === site && report.targets.content.element.tag === 'div', 'Configuration not read from currentScript');
+        assert(report.targets.missing === null && report.targets.invalid === null, 'Missing/invalid selectors not handled');
+        const text = JSON.stringify(report);
+        assert(!/private-body|private-input|private-value/.test(text), 'Report leaked page content or invalid settings');
+        let copied;
+        Object.defineProperty(win.navigator, 'clipboard', { configurable: true, value: { writeText: async text => { copied = text; } } });
+        win.document.querySelector('[data-stash-layout-diagnostic-button]').click();
+        await new Promise(resolve => setTimeout(resolve, 0));
+        assert(JSON.parse(copied).site === site, 'Copy button did not copy report');
+        Object.defineProperty(win.navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new Error('denied'); } } });
+        win.document.execCommand = () => false;
+        win.document.querySelector('[data-stash-layout-diagnostic-button]').click();
+        await new Promise(resolve => setTimeout(resolve, 0));
+        const panel = win.document.querySelector('[data-stash-layout-diagnostic-panel]');
+        assert(panel && JSON.parse(panel.querySelector('textarea').value).site === site, 'Manual copy fallback missing');
+        panel.querySelector('button').click();
+        assert(!win.document.querySelector('[data-stash-layout-diagnostic-panel]'), 'Manual copy panel did not close');
+        const duplicate = win.document.createElement('script');
+        duplicate.src = source;
+        duplicate.setAttribute('data-layout-config', JSON.stringify(config));
+        const reloaded = new Promise(resolve => duplicate.onload = resolve);
+        win.document.body.appendChild(duplicate);
+        await reloaded;
+        assert(win.document.querySelectorAll('[data-stash-layout-diagnostic-button]').length === 1, 'Duplicate button created');
+        frame.remove();
+    }
+    output.textContent = `PASS: ${passed} external-script assertions`;
+} catch (error) {
+    output.textContent = `FAIL: ${error.stack || error}`;
+}
+</script>
+</html>

@@ -503,6 +503,7 @@ function getXOptions() {
         hide_chat_drawer: true,
         hide_sidebar_trends: true,
         hide_nav_grok: true,
+        hide_bottom_grok: true,
         hide_nav_premium: true,
         hide_nav_verified_orgs: true,
         hide_nav_jobs: true,
@@ -641,6 +642,11 @@ function removeAdsCode(options) {
             })
         }
         componentRules.forEach(([, selector]) => document.querySelectorAll(selector).forEach(hide))
+        if (options.hide_bottom_grok && mobile) {
+            document.querySelectorAll("nav a[href='/i/grok'], [data-testid='BottomBar'] a[href='/i/grok']").forEach(link => {
+                if (!link.closest('header, article')) hide(link)
+            })
+        }
 
         if (options.block_ads_and_recommendations) {
             document.querySelectorAll("[data-testid='sidebarColumn'] a[href^='/i/premium_sign_up']").forEach(link => {
@@ -695,195 +701,39 @@ function removeAdsCode(options) {
     }
 }
 
-function layoutDiagnosticsCode(options) {
-    const hiddenClass = 'x-ad-hidden'
-    const diagnosticAttribute = 'data-x-ad-diagnostic'
-
-    function roundRect(rect) {
-        return {
-            top: Math.round(rect.top), bottom: Math.round(rect.bottom),
-            left: Math.round(rect.left), width: Math.round(rect.width), height: Math.round(rect.height),
-        }
-    }
-
-    function describeElement(element) {
-        const style = window.getComputedStyle(element)
-        return {
-            tag: element.tagName.toLowerCase(),
-            testid: element.getAttribute('data-testid'),
-            role: element.getAttribute('role'),
-            classes: Array.from(element.classList).slice(0, 8),
-            rect: roundRect(element.getBoundingClientRect()),
-            style: {
-                display: style.display, position: style.position, zIndex: style.zIndex,
-                overflow: style.overflow, height: style.height, minHeight: style.minHeight,
-                paddingTop: style.paddingTop, marginTop: style.marginTop,
-                transform: style.transform === 'none' ? null : style.transform, opacity: style.opacity,
+function removeAds(document, options) {
+    const enabled = Object.values(options).some(value => value === true)
+    if (!enabled) return false
+    const script = document.createElement('script')
+    const container = document.body || document.documentElement
+    const settings = JSON.stringify(options).replace(/</g, '\\u003c')
+    script.textContent = `(${removeAdsCode.toString()})(${settings});`
+    if (options.enable_layout_diagnostics) {
+        const diagnostic = document.createElement('script')
+        diagnostic.src = 'https://raw.githubusercontent.com/qsoyq/stash/add-x-stoverride-parameters/script/browser/layout-diagnostics.js'
+        diagnostic.defer = true
+        diagnostic.setAttribute('data-layout-config', JSON.stringify({
+            site: 'x',
+            hiddenClass: 'x-ad-hidden',
+            publicRoutes: ['/home', '/explore'],
+            targets: {
+                topNav: "[data-testid='TopNavBar']",
+                banner: "header[role='banner']",
+                primaryColumn: "[data-testid='primaryColumn']",
+                sidebarColumn: "[data-testid='sidebarColumn']",
+                bottomBar: "[data-testid='BottomBar']",
+                bottomGrok: "nav a[href='/i/grok']:not(header a), [data-testid='BottomBar'] a[href='/i/grok']",
             },
-            childCount: element.children.length,
-            hiddenByScript: element.classList.contains(hiddenClass),
-        }
-    }
-
-    function ancestorChain(element, limit = 16) {
-        const chain = []
-        for (let current = element; current && chain.length < limit; current = current.parentElement) {
-            chain.push(describeElement(current))
-            if (current === document.documentElement) break
-        }
-        return chain
-    }
-
-    function isDiagnosticElement(element) {
-        return element.closest(`[${diagnosticAttribute}]`) !== null
-    }
-
-    function measureSafeArea() {
-        const probe = document.createElement('div')
-        probe.setAttribute(diagnosticAttribute, '')
-        probe.style.cssText = 'position:fixed;top:0;left:0;visibility:hidden;pointer-events:none;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)'
-        document.body.appendChild(probe)
-        const style = window.getComputedStyle(probe)
-        const result = { top: style.paddingTop, bottom: style.paddingBottom }
-        probe.remove()
-        return result
-    }
-
-    function collectLayoutDiagnostics() {
-        const maxTop = 360
-        const width = window.innerWidth || document.documentElement.clientWidth
-        const nav = document.querySelector("[data-testid='TopNavBar']")
-        const topElements = Array.from(document.querySelectorAll('body *')).filter(element => {
-            if (isDiagnosticElement(element) || element.matches('script, style')) return false
-            const rect = element.getBoundingClientRect()
-            return rect.bottom > 0 && rect.top < maxTop && rect.height >= 16 && rect.width >= width * 0.5
-        }).slice(0, 100).map(element => {
-            let depth = 0
-            for (let current = element; current.parentElement; current = current.parentElement) depth++
-            return { depth, ...describeElement(element) }
-        })
-        const svgs = Array.from(document.querySelectorAll('svg')).filter(svg => {
-            if (isDiagnosticElement(svg)) return false
-            const rect = svg.getBoundingClientRect()
-            return rect.bottom > 0 && rect.top < maxTop && rect.width > 0 && rect.height > 0
-        }).slice(0, 40).map(svg => ({
-            svg: describeElement(svg),
-            viewBox: svg.getAttribute('viewBox'),
-            firstPath: svg.querySelector('path')?.getAttribute('d')?.slice(0, 160) || null,
-            ancestors: ancestorChain(svg.parentElement, 8),
-        }))
-        const probes = Array.from({ length: 19 }, (_, index) => index * 20).map(y => ({
-            y,
-            stack: document.elementsFromPoint(width / 2, y)
-                .filter(element => !isDiagnosticElement(element)).slice(0, 10).map(describeElement),
-        }))
-        const path = new URL(window.location.href).pathname
-        return {
-            diagnosticVersion: 1,
-            timestamp: new Date().toISOString(),
-            route: path === '/home' ? '/home' : '[non-home route]',
-            standalone: {
-                navigator: window.navigator?.standalone === true,
-                displayMode: window.matchMedia?.('(display-mode: standalone)')?.matches === true,
-            },
-            viewport: {
-                innerWidth: window.innerWidth, innerHeight: window.innerHeight,
-                visualViewportHeight: window.visualViewport?.height ?? null,
-                visualViewportOffsetTop: window.visualViewport?.offsetTop ?? null,
-                devicePixelRatio: window.devicePixelRatio ?? null,
-                safeArea: measureSafeArea(),
-            },
-            scroll: {
-                windowY: Math.round(window.scrollY || 0),
-                documentTop: Math.round(document.scrollingElement?.scrollTop || 0),
-            },
-            options: {
+            settings: {
                 hide_top_nav: options.hide_top_nav,
                 hide_home_composer: options.hide_home_composer,
                 enable_custom_layout: options.enable_custom_layout,
                 center_primary_column: options.center_primary_column,
             },
-            scriptInjected: document.getElementById('x-ad-blocker-style') !== null,
-            topNav: nav ? { element: describeElement(nav), ancestors: ancestorChain(nav) } : null,
-            primaryColumn: document.querySelector("[data-testid='primaryColumn']") ? describeElement(document.querySelector("[data-testid='primaryColumn']")) : null,
-            topElements,
-            svgs,
-            probes,
-        }
+        }))
+        diagnostic.setAttribute('onerror', "this.removeAttribute('onerror');var b=document.createElement('button');b.textContent='诊断工具加载失败（点击关闭）';b.style.cssText='position:fixed;right:12px;bottom:calc(env(safe-area-inset-bottom) + 76px);z-index:2147483647;background:#b33;color:white;padding:8px';b.onclick=function(){b.remove()};document.body.appendChild(b)")
+        container.appendChild(diagnostic)
     }
-
-    async function copyDiagnosticText(text) {
-        try {
-            if (window.navigator?.clipboard?.writeText) {
-                await window.navigator.clipboard.writeText(text)
-                return true
-            }
-        } catch (_) { }
-        const area = document.createElement('textarea')
-        area.setAttribute(diagnosticAttribute, '')
-        area.value = text
-        area.readOnly = true
-        area.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0'
-        document.body.appendChild(area)
-        area.select()
-        let copied = false
-        try { copied = document.execCommand('copy') } catch (_) { }
-        area.remove()
-        return copied
-    }
-
-    function showManualCopy(text) {
-        document.querySelector('[data-x-ad-diagnostic-panel]')?.remove()
-        const panel = document.createElement('div')
-        panel.setAttribute(diagnosticAttribute, '')
-        panel.setAttribute('data-x-ad-diagnostic-panel', '')
-        panel.style.cssText = 'position:fixed;inset:12px;z-index:2147483647;background:#000;border:1px solid #1d9bf0;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px'
-        const area = document.createElement('textarea')
-        area.value = text
-        area.readOnly = true
-        area.style.cssText = 'flex:1;width:100%;font:11px monospace;background:#111;color:#fff;border:0'
-        const close = document.createElement('button')
-        close.textContent = '关闭'
-        close.type = 'button'
-        close.addEventListener('click', () => panel.remove())
-        panel.append(area, close)
-        document.body.appendChild(panel)
-        area.select()
-    }
-
-    function ensureDiagnosticButton() {
-        if (document.querySelector('[data-x-ad-diagnostic-button]')) return
-        const button = document.createElement('button')
-        button.type = 'button'
-        button.textContent = '复制诊断信息'
-        button.setAttribute(diagnosticAttribute, '')
-        button.setAttribute('data-x-ad-diagnostic-button', '')
-        button.style.cssText = 'position:fixed;right:12px;bottom:calc(env(safe-area-inset-bottom) + 76px);z-index:2147483647;border:0;border-radius:999px;padding:8px 12px;background:#1d9bf0;color:#fff;font:600 13px -apple-system,system-ui,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.35)'
-        button.addEventListener('click', async () => {
-            const text = JSON.stringify(collectLayoutDiagnostics(), null, 2)
-            const copied = await copyDiagnosticText(text)
-            button.textContent = copied ? '已复制' : '请手动复制'
-            if (!copied) showManualCopy(text)
-            window.setTimeout(() => { button.textContent = '复制诊断信息' }, 2500)
-        })
-        document.body.appendChild(button)
-    }
-
-    window.__xAdCollectLayoutDiagnostics = collectLayoutDiagnostics
-    ensureDiagnosticButton()
-    window.setInterval(ensureDiagnosticButton, 1000)
-}
-
-function removeAds(document, options) {
-    const enabled = Object.values(options).some(value => value === true)
-    if (!enabled) return false
-    const script = document.createElement('script')
-    const settings = JSON.stringify(options).replace(/</g, '\\u003c')
-    script.textContent = `(${removeAdsCode.toString()})(${settings});`
-    if (options.enable_layout_diagnostics) {
-        script.textContent += `\n(${layoutDiagnosticsCode.toString()})(${settings});`
-    }
-    const container = document.body || document.documentElement
     container.appendChild(script)
     return true
 }
