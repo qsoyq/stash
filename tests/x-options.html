@@ -77,8 +77,9 @@ try {
             addEventListener() {}, setInterval: fn => timers.push(fn),
             history: { back: () => state.back++ },
         };
-        const run = new Function('document', 'window', 'Element', `${functions}; return { removeAdsCode, removeAds };`)(doc, browser, frame.contentWindow.Element);
+        const run = new Function('document', 'window', 'Element', `${functions}; return { removeAdsCode, removeAds, layoutDiagnosticsCode };`)(doc, browser, frame.contentWindow.Element);
         run.removeAdsCode(options);
+        if (options.enable_layout_diagnostics) run.layoutDiagnosticsCode(options);
         state.collectDiagnostics = browser.__xAdCollectLayoutDiagnostics;
         const visible = id => {
             const element = doc.getElementById(id);
@@ -187,7 +188,7 @@ try {
         page.frame.remove();
     }
     {
-        const page = await fixture(defaults, '/home', 500, '', true);
+        const page = await fixture({ ...defaults, enable_layout_diagnostics: true }, '/home', 500, '', true);
         const button = page.doc.querySelector('[data-x-ad-diagnostic-button]');
         assert(button, 'Standalone diagnostic button missing');
         const report = JSON.stringify(page.state.collectDiagnostics());
@@ -196,13 +197,29 @@ try {
         page.frame.remove();
     }
     {
-        const page = await fixture(defaults, '/u/status/123', 500, '', true);
+        const page = await fixture({ ...defaults, enable_layout_diagnostics: true }, '/u/status/123', 500, '', true);
         assert(page.state.collectDiagnostics().route === '[non-home route]', 'Diagnostic report exposed non-home route');
         page.frame.remove();
     }
     {
         const page = await fixture(defaults, '/home', 500);
         assert(!page.doc.querySelector('[data-x-ad-diagnostic-button]'), 'Diagnostic button shown outside standalone mode');
+        page.frame.remove();
+    }
+    for (const standalone of [false, true]) {
+        const page = await fixture(defaults, '/home', 420, '', standalone);
+        assert(!page.state.collectDiagnostics && !page.doc.querySelector('[data-x-ad-diagnostic-button]'), 'Default diagnostics enabled');
+        page.run.removeAds(page.doc, defaults);
+        assert(!page.doc.querySelector('script').textContent.includes('collectLayoutDiagnostics'), 'Disabled diagnostics code injected');
+        page.frame.remove();
+    }
+    {
+        const page = await fixture({ ...disabled, enable_layout_diagnostics: true }, '/home', 420);
+        assert(page.doc.querySelector('[data-x-ad-diagnostic-button]'), 'Browser diagnostics button missing');
+        assert(page.timers.length === 1 && !page.doc.getElementById('x-ad-blocker-style'), 'Diagnostics-only mode enabled cleanup');
+        assert(page.state.collectDiagnostics().standalone.navigator === false, 'Browser mode reported incorrectly');
+        page.run.removeAds(page.doc, { ...disabled, enable_layout_diagnostics: true });
+        assert(page.doc.querySelector('script').textContent.includes('collectLayoutDiagnostics'), 'Enabled diagnostics not serialized');
         page.frame.remove();
     }
     // Execute the complete response entrypoint, including argument parsing and $done.

@@ -4,7 +4,7 @@ desc: |-
     - 页面组件分别开关：新推文提示、顶部导航、快捷发帖、聊天、趋势、导航入口、浮动按钮和详情页组件
     - 阅读与操作：阅读列宽度、居中、详情页 Esc 返回
     - 高级设置：移除 CSP，允许网页执行注入代码
-    - 所有功能默认开启，可在覆写详情 → 参数中调整；修改后请刷新已打开的 X 页面
+    - 页面布局诊断默认关闭，其余功能默认开启；可在覆写详情 → 参数中调整，修改后请刷新已打开的 X 页面
     - 参数功能需要 Stash iOS/tvOS 3.7+ 或 macOS 4.4+（Beta）
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/x.png
@@ -118,6 +118,11 @@ arguments:
         title: 阅读与操作 · 详情页 Esc 返回
         description: 在推文详情按 Esc 返回上一页，输入框内不触发
         default: true
+    enable_layout_diagnostics:
+        type: switch
+        title: 高级设置 · 页面布局诊断
+        description: 在普通浏览器和主屏幕窗口显示「复制诊断信息」按钮；仅点击时采集布局，不包含正文、Cookie 或输入内容，不自动上传；关闭后不注入诊断代码
+        default: false
     csp_policy:
         type: select
         title: 高级设置 · CSP 策略
@@ -148,7 +153,7 @@ http:
             max-size: 2097152
             require-body: true
             timeout: 10
-            argument: '{"block_ads_and_recommendations":${args.block_ads_and_recommendations|json},"hide_top_nav":${args.hide_top_nav|json},"hide_home_composer":${args.hide_home_composer|json},"hide_chat_drawer":${args.hide_chat_drawer|json},"hide_sidebar_trends":${args.hide_sidebar_trends|json},"hide_nav_grok":${args.hide_nav_grok|json},"hide_nav_premium":${args.hide_nav_premium|json},"hide_nav_verified_orgs":${args.hide_nav_verified_orgs|json},"hide_nav_jobs":${args.hide_nav_jobs|json},"hide_account_menu":${args.hide_account_menu|json},"hide_grok_drawer":${args.hide_grok_drawer|json},"hide_floating_post_button":${args.hide_floating_post_button|json},"hide_reply_permissions":${args.hide_reply_permissions|json},"hide_grok_actions":${args.hide_grok_actions|json},"hide_translate_button":${args.hide_translate_button|json},"hide_automated_content":${args.hide_automated_content|json},"hide_probable_spam_prompt":${args.hide_probable_spam_prompt|json},"enable_custom_layout":${args.enable_custom_layout|json},"home_width_vw":${args.home_width_vw|json},"page_width_vw":${args.page_width_vw|json},"center_primary_column":${args.center_primary_column|json},"enable_escape_back":${args.enable_escape_back|json}}'
+            argument: '{"block_ads_and_recommendations":${args.block_ads_and_recommendations|json},"hide_top_nav":${args.hide_top_nav|json},"hide_home_composer":${args.hide_home_composer|json},"hide_chat_drawer":${args.hide_chat_drawer|json},"hide_sidebar_trends":${args.hide_sidebar_trends|json},"hide_nav_grok":${args.hide_nav_grok|json},"hide_nav_premium":${args.hide_nav_premium|json},"hide_nav_verified_orgs":${args.hide_nav_verified_orgs|json},"hide_nav_jobs":${args.hide_nav_jobs|json},"hide_account_menu":${args.hide_account_menu|json},"hide_grok_drawer":${args.hide_grok_drawer|json},"hide_floating_post_button":${args.hide_floating_post_button|json},"hide_reply_permissions":${args.hide_reply_permissions|json},"hide_grok_actions":${args.hide_grok_actions|json},"hide_translate_button":${args.hide_translate_button|json},"hide_automated_content":${args.hide_automated_content|json},"hide_probable_spam_prompt":${args.hide_probable_spam_prompt|json},"enable_custom_layout":${args.enable_custom_layout|json},"home_width_vw":${args.home_width_vw|json},"page_width_vw":${args.page_width_vw|json},"center_primary_column":${args.center_primary_column|json},"enable_escape_back":${args.enable_escape_back|json},"enable_layout_diagnostics":${args.enable_layout_diagnostics|json}}'
             type: response
             debug: false
 script-providers:

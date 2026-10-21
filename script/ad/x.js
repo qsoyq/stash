@@ -519,6 +519,7 @@ function getXOptions() {
         page_width_vw: 55,
         center_primary_column: true,
         enable_escape_back: true,
+        enable_layout_diagnostics: false,
     }
     if (typeof $argument === 'undefined' || !$argument) return options
     let supplied
@@ -685,12 +686,18 @@ function removeAdsCode(options) {
         }, true)
     }
 
-    // TEMPORARY: home-screen layout diagnostics. Remove after the standalone header issue is fixed.
-    const diagnosticAttribute = 'data-x-ad-diagnostic'
-
-    function isStandaloneMode() {
-        return window.navigator?.standalone === true || window.matchMedia?.('(display-mode: standalone)')?.matches === true
+    const needsUpdates = Object.keys(options).some(key => key !== 'enable_escape_back' && key !== 'enable_layout_diagnostics' && typeof options[key] === 'boolean' && options[key])
+    if (needsUpdates) {
+        document.head.appendChild(style)
+        updatePage()
+        window.addEventListener('resize', updatePage)
+        window.setInterval(updatePage, 500)
     }
+}
+
+function layoutDiagnosticsCode(options) {
+    const hiddenClass = 'x-ad-hidden'
+    const diagnosticAttribute = 'data-x-ad-diagnostic'
 
     function roundRect(rect) {
         return {
@@ -862,26 +869,20 @@ function removeAdsCode(options) {
         document.body.appendChild(button)
     }
 
-    if (isStandaloneMode()) {
-        window.__xAdCollectLayoutDiagnostics = collectLayoutDiagnostics
-        ensureDiagnosticButton()
-        window.setInterval(ensureDiagnosticButton, 1000)
-    }
-
-    const needsUpdates = Object.keys(options).some(key => key !== 'enable_escape_back' && typeof options[key] === 'boolean' && options[key])
-    if (needsUpdates) {
-        document.head.appendChild(style)
-        updatePage()
-        window.addEventListener('resize', updatePage)
-        window.setInterval(updatePage, 500)
-    }
+    window.__xAdCollectLayoutDiagnostics = collectLayoutDiagnostics
+    ensureDiagnosticButton()
+    window.setInterval(ensureDiagnosticButton, 1000)
 }
 
 function removeAds(document, options) {
     const enabled = Object.values(options).some(value => value === true)
     if (!enabled) return false
     const script = document.createElement('script')
-    script.textContent = `(${removeAdsCode.toString()})(${JSON.stringify(options).replace(/</g, '\\u003c')});`
+    const settings = JSON.stringify(options).replace(/</g, '\\u003c')
+    script.textContent = `(${removeAdsCode.toString()})(${settings});`
+    if (options.enable_layout_diagnostics) {
+        script.textContent += `\n(${layoutDiagnosticsCode.toString()})(${settings});`
+    }
     const container = document.body || document.documentElement
     container.appendChild(script)
     return true
