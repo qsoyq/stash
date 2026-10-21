@@ -153,5 +153,5 @@ http:
             debug: false
 script-providers:
     x:
-        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/x.js
+        url: https://raw.githubusercontent.com/qsoyq/stash/add-x-stoverride-parameters/script/ad/x.js
         interval: 86400
