@@ -495,226 +495,293 @@ function parseDocument(body) {
     return domParser.parseFromString(body, 'text/html');
 }
 
-function removeAdsCode() {
-    // 隐藏右侧栏，但保留 X 的桌面阅读列宽；媒体卡片会随主列宽度自适应。
-    function injectStyle() {
-
-        if (document.getElementById('x-ad-blocker-style')) return
-        let style = document.createElement('style')
-        style.id = 'x-ad-blocker-style'
-        style.textContent = `
-            div[data-testid='sidebarColumn'] { display: none !important; }
-            div[data-testid='primaryColumn'] {
-                width: 100% !important;
-                max-width: 100% !important;
-                flex: 0 1 100% !important;
-            }
-            @media (min-width: 1000px) {
-                div[data-testid='primaryColumn'] {
-                    width: 55vw !important;
-                    max-width: 55vw !important;
-                    flex: 0 1 55vw !important;
-                }
-                html.x-ad-home-layout div[data-testid='primaryColumn'] {
-                    width: 65vw !important;
-                    max-width: 65vw !important;
-                    flex-basis: 65vw !important;
-                }
-            }
-        `
-        document.head.appendChild(style)
+function getXOptions() {
+    const options = {
+        block_ads_and_recommendations: true,
+        hide_top_nav: true,
+        hide_home_composer: true,
+        hide_chat_drawer: true,
+        hide_sidebar_trends: true,
+        hide_nav_grok: true,
+        hide_bottom_grok: true,
+        hide_nav_premium: true,
+        hide_nav_verified_orgs: true,
+        hide_nav_jobs: true,
+        hide_account_menu: true,
+        hide_grok_drawer: true,
+        hide_floating_post_button: true,
+        hide_reply_permissions: true,
+        hide_grok_actions: true,
+        hide_translate_button: true,
+        hide_automated_content: true,
+        hide_probable_spam_prompt: true,
+        enable_custom_layout: true,
+        home_width_vw: 65,
+        page_width_vw: 55,
+        center_primary_column: true,
+        enable_escape_back: true,
+        enable_layout_diagnostics: false,
     }
-    injectStyle()
-
-    function applyPageLayout() {
-        let isHome = new URL(window.location.href).pathname.startsWith('/home')
-        document.documentElement.classList.toggle('x-ad-home-layout', isHome)
+    if (typeof $argument === 'undefined' || !$argument) return options
+    let supplied
+    try {
+        supplied = JSON.parse($argument)
+    } catch (_) {
+        console.log('[x-ad] 参数不是有效 JSON，使用默认设置')
+        return options
     }
-    applyPageLayout()
-
-    function isStatusPage() {
-        return /^\/[^/]+\/status\/\d+(?:\/|$)/.test(new URL(window.location.href).pathname)
-    }
-
-    // X 的返回按钮最终也是通过浏览器 history 回退路由；直接调用它可避免模拟点击。
-    function registerStatusEscapeBack() {
-        if (window.__xAdEscapeBackRegistered) return
-        window.__xAdEscapeBackRegistered = true
-
-        document.addEventListener('keydown', event => {
-            if (event.key !== 'Escape' || event.isComposing || event.repeat || !isStatusPage()) return
-
-            let target = event.target
-            if (target instanceof Element && target.closest('input, textarea, select, [contenteditable="true"]')) return
-
-            event.preventDefault()
-            event.stopPropagation()
-            console.log('[x-ad] Escape: history.back()')
-            window.history.back()
-        }, true)
-    }
-    registerStatusEscapeBack()
-
-    // X 的主内容父容器不是完整视口，CSS 自动外边距无法让阅读列视觉居中。
-    // 以实际渲染位置计算偏移，避免依赖易变的 X 容器层级。
-    function centerPrimaryColumn() {
-        let column = document.querySelector("div[data-testid='primaryColumn']")
-        if (!column) return
-
-        if (window.innerWidth < 1000) {
-            column.style.removeProperty('transform')
-            delete column.dataset.xCenterLayout
-            return
+    if (!supplied || typeof supplied !== 'object' || Array.isArray(supplied)) return options
+    for (const key of Object.keys(options)) {
+        if (typeof options[key] === 'boolean' && typeof supplied[key] === 'boolean') {
+            options[key] = supplied[key]
+        } else if (typeof options[key] === 'number' && Number.isInteger(supplied[key]) && supplied[key] >= 30 && supplied[key] <= 100) {
+            options[key] = supplied[key]
         }
+    }
+    return options
+}
 
-        let layoutKey = `${window.innerWidth}:${column.offsetWidth}`
-        if (column.dataset.xCenterLayout === layoutKey) return
+function removeAdsCode(options) {
+    const hiddenClass = 'x-ad-hidden'
+    const sidebarClass = 'x-ad-empty-sidebar'
+    const style = document.createElement('style')
+    style.id = 'x-ad-blocker-style'
+    style.textContent = `
+        .${hiddenClass}, .${sidebarClass} { display: none !important; }
+        ${options.enable_custom_layout ? `
+        @media (min-width: 1000px) {
+            div[data-testid='primaryColumn'] {
+                width: ${options.page_width_vw}vw !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                flex: 0 1 ${options.page_width_vw}vw !important;
+            }
+            html.x-ad-home-layout div[data-testid='primaryColumn'] {
+                width: ${options.home_width_vw}vw !important;
+                flex-basis: ${options.home_width_vw}vw !important;
+            }
+        }` : ''}
+    `
 
-        column.style.removeProperty('transform')
-        let rect = column.getBoundingClientRect()
-        let offset = (window.innerWidth - rect.width) / 2 - rect.left
-        column.style.setProperty('transform', `translateX(${offset}px)`, 'important')
-        column.dataset.xCenterLayout = layoutKey
+    const componentRules = [
+        ['hide_chat_drawer', "[data-testid='chat-drawer-main']"],
+        ['hide_nav_grok', "header a[aria-label='Grok'], header a[href='/i/grok']"],
+        ['hide_nav_premium', "header a[aria-label='Premium'], header a[href='/i/premium_sign_up']"],
+        ['hide_nav_verified_orgs', "header a[aria-label='Verified Orgs'], header a[href='/i/verified-orgs-signup']"],
+        ['hide_nav_jobs', "header a[aria-label='Jobs'], header a[href='/jobs']"],
+        ['hide_account_menu', "header button[aria-label='Account menu'], header [data-testid='SideNav_AccountSwitcher_Button']"],
+        ['hide_floating_post_button', "[data-testid='FloatingActionButtonBase']"],
+        ['hide_grok_drawer', "[data-testid='GrokDrawer']"],
+        ['hide_grok_actions', "button[aria-label='Grok actions']"],
+        ['hide_translate_button', "button[aria-label='Translate post']"],
+        ['hide_reply_permissions', "[data-testid='tweetReplyRestrictions'], [data-testid='reply-restrictions']"],
+        ['hide_sidebar_trends', "[data-testid='sidebarColumn'] [data-testid='trend'], [data-testid='sidebarColumn'] [data-testid='trends']"],
+        ['block_ads_and_recommendations', "[data-testid='sidebarColumn'] [data-testid='premium-signup'], [data-testid='sidebarColumn'] [data-testid='super-upsell-UpsellCardRenderProperties']"],
+    ].filter(([key]) => options[key])
+
+    function hide(element) {
+        if (element) element.classList.add(hiddenClass)
     }
 
-    window.addEventListener('resize', centerPrimaryColumn)
+    function hasVisibleContent(element) {
+        if (element.classList.contains(hiddenClass)) return false
+        const computed = window.getComputedStyle(element)
+        if (computed.display === 'none' || computed.visibility === 'hidden') return false
+        // Inspect leaves rather than the aggregate text of wrappers containing hidden cards.
+        const text = Array.from(element.childNodes).some(node => node.nodeType === 3 && node.textContent.trim())
+        if (text || element.matches('input, button, img, svg, video, canvas, iframe')) return true
+        return Array.from(element.children).some(hasVisibleContent)
+    }
 
-    function removeElements() {
-        // 时间线元素不容易定位, 增加页面 url 进行判断
-        let url = new URL(window.location.href)
-        let searchHeaderQueries = [
-            "div[data-testid='TopNavBar']",
-            "header[role='banner']",
-        ]
-        let preserveMobileSearchHeader = window.innerWidth < 1000 && url.pathname.startsWith('/explore')
+    function updateSidebar() {
+        const sidebar = document.querySelector("[data-testid='sidebarColumn']")
+        if (!sidebar) return null
+        sidebar.classList.remove(sidebarClass)
+        // Only collapse an empty sidebar when this execution actually hides sidebar components.
+        if ((options.block_ads_and_recommendations || options.hide_sidebar_trends) && !hasVisibleContent(sidebar)) {
+            sidebar.classList.add(sidebarClass)
+        }
+        return sidebar
+    }
 
-        // 移动端底部搜索会进入 /explore，顶部搜索框位于这些容器内。
-        // 站内跳转前若曾隐藏过它们，此处还需恢复内联样式。
-        if (preserveMobileSearchHeader) {
-            searchHeaderQueries.forEach(query => {
-                document.querySelectorAll(query).forEach(tag => tag.style.removeProperty('display'))
+    function centerPrimaryColumn(sidebar) {
+        const column = document.querySelector("[data-testid='primaryColumn']")
+        if (!column || !options.center_primary_column) return
+        column.style.removeProperty('transform')
+        if (window.innerWidth < 1000) return
+        if (sidebar && window.getComputedStyle(sidebar).display !== 'none') return
+        const rect = column.getBoundingClientRect()
+        const offset = (window.innerWidth - rect.width) / 2 - rect.left
+        column.style.setProperty('transform', `translateX(${offset}px)`, 'important')
+    }
+
+    function updatePage() {
+        const path = new URL(window.location.href).pathname
+        const mobile = window.innerWidth < 1000
+        if (options.enable_custom_layout) {
+            document.documentElement.classList.toggle('x-ad-home-layout', path.startsWith('/home'))
+        }
+        if (options.hide_top_nav) {
+            const preserveSearch = mobile && path.startsWith('/explore')
+            document.querySelectorAll("[data-testid='TopNavBar']").forEach(element => {
+                element.classList.toggle(hiddenClass, !preserveSearch)
+            })
+            // Mobile X renders the visible TopNavBar in a fixed layer and keeps an empty
+            // banner in document flow to reserve its height. Collapse only that spacer.
+            document.querySelectorAll("header[role='banner']").forEach(header => {
+                // Re-evaluate the site's contents without our previous hiding state.
+                header.classList.remove(hiddenClass)
+                const hasNavigation = header.querySelector("nav, a, button, input, [data-testid='TopNavBar']") !== null
+                const collapse = mobile && !preserveSearch && !hasNavigation && !hasVisibleContent(header)
+                header.classList.toggle(hiddenClass, collapse)
+            })
+        }
+        if (options.hide_home_composer && path === '/home') {
+            document.querySelectorAll("[data-testid='tweetTextarea_0']").forEach(composer => {
+                const container = composer.closest("[data-testid='cellInnerDiv']") || composer.closest("[data-testid='tweetComposer']")
+                    || Array.from(document.querySelectorAll("div[role='progressbar'] + div")).find(element => element.contains(composer))
+                hide(container)
+            })
+        }
+        componentRules.forEach(([, selector]) => document.querySelectorAll(selector).forEach(hide))
+        if (options.hide_bottom_grok && mobile) {
+            document.querySelectorAll("nav a[href='/i/grok'], [data-testid='BottomBar'] a[href='/i/grok']").forEach(link => {
+                if (!link.closest('header, article')) hide(link)
             })
         }
 
-        if (url.pathname.includes("/home")) {
-            // 使用稳定的测试标识而非会随语言变化的时间线 aria-label。
-            let composer = document.querySelector("div[data-testid='tweetTextarea_0']")
-            let composerCell = composer && composer.closest("div[data-testid='cellInnerDiv']")
-            // 部分 X 页面将快捷发帖块置于时间线首个进度节点之后，而非 cellInnerDiv 内。
-            if (!composerCell) composerCell = document.querySelector("div[role='progressbar'] + div")
-            if (composerCell && composerCell.style.display !== 'none') {
-                composerCell.style.display = 'none'
-                console.log('hide home timeline composer')
-            }
-
+        if (options.block_ads_and_recommendations) {
+            document.querySelectorAll("[data-testid='sidebarColumn'] a[href^='/i/premium_sign_up']").forEach(link => {
+                hide(link.closest('aside') || link.closest('section') || link)
+            })
+            document.querySelectorAll("[data-testid='sidebarColumn'] aside").forEach(card => {
+                if (card.querySelector("[data-testid='UserCell']")) hide(card)
+            })
         }
-
-        const queryList = [
-            // 顶部 banner
-            ...searchHeaderQueries,
-
-            // 浮窗
-            "div[data-testid='chat-drawer-main']", // 右侧底部聊天组件
-
-            // 左侧导航栏
-            "a[aria-label='Grok']",
-            "a[aria-label='Premium']",
-            "a[aria-label='Verified Orgs']",
-            "a[aria-label='Jobs']",
-            "button[aria-label='Account menu']",
-
-            // 页面浮标
-            "div[data-testid='FloatingActionButtonBase']",  // mobile 发帖悬浮按钮
-            "div[data-testid='GrokDrawer']", // Grok悬浮按钮
-
-            // 详情
-            "div[aria-live='polite']", // Who can reply
-            "button[aria-label='Grok actions']", // Grok actions
-
-        ]
-        queryList.forEach(query => {
-            if (preserveMobileSearchHeader && searchHeaderQueries.includes(query)) return
-
-            let tag = document.querySelector(query)
-            // 当 css 可见性不为 none 时, 修改为 none
-            // @ts-ignore
-            if (tag && tag.style.display !== 'none') {
-                // @ts-ignore
-                tag.style.display = 'none'
-                // tag.remove()
-                console.log(`modify display to none ${query}`)
-            }
-        })
-
-        // "Automated"
-        document.querySelectorAll('span').forEach(span => {
-            if (span.textContent === "Automated") {
-                // @ts-ignore
-                span.parentNode.parentNode.parentNode.parentNode.style.display = 'none'
-                console.log(span);
-            }
-        });
-
-        //
-
-        // 文本内容匹配移除
-        document.querySelectorAll('span').forEach(span => {
-            let blockedWords = ["Show probable spam"]
-            for (const words of blockedWords) {
-                if (span.textContent === words) {
-                    span.style.display = 'none'
-                    console.log(span);
-                    break
+        if (options.hide_sidebar_trends) {
+            document.querySelectorAll("[data-testid='sidebarColumn'] [data-testid='trend']").forEach(trend => {
+                // A trend's enclosing section is the trends component, including its heading.
+                hide(trend.closest('section') || trend)
+            })
+        }
+        if (options.hide_reply_permissions && /^\/[^/]+\/status\/\d+(?:\/|$)/.test(path)) {
+            // Never hide every aria-live region: unrelated status messages use the same attribute.
+            document.querySelectorAll('span').forEach(span => {
+                if (['Who can reply', '谁可以回复', '誰可以回覆'].includes(span.textContent.trim())) {
+                    hide(span.closest("[aria-live='polite']") || span)
                 }
-            }
-        });
-
-        // Translate post
-        let btn = document.querySelector('button[aria-label="Translate post"]')
-        if (btn) {
-            if (btn.parentElement) btn.parentElement.style.display = 'none'
+            })
         }
-
+        if (options.hide_automated_content || options.hide_probable_spam_prompt) {
+            document.querySelectorAll('span').forEach(span => {
+                if (options.hide_automated_content && span.textContent.trim() === 'Automated') {
+                    hide(span.closest("[data-testid='cellInnerDiv']") || span.closest('article'))
+                }
+                if (options.hide_probable_spam_prompt && span.textContent.trim() === 'Show probable spam') hide(span)
+            })
+        }
+        centerPrimaryColumn(updateSidebar())
     }
-    setInterval(() => {
-        removeElements()
-        applyPageLayout()
-        centerPrimaryColumn()
-    }, 500)
 
+    if (options.enable_escape_back) {
+        document.addEventListener('keydown', event => {
+            if (event.key !== 'Escape' || event.isComposing || event.repeat) return
+            if (!/^\/[^/]+\/status\/\d+(?:\/|$)/.test(new URL(window.location.href).pathname)) return
+            if (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return
+            event.preventDefault()
+            event.stopPropagation()
+            window.history.back()
+        }, true)
+    }
 
-    ///////////////////////////////////////////////////////////
-    document.addEventListener('DOMContentLoaded', (event) => {
-        console.log("removeAdsCode")
-        let url = new URL(window.location.href)
-        console.log(`path: ${url.pathname}`)
-    });
+    const needsUpdates = Object.keys(options).some(key => key !== 'enable_escape_back' && key !== 'enable_layout_diagnostics' && typeof options[key] === 'boolean' && options[key])
+    if (needsUpdates) {
+        document.head.appendChild(style)
+        updatePage()
+        window.addEventListener('resize', updatePage)
+        window.setInterval(updatePage, 500)
+    }
 }
 
+const LAYOUT_DIAGNOSTICS_URL = 'https://raw.githubusercontent.com/qsoyq/stash/main/script/browser/layout-diagnostics.js'
 
-function removeAds(document) {
-    let code = `
-    ${removeAdsCode.toString()};
-    removeAdsCode();
-    `
-    let script = document.createElement('script');
-    script.textContent = code
-    document['body'].appendChild(script);
-    echo("注入代码以移除广告")
+async function loadLayoutDiagnosticsSource() {
+    try {
+        const result = await get({ url: LAYOUT_DIAGNOSTICS_URL, timeout: 5 })
+        const status = result.response?.status ?? result.response?.statusCode
+        if (status >= 200 && status < 300 && typeof result.data === 'string' && result.data.includes('function startLayoutDiagnostics')) {
+            return result.data
+        }
+        echo(`[Warn] 页面布局诊断脚本下载失败：HTTP ${status}`)
+    } catch (error) {
+        echo(`[Warn] 页面布局诊断脚本下载失败：${error.error || error}`)
+    }
+    return null
 }
 
+function addDiagnosticFailureNotice(document, container) {
+    const notice = document.createElement('script')
+    notice.textContent = "(function(){var b=document.createElement('button');b.textContent='诊断工具加载失败（点击关闭）';b.style.cssText='position:fixed;right:12px;bottom:calc(env(safe-area-inset-bottom) + 76px);z-index:2147483647;background:#b33;color:white;padding:8px';b.onclick=function(){b.remove()};document.body.appendChild(b)})();"
+    container.appendChild(notice)
+}
+
+function removeAds(document, options, diagnosticSource = null) {
+    const enabled = Object.values(options).some(value => value === true)
+    if (!enabled) return false
+    const script = document.createElement('script')
+    const container = document.body || document.documentElement
+    const settings = JSON.stringify(options).replace(/</g, '\\u003c')
+    script.textContent = `(${removeAdsCode.toString()})(${settings});`
+    if (options.enable_layout_diagnostics && !diagnosticSource) {
+        addDiagnosticFailureNotice(document, container)
+    } else if (options.enable_layout_diagnostics) {
+        const diagnostic = document.createElement('script')
+        diagnostic.textContent = diagnosticSource.replace(/<\/script/gi, '<\\/script')
+        diagnostic.setAttribute('data-layout-config', JSON.stringify({
+            site: 'x',
+            hiddenClass: 'x-ad-hidden',
+            publicRoutes: ['/home', '/explore'],
+            targets: {
+                topNav: "[data-testid='TopNavBar']",
+                banner: "header[role='banner']",
+                primaryColumn: "[data-testid='primaryColumn']",
+                sidebarColumn: "[data-testid='sidebarColumn']",
+                bottomBar: "[data-testid='BottomBar']",
+                bottomGrok: "nav a[href='/i/grok']:not(header a), [data-testid='BottomBar'] a[href='/i/grok']",
+            },
+            settings: {
+                hide_top_nav: options.hide_top_nav,
+                hide_home_composer: options.hide_home_composer,
+                enable_custom_layout: options.enable_custom_layout,
+                center_primary_column: options.center_primary_column,
+            },
+        }))
+        container.appendChild(diagnostic)
+    }
+    container.appendChild(script)
+    return true
+}
 
 
 async function main() {
+    const options = getXOptions()
+    if (!Object.values(options).some(value => value === true)) {
+        $done({})
+        return
+    }
     switch (getScriptType()) {
         case "response":
             let url = (new URL($request.url))
             let body = getScriptResponseBody()
-            let ct = $response.headers['Content-Type']
-            if (ct && ct.includes("text/html") && body) {
+            let ct = Object.entries($response.headers || {}).find(([name]) => name.toLowerCase() === 'content-type')?.[1]
+            if (ct && ct.toLowerCase().includes("text/html") && body) {
                 echo(`url: ${url}, path: ${url.pathname}`)
                 const document = new DOMParser().parseFromString(body, 'text/html')
-                removeAds(document)
+                const diagnosticSource = options.enable_layout_diagnostics ? await loadLayoutDiagnosticsSource() : null
+                if (!removeAds(document, options, diagnosticSource)) {
+                    $done({})
+                    break
+                }
                 $done({ body: document.documentElement.outerHTML })
                 break
             }

@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>X override parameter checks</title>
+<pre id="result">Running…</pre>
+<script type="module">
+// Serve the repository root over HTTP, then open /tests/x-options.html.
+const output = document.querySelector('#result');
+try {
+    const response = await fetch('../script/ad/x.js');
+    if (!response.ok) throw new Error(`Script fetch failed: ${response.status}`);
+    const source = await response.text();
+    const start = source.indexOf('function getXOptions()');
+    const end = source.indexOf('\nasync function main()', start);
+    if (start < 0 || end < 0) throw new Error('Production functions not found');
+    const functions = source.slice(start, end);
+    const diagnosticSource = await (await fetch('../script/browser/layout-diagnostics.js')).text();
+    const diagnosticFunction = diagnosticSource.slice(0, diagnosticSource.indexOf('// Classic script entrypoint:'));
+    const parse = argument => new Function('$argument', `${functions}; return getXOptions();`)(argument);
+    const defaults = parse(undefined);
+    const disabled = Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, typeof value === 'boolean' ? false : value]));
+    let passed = 0;
+    function assert(condition, message) {
+        if (!condition) throw new Error(message);
+        passed++;
+    }
+    for (const argument of ['', '{', 'null', '[]', 'false', '123']) {
+        assert(JSON.stringify(parse(argument)) === JSON.stringify(defaults), `Bad fallback: ${argument}`);
+    }
+    assert(Object.values(parse(JSON.stringify(disabled))).filter(value => value === true).length === 0, 'False values lost');
+    assert(parse('{"home_width_vw":0,"page_width_vw":"70","hide_top_nav":0}').home_width_vw === 65, 'Invalid width accepted');
+    assert(parse('{"home_width_vw":30,"page_width_vw":100}').page_width_vw === 100, 'Valid boundaries rejected');
+    assert(parse('{"home_width_vw":101,"page_width_vw":55.5}').page_width_vw === 55, 'Invalid number accepted');
+
+    const targets = {
+        block_ads_and_recommendations: 'premium', hide_top_nav: 'top', hide_home_composer: 'composer',
+        hide_chat_drawer: 'chat', hide_sidebar_trends: 'trends', hide_nav_grok: 'nav-grok',
+        hide_nav_premium: 'nav-premium', hide_nav_verified_orgs: 'nav-orgs', hide_nav_jobs: 'nav-jobs',
+        hide_account_menu: 'account', hide_grok_drawer: 'grok', hide_floating_post_button: 'post',
+        hide_reply_permissions: 'reply', hide_grok_actions: 'actions', hide_translate_button: 'translate',
+        hide_automated_content: 'automated', hide_probable_spam_prompt: 'spam',
+    };
+    async function fixture(options, path = '/home', width = 1440, extraSidebar = '', standalone = false, mobileHeader = false) {
+        const frame = document.createElement('iframe');
+        frame.style.width = '1440px';
+        frame.srcdoc = `<!doctype html><html><head></head><body>
+            ${mobileHeader ? '<div style="position:fixed;top:0;left:0;width:420px;height:107px"><div data-testid="TopNavBar" id="top" style="height:107px">Top</div></div><header role="banner" id="mobile-spacer" style="height:106px"><div style="height:106px;opacity:0"></div></header><div id="refresh-indicator" style="position:absolute;top:46px;height:60px">Refresh</div>' : ''}
+            <header role="banner" id="desktop-banner">${mobileHeader ? '' : '<div data-testid="TopNavBar" id="top">Top</div>'}<nav>
+                <a aria-label="Home" id="home">Home</a><a aria-label="Grok" id="nav-grok">Grok</a>
+                <a aria-label="Premium" id="nav-premium">Premium</a><a aria-label="Verified Orgs" id="nav-orgs">Orgs</a>
+                <a aria-label="Jobs" id="nav-jobs">Jobs</a><button aria-label="Account menu" id="account">Account</button>
+            </nav></header>
+            <div style="display:flex"><div data-testid="primaryColumn" style="width:600px">
+                <div data-testid="cellInnerDiv" id="composer"><div data-testid="tweetTextarea_0">Compose</div></div>
+                <div data-testid="chat-drawer-main" id="chat">Chat</div>
+                <div data-testid="GrokDrawer" id="grok">Grok</div><div data-testid="FloatingActionButtonBase" id="post">Post</div>
+                <div aria-live="polite" id="reply"><span>Who can reply</span></div>
+                <div aria-live="polite" id="unrelated-live">Saved</div>
+                <button aria-label="Grok actions" id="actions">Actions</button>
+                <div id="translate-container"><button aria-label="Translate post" id="translate">Translate</button><button id="other-action">Other</button></div>
+                <div data-testid="cellInnerDiv" id="automated"><article><span>Automated</span></article></div>
+                <span id="spam">Show probable spam</span>
+            </div><div data-testid="sidebarColumn">
+                <aside data-testid="premium-signup" id="premium"><a href="/i/premium_sign_up">Subscribe</a></aside>
+                <section id="trends"><h2>Trends</h2><div data-testid="trend">Trend</div></section>${extraSidebar}
+            </div></div><input id="input"><div id="editable" contenteditable></div></body></html>`;
+        const loaded = new Promise(resolve => frame.onload = resolve);
+        document.body.appendChild(frame);
+        await loaded;
+        const doc = frame.contentDocument;
+        const timers = [];
+        const state = { back: 0, width, path };
+        const browser = {
+            navigator: { standalone },
+            matchMedia: query => ({ matches: standalone && query === '(display-mode: standalone)' }),
+            get location() { return { href: `https://x.com${state.path}` }; },
+            get innerWidth() { return state.width; },
+            getComputedStyle: element => frame.contentWindow.getComputedStyle(element),
+            addEventListener() {}, setInterval: fn => timers.push(fn),
+            history: { back: () => state.back++ },
+        };
+        const run = new Function('document', 'window', 'Element', `${functions}
+${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics };`)(doc, browser, frame.contentWindow.Element);
+        run.removeAdsCode(options);
+        if (options.enable_layout_diagnostics) run.startLayoutDiagnostics({
+            site: 'x', hiddenClass: 'x-ad-hidden', publicRoutes: ['/home'],
+            targets: { topNav: "[data-testid='TopNavBar']" }, settings: options,
+        });
+        state.collectDiagnostics = browser.__stashLayoutDiagnostics?.collect;
+        const visible = id => {
+            const element = doc.getElementById(id);
+            for (let node = element; node; node = node.parentElement) {
+                if (frame.contentWindow.getComputedStyle(node).display === 'none') return false;
+            }
+            return true;
+        };
+        return { frame, doc, timers, state, visible, run };
+    }
+    for (const [key, target] of Object.entries(targets)) {
+        const page = await fixture({ ...disabled, [key]: true }, key === 'hide_reply_permissions' ? '/u/status/123' : '/home');
+        assert(!page.visible(target), `${key} did not hide ${target}`);
+        for (const other of Object.values(targets).filter(id => id !== target)) {
+            assert(page.visible(other), `${key} unexpectedly hid ${other}`);
+        }
+        assert(page.visible('home') && page.visible('other-action') && page.visible('unrelated-live'), `${key} hid unrelated controls`);
+        page.frame.remove();
+    }
+    {
+        const page = await fixture(defaults, '/u/status/123');
+        assert(!page.visible('premium') && !page.visible('trends'), 'Default sidebar cleanup failed');
+        assert(page.doc.querySelector('[data-testid="sidebarColumn"]').classList.contains('x-ad-empty-sidebar'), 'Empty sidebar not collapsed');
+        assert(page.doc.querySelector('[data-testid="primaryColumn"]').style.transform.includes('translateX'), 'Centering missing');
+        assert(page.visible('home') && page.visible('unrelated-live') && page.visible('other-action'), 'Default hides unrelated content');
+        page.doc.body.dispatchEvent(new page.frame.contentWindow.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        assert(page.state.back === 1, 'Escape did not navigate back');
+        for (const id of ['input', 'editable']) {
+            page.doc.getElementById(id).dispatchEvent(new page.frame.contentWindow.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        }
+        assert(page.state.back === 1, 'Escape intercepted editing');
+        for (const properties of [{ repeat: true }, { isComposing: true }, { key: 'Enter' }]) {
+            page.doc.body.dispatchEvent(new page.frame.contentWindow.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, ...properties }));
+        }
+        assert(page.state.back === 1, 'Escape ignored repeat/composition/key guards');
+        page.state.path = '/home';
+        page.timers.forEach(fn => fn());
+        assert(page.doc.documentElement.classList.contains('x-ad-home-layout'), 'SPA home layout missing');
+        page.state.width = 500;
+        page.state.path = '/explore';
+        page.timers.forEach(fn => fn());
+        assert(page.visible('top'), 'Mobile search header hidden');
+        assert(!page.doc.querySelector('[data-testid="primaryColumn"]').style.transform, 'Mobile transform not cleared');
+        page.frame.remove();
+    }
+    {
+        const page = await fixture(defaults, '/home', 1440, '<div id="sidebar-extra">Other content</div>');
+        assert(page.visible('sidebar-extra'), 'Other sidebar content hidden');
+        assert(!page.doc.querySelector('[data-testid="primaryColumn"]').style.transform, 'Visible sidebar overlaps centered column');
+        const recommendation = page.doc.createElement('aside');
+        recommendation.innerHTML = '<h2>Who to follow</h2><div data-testid="UserCell">Suggested user</div>';
+        page.doc.querySelector('[data-testid="sidebarColumn"]').appendChild(recommendation);
+        page.timers.forEach(fn => fn());
+        assert(recommendation.classList.contains('x-ad-hidden'), 'Dynamic sidebar recommendation not hidden');
+        page.frame.remove();
+    }
+    {
+        const page = await fixture(disabled);
+        assert(page.timers.length === 0 && !page.doc.getElementById('x-ad-blocker-style'), 'Disabled features installed updates');
+        assert(page.run.removeAds(page.doc, disabled) === false && !page.doc.querySelector('script'), 'Disabled features injected script');
+        page.doc.body.dispatchEvent(new page.frame.contentWindow.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        assert(page.state.back === 0, 'Disabled Escape navigated');
+        for (const target of Object.values(targets)) assert(page.visible(target), `Disabled features hid ${target}`);
+        page.frame.remove();
+    }
+    {
+        const page = await fixture({ ...disabled, enable_escape_back: true }, '/u/status/123');
+        assert(page.timers.length === 0, 'Escape-only mode started cleanup timer');
+        page.doc.body.dispatchEvent(new page.frame.contentWindow.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        assert(page.state.back === 1, 'Escape-only mode failed');
+        page.frame.remove();
+    }
+    {
+        const page = await fixture({ ...disabled, enable_custom_layout: true, home_width_vw: 70, page_width_vw: 45 });
+        const css = page.doc.getElementById('x-ad-blocker-style').textContent;
+        assert(css.includes('70vw') && css.includes('45vw'), 'Custom widths lost');
+        assert(!page.doc.querySelector('[data-testid="primaryColumn"]').style.transform, 'Width control enabled centering');
+        page.frame.remove();
+    }
+    {
+        const page = await fixture({ ...disabled, hide_home_composer: true });
+        page.doc.getElementById('composer').remove();
+        const wrapper = page.doc.createElement('div');
+        wrapper.innerHTML = '<div role="progressbar"></div><div id="alternate-composer"><div data-testid="tweetTextarea_0">Compose</div></div><div id="regular-content">Keep</div>';
+        page.doc.body.appendChild(wrapper);
+        page.timers.forEach(fn => fn());
+        assert(!page.visible('alternate-composer') && page.visible('regular-content'), 'Alternate composer detection hid unrelated content');
+        page.frame.remove();
+    }
+    {
+        const page = await fixture({ ...disabled, hide_top_nav: true }, '/home', 420, '', true, true);
+        assert(!page.visible('top') && !page.visible('mobile-spacer'), 'Mobile header spacer remained visible');
+        assert(page.visible('desktop-banner') && page.visible('home') && page.visible('refresh-indicator'), 'Mobile header fix hid navigation or refresh content');
+        page.state.path = '/explore';
+        page.timers.forEach(fn => fn());
+        assert(page.visible('top') && page.visible('mobile-spacer'), 'Mobile search header was not restored');
+        page.state.path = '/home';
+        page.state.width = 1440;
+        page.timers.forEach(fn => fn());
+        assert(page.visible('mobile-spacer') && page.visible('desktop-banner'), 'Desktop banner was collapsed');
+        page.state.width = 420;
+        page.timers.forEach(fn => fn());
+        page.doc.getElementById('mobile-spacer').append('New visible banner content');
+        page.timers.forEach(fn => fn());
+        assert(page.visible('mobile-spacer'), 'Previously empty banner remained hidden after content appeared');
+        page.frame.remove();
+    }
+    {
+        const page = await fixture({ ...disabled, hide_top_nav: false }, '/home', 420, '', true, true);
+        assert(page.visible('top') && page.visible('mobile-spacer'), 'Disabled top navigation option collapsed header');
+        page.frame.remove();
+    }
+    {
+        const page = await fixture({ ...defaults, enable_layout_diagnostics: true }, '/home', 500, '', true);
+        const button = page.doc.querySelector('[data-stash-layout-diagnostic-button]');
+        assert(button, 'Standalone diagnostic button missing');
+        const report = JSON.stringify(page.state.collectDiagnostics());
+        assert(report.includes('"diagnosticVersion":2') && report.includes('"TopNavBar"'), 'Diagnostic layout data missing');
+        assert(report.includes('"route":"/home"') && !report.includes('Compose') && !report.includes('Suggested user'), 'Diagnostic report exposed page text');
+        page.frame.remove();
+    }
+    {
+        const page = await fixture({ ...defaults, enable_layout_diagnostics: true }, '/u/status/123', 500, '', true);
+        assert(page.state.collectDiagnostics().route === '[other route]', 'Diagnostic report exposed non-home route');
+        page.frame.remove();
+    }
+    {
+        const page = await fixture(defaults, '/home', 500);
+        assert(!page.doc.querySelector('[data-stash-layout-diagnostic-button]'), 'Diagnostic button shown outside standalone mode');
+        page.frame.remove();
+    }
+    for (const standalone of [false, true]) {
+        const page = await fixture(defaults, '/home', 420, '', standalone);
+        assert(!page.state.collectDiagnostics && !page.doc.querySelector('[data-stash-layout-diagnostic-button]'), 'Default diagnostics enabled');
+        page.run.removeAds(page.doc, defaults);
+        assert(!page.doc.querySelector('script').textContent.includes('collectLayoutDiagnostics'), 'Disabled diagnostics code injected');
+        page.frame.remove();
+    }
+    {
+        const page = await fixture({ ...disabled, enable_layout_diagnostics: true }, '/home', 420);
+        assert(page.doc.querySelector('[data-stash-layout-diagnostic-button]'), 'Browser diagnostics button missing');
+        assert(page.timers.length === 1 && !page.doc.getElementById('x-ad-blocker-style'), 'Diagnostics-only mode enabled cleanup');
+        assert(page.state.collectDiagnostics().standalone.navigator === false, 'Browser mode reported incorrectly');
+        page.run.removeAds(page.doc, { ...disabled, enable_layout_diagnostics: true }, diagnosticSource);
+        const inlineDiagnostic = page.doc.querySelector('script[data-layout-config]');
+        assert(inlineDiagnostic && inlineDiagnostic.textContent.includes('function startLayoutDiagnostics'), 'Downloaded diagnostic source was not inlined');
+        assert(JSON.parse(inlineDiagnostic.getAttribute('data-layout-config')).site === 'x', 'Inline diagnostic configuration missing');
+        page.frame.remove();
+    }
+    for (const enabled of [false, true]) {
+        const page = await fixture({ ...disabled, hide_bottom_grok: enabled, center_primary_column: true }, '/home', 420);
+        page.doc.body.insertAdjacentHTML('beforeend', '<nav data-testid="BottomBar"><a id="bottom-home" href="/home">Home</a><a id="bottom-grok" href="/i/grok">Grok</a><a id="bottom-search" href="/explore">Search</a></nav><article><a id="tweet-grok-link" href="/i/grok">Link</a></article>');
+        page.timers.forEach(fn => fn());
+        assert(page.visible('bottom-grok') === !enabled, 'Bottom Grok control ignored');
+        assert(page.visible('nav-grok') && page.visible('grok') && page.visible('bottom-home') && page.visible('bottom-search') && page.visible('tweet-grok-link'), 'Bottom Grok control affected other components');
+        page.frame.remove();
+    }
+    // Execute the complete response entrypoint, including argument parsing and $done.
+    async function responseCheck(argument, contentType, expectedBody) {
+        const result = await new Promise(resolve => {
+            new Function('$argument', '$script', '$request', '$response', '$done', source)(argument, { type: 'response' },
+                { url: 'https://x.com/home' }, { headers: { 'content-type': contentType }, body: '<html><head></head><body>Original</body></html>' }, resolve);
+        });
+        assert(typeof result.body === 'string' === expectedBody, `Unexpected response rewrite: ${argument}`);
+        if (expectedBody) assert(result.body.includes('x-ad-hidden'), 'Response has no injection');
+    }
+    for (const success of [true, false]) {
+        const result = await new Promise(resolve => {
+            new Function('$argument', '$script', '$request', '$response', '$done', '$httpClient', source)(
+                JSON.stringify({ ...disabled, enable_layout_diagnostics: true }), { type: 'response' },
+                { url: 'https://x.com/home' }, { headers: { 'content-type': 'text/html' }, body: '<html><head></head><body>Original</body></html>' }, resolve,
+                { get: (request, callback) => {
+                    assert(request.url === 'https://raw.githubusercontent.com/qsoyq/stash/main/script/browser/layout-diagnostics.js', 'Diagnostic download still uses a test branch');
+                    callback(success ? null : 'network', { status: success ? 200 : 503 }, success ? diagnosticSource + '\n// </scr' + 'ipt><div id="escaped-script-marker">unexpected</div>' : null);
+                } },
+            );
+        });
+        assert(result.body.includes(success ? 'function startLayoutDiagnostics' : '诊断工具加载失败'), `Diagnostic response path failed: ${success}`);
+        const frame = document.createElement('iframe');
+        frame.srcdoc = result.body;
+        const loaded = new Promise(resolve => frame.onload = resolve);
+        document.body.appendChild(frame);
+        await loaded;
+        const doc = frame.contentDocument;
+        assert(!doc.getElementById('escaped-script-marker'), 'Downloaded script closed its HTML script element');
+        if (success) {
+            assert(frame.contentWindow.__stashLayoutDiagnostics?.collect().site === 'x', 'Actual inline script did not initialize with X configuration');
+            assert(doc.querySelector('[data-stash-layout-diagnostic-button]'), 'Actual inline script did not render its button');
+            assert(!doc.querySelector('script[src]'), 'Response still depends on browser external loading');
+        } else {
+            assert(doc.querySelector('button')?.textContent.includes('诊断工具加载失败'), 'Actual failure notice did not render');
+        }
+        frame.remove();
+    }
+    await responseCheck(JSON.stringify(disabled), 'text/html', false);
+    await responseCheck(undefined, 'text/html', true);
+    await responseCheck('{', 'text/html', true);
+    await responseCheck('{}', 'application/json', false);
+    output.textContent = `PASS: ${passed} assertions`;
+} catch (error) {
+    output.textContent = `FAIL: ${error.stack || error}`;
+}
+</script>
+</html>
