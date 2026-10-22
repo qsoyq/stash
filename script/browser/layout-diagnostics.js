@@ -1,3 +1,8 @@
+// Browser-only layout inspector. Load as a classic inline or external script with
+// data-layout-config JSON: { site, hiddenClass, publicRoutes, targets, settings }.
+// targets maps report names to CSS selectors; settings accepts booleans/numbers only.
+// publicRoutes must contain only non-personal static paths. No text, input values,
+// cookies or network uploads are collected. Reports are generated on button clicks.
 function startLayoutDiagnostics(config) {
     if (window.__stashLayoutDiagnostics) return
     if (!config || typeof config !== 'object' || Array.isArray(config)) return
@@ -189,7 +194,7 @@ function startLayoutDiagnostics(config) {
     window.setInterval(ensureDiagnosticButton, 1000)
 }
 
-// Classic external script: configuration belongs to this tag, not to a shared global.
+// Classic script entrypoint: configuration belongs to this tag, not to a shared global.
 try {
     const config = JSON.parse(document.currentScript?.getAttribute('data-layout-config') || '{}')
     startLayoutDiagnostics(config)

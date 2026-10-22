@@ -15,7 +15,7 @@ try {
     if (start < 0 || end < 0) throw new Error('Production functions not found');
     const functions = source.slice(start, end);
     const diagnosticSource = await (await fetch('../script/browser/layout-diagnostics.js')).text();
-    const diagnosticFunction = diagnosticSource.slice(0, diagnosticSource.indexOf('// Classic external script:'));
+    const diagnosticFunction = diagnosticSource.slice(0, diagnosticSource.indexOf('// Classic script entrypoint:'));
     const parse = argument => new Function('$argument', `${functions}; return getXOptions();`)(argument);
     const defaults = parse(undefined);
     const disabled = Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, typeof value === 'boolean' ? false : value]));
@@ -186,6 +186,11 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
         page.state.width = 1440;
         page.timers.forEach(fn => fn());
         assert(page.visible('mobile-spacer') && page.visible('desktop-banner'), 'Desktop banner was collapsed');
+        page.state.width = 420;
+        page.timers.forEach(fn => fn());
+        page.doc.getElementById('mobile-spacer').append('New visible banner content');
+        page.timers.forEach(fn => fn());
+        assert(page.visible('mobile-spacer'), 'Previously empty banner remained hidden after content appeared');
         page.frame.remove();
     }
     {
@@ -252,10 +257,28 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
             new Function('$argument', '$script', '$request', '$response', '$done', '$httpClient', source)(
                 JSON.stringify({ ...disabled, enable_layout_diagnostics: true }), { type: 'response' },
                 { url: 'https://x.com/home' }, { headers: { 'content-type': 'text/html' }, body: '<html><head></head><body>Original</body></html>' }, resolve,
-                { get: (_, callback) => callback(success ? null : 'network', { status: success ? 200 : 503 }, success ? diagnosticSource : null) },
+                { get: (request, callback) => {
+                    assert(request.url === 'https://raw.githubusercontent.com/qsoyq/stash/main/script/browser/layout-diagnostics.js', 'Diagnostic download still uses a test branch');
+                    callback(success ? null : 'network', { status: success ? 200 : 503 }, success ? diagnosticSource + '\n// </scr' + 'ipt><div id="escaped-script-marker">unexpected</div>' : null);
+                } },
             );
         });
         assert(result.body.includes(success ? 'function startLayoutDiagnostics' : '诊断工具加载失败'), `Diagnostic response path failed: ${success}`);
+        const frame = document.createElement('iframe');
+        frame.srcdoc = result.body;
+        const loaded = new Promise(resolve => frame.onload = resolve);
+        document.body.appendChild(frame);
+        await loaded;
+        const doc = frame.contentDocument;
+        assert(!doc.getElementById('escaped-script-marker'), 'Downloaded script closed its HTML script element');
+        if (success) {
+            assert(frame.contentWindow.__stashLayoutDiagnostics?.collect().site === 'x', 'Actual inline script did not initialize with X configuration');
+            assert(doc.querySelector('[data-stash-layout-diagnostic-button]'), 'Actual inline script did not render its button');
+            assert(!doc.querySelector('script[src]'), 'Response still depends on browser external loading');
+        } else {
+            assert(doc.querySelector('button')?.textContent.includes('诊断工具加载失败'), 'Actual failure notice did not render');
+        }
+        frame.remove();
     }
     await responseCheck(JSON.stringify(disabled), 'text/html', false);
     await responseCheck(undefined, 'text/html', true);

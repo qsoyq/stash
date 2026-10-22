@@ -629,6 +629,8 @@ function removeAdsCode(options) {
             // Mobile X renders the visible TopNavBar in a fixed layer and keeps an empty
             // banner in document flow to reserve its height. Collapse only that spacer.
             document.querySelectorAll("header[role='banner']").forEach(header => {
+                // Re-evaluate the site's contents without our previous hiding state.
+                header.classList.remove(hiddenClass)
                 const hasNavigation = header.querySelector("nav, a, button, input, [data-testid='TopNavBar']") !== null
                 const collapse = mobile && !preserveSearch && !hasNavigation && !hasVisibleContent(header)
                 header.classList.toggle(hiddenClass, collapse)
@@ -701,7 +703,7 @@ function removeAdsCode(options) {
     }
 }
 
-const LAYOUT_DIAGNOSTICS_URL = 'https://raw.githubusercontent.com/qsoyq/stash/add-x-stoverride-parameters/script/browser/layout-diagnostics.js'
+const LAYOUT_DIAGNOSTICS_URL = 'https://raw.githubusercontent.com/qsoyq/stash/main/script/browser/layout-diagnostics.js'
 
 async function loadLayoutDiagnosticsSource() {
     try {
