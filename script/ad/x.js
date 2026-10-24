@@ -344,6 +344,18 @@ function removeAdsCode(options) {
     }
 
     function reconcile(changedRoots) {
+        // A nested nav/cell update also invalidates its managed ancestors. Scan
+        // those containers before replacing their reasons; scanning only the
+        // descendant cannot rediscover TopNavBar (or a hidden card) itself.
+        const boundaries = new Set(changedRoots.map(root => {
+            let boundary = root
+            for (let parent = root.parentElement; parent; parent = parent.parentElement) {
+                if (managed.has(parent)) boundary = parent
+            }
+            return boundary
+        }))
+        const expanded = Array.from(boundaries)
+        changedRoots = expanded.filter(root => !expanded.some(other => other !== root && other.contains(root)))
         const hits = new Map()
         changedRoots.forEach(root => collect(root, hits))
         managed.forEach((reasons, element) => {
