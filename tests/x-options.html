@@ -38,7 +38,7 @@ try {
         hide_nav_premium: 'nav-premium', hide_nav_verified_orgs: 'nav-orgs', hide_nav_jobs: 'nav-jobs',
         hide_account_menu: 'account', hide_grok_drawer: 'grok', hide_floating_post_button: 'post',
         hide_reply_permissions: 'reply', hide_grok_actions: 'actions', hide_translate_button: 'translate',
-        hide_automated_content: 'automated', hide_probable_spam_prompt: 'spam',
+        hide_automated_content: 'automated', hide_probable_spam_prompt: 'spam', hide_show_posts_prompt: 'show-posts',
     };
     async function fixture(options, path = '/home', width = 1440, extraSidebar = '', standalone = false, mobileHeader = false) {
         const frame = document.createElement('iframe');
@@ -51,6 +51,7 @@ try {
                 <a aria-label="Jobs" id="nav-jobs">Jobs</a><button aria-label="Account menu" id="account">Account</button>
             </nav></header>
             <div style="display:flex"><div data-testid="primaryColumn" style="width:600px">
+                <div data-testid="cellInnerDiv" id="show-posts"><div><button role="button"><div dir="ltr"><span>Show 56 posts</span></div></button></div></div>
                 <div data-testid="cellInnerDiv" id="composer"><div data-testid="tweetTextarea_0">Compose</div></div>
                 <div data-testid="chat-drawer-main" id="chat">Chat</div>
                 <div data-testid="GrokDrawer" id="grok">Grok</div><div data-testid="FloatingActionButtonBase" id="post">Post</div>
@@ -273,7 +274,7 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
     }
     for (const [autoHide, hideBar] of [[false, false], [true, false], [true, true]]) {
         const options = { ...disabled, hide_bottom_bar_on_scroll: autoHide, hide_bottom_bar: hideBar, hide_floating_post_button: true };
-        assert(defaults.hide_bottom_bar_on_scroll === false, 'Scroll auto-hide is not disabled by default');
+        assert(defaults.hide_bottom_bar_on_scroll === true, 'Scroll auto-hide is not enabled by default');
         const page = await fixture(options, '/home', 420);
         page.doc.body.insertAdjacentHTML('beforeend', '<div style="height:5000px"></div><div id="autohide-shell" style="position:fixed;bottom:0;height:53px"><div data-testid="BottomBar"><div role="tablist"><a id="autohide-home" href="/home">Home</a><a href="/explore">Search</a></div></div></div>');
         page.timers.forEach(fn => fn());
@@ -311,6 +312,28 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
         page.state.path = '/explore';
         page.timers.forEach(fn => fn());
         assert(!collapsed(), 'Route change kept the bottom bar collapsed');
+        page.frame.remove();
+    }
+    {
+        assert(defaults.hide_show_posts_prompt === false, 'Show posts prompt switch is not disabled by default');
+        const page = await fixture({ ...disabled, hide_show_posts_prompt: true }, '/home', 420);
+        const column = page.doc.querySelector('[data-testid="primaryColumn"]');
+        const cells = {
+            'show-posts-zh': '<div role="button"><span>显示 56 帖子</span></div>',
+            'show-posts-zh-measure': '<button><span>显示 3 条帖子</span></button>',
+            'show-posts-hant': '<button><span>顯示 12 則貼文</span></button>',
+            'show-posts-compact': '<button><span>Show 1.2K posts</span></button>',
+            'show-posts-single': '<button><span>Show 1 post</span></button>',
+            'keep-more-replies': '<button><span>Show more replies</span></button>',
+            'keep-show-spam': '<button><span>Show probable spam</span></button>',
+            'keep-tweet': '<article><button><span>Show 56 posts</span></button></article>',
+            'keep-number-text': '<div><span>显示 56 帖子</span></div>',
+        };
+        for (const [id, html] of Object.entries(cells)) column.insertAdjacentHTML('afterbegin', `<div data-testid="cellInnerDiv" id="${id}">${html}</div>`);
+        page.doc.body.insertAdjacentHTML('beforeend', '<button id="outside-column">Show 56 posts</button>');
+        page.timers.forEach(fn => fn());
+        for (const id of Object.keys(cells)) assert(page.visible(id) === id.startsWith('keep-'), `Show posts prompt visibility wrong for ${id}`);
+        assert(!page.visible('show-posts') && page.visible('outside-column'), 'Show posts prompt matched outside the timeline');
         page.frame.remove();
     }
     // Execute the complete response entrypoint, including argument parsing and $done.

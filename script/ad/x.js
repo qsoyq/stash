@@ -522,10 +522,11 @@ function getXOptions() {
         enable_escape_back: true,
         enable_layout_diagnostics: false,
         hide_bottom_bar: false,
-        hide_bottom_bar_on_scroll: false,
+        hide_bottom_bar_on_scroll: true,
         hide_nav_notifications: false,
         hide_nav_messages: false,
         hide_notification_badge: false,
+        hide_show_posts_prompt: false,
     }
     if (typeof $argument === 'undefined' || !$argument) return options
     let supplied
@@ -594,6 +595,9 @@ function removeAdsCode(options) {
     function hide(element) {
         if (element) element.classList.add(hiddenClass)
     }
+
+    // "Show 56 posts" / "显示 56 帖子" / "顯示 56 則貼文", including compact counts such as 1.2K or 1.2万.
+    const showPostsPattern = /^(?:Show|显示|顯示)\s*[\d.,]+\s*[KkMm万萬]?\s*(?:posts?|Tweets?|(?:条|個|个|篇|則|则)?\s*(?:帖子|贴子|推文|貼文))$/
 
     // Mobile uses the bottom bar; desktop and tablet use the left navigation in header.
     const navigationScopes = ["[data-testid='BottomBar']", 'header', 'nav']
@@ -778,6 +782,15 @@ function removeAdsCode(options) {
                 }
             })
         }
+        if (options.hide_show_posts_prompt) {
+            // The pending-posts bar is a timeline cell with a single button, not a tweet.
+            document.querySelectorAll("[data-testid='primaryColumn'] [role='button'], [data-testid='primaryColumn'] button").forEach(button => {
+                if (button.closest('article')) return
+                if (showPostsPattern.test(button.textContent.replace(/\s+/g, ' ').trim())) {
+                    hide(button.closest("[data-testid='cellInnerDiv']") || button)
+                }
+            })
+        }
         if (options.hide_automated_content || options.hide_probable_spam_prompt) {
             document.querySelectorAll('span').forEach(span => {
                 if (options.hide_automated_content && span.textContent.trim() === 'Automated') {
@@ -868,6 +881,7 @@ function removeAds(document, options, diagnosticSource = null) {
                 hide_nav_notifications: options.hide_nav_notifications,
                 hide_nav_messages: options.hide_nav_messages,
                 hide_notification_badge: options.hide_notification_badge,
+                hide_show_posts_prompt: options.hide_show_posts_prompt,
             },
         }))
         container.appendChild(diagnostic)
