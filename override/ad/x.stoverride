@@ -7,7 +7,6 @@ desc: |-
     - 底部导航：完整隐藏底部导航栏，或分别隐藏通知入口、对话入口、通知未读数角标（通知/对话/角标同时作用于桌面左侧导航）
     - 页面布局诊断和底部导航相关开关默认关闭，其余功能默认开启；可在覆写详情 → 参数中调整，修改后请刷新已打开的 X 页面
     - 参数功能需要 Stash iOS/tvOS 3.7+ 或 macOS 4.4+（Beta）
-category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/x.png
 arguments-version: 1
 arguments:
