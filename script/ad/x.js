@@ -521,6 +521,10 @@ function getXOptions() {
         center_primary_column: true,
         enable_escape_back: true,
         enable_layout_diagnostics: false,
+        hide_bottom_bar: false,
+        hide_nav_notifications: false,
+        hide_nav_messages: false,
+        hide_notification_badge: false,
     }
     if (typeof $argument === 'undefined' || !$argument) return options
     let supplied
@@ -581,6 +585,36 @@ function removeAdsCode(options) {
 
     function hide(element) {
         if (element) element.classList.add(hiddenClass)
+    }
+
+    // Mobile uses the bottom bar; desktop and tablet use the left navigation in header.
+    const navigationScopes = ["[data-testid='BottomBar']", 'header', 'nav']
+    const scoped = hrefs => navigationScopes.flatMap(scope => hrefs.map(href => `${scope} a[href${href}]`))
+    const notificationLinks = ["a[data-testid='AppTabBar_Notifications_Link']", ...scoped(["='/notifications'", "='/notifications/'"])].join(', ')
+    const messageLinks = ["a[data-testid='AppTabBar_DirectMessage_Link']", ...scoped(["='/messages'", "='/messages/'", "^='/i/chat'"])].join(', ')
+
+    // Hide single-child wrappers too, so flex tab slots and fixed backgrounds do not leave gaps.
+    function navigationItem(element) {
+        const stop = "body, main, header, nav, [role='navigation'], [data-testid='BottomBar'], [data-testid='primaryColumn'], #react-root, #layers"
+        let target = element
+        for (let parent = target.parentElement; parent && parent.children.length === 1 && !parent.matches(stop); parent = parent.parentElement) {
+            target = parent
+        }
+        return target
+    }
+
+    // Badges are short numeric labels ("1", "20+") or unread labels without the tab icon.
+    function notificationBadges(link) {
+        const badges = []
+        link.querySelectorAll('*').forEach(element => {
+            if (element.closest('svg') || element.querySelector('svg')) return
+            const label = element.getAttribute('aria-label') || ''
+            const text = element.textContent.trim()
+            if (!/^\d+\+?$/.test(text) && !/unread|未读|未讀/i.test(label)) return
+            if (badges.some(badge => badge.contains(element))) return
+            badges.push(element)
+        })
+        return badges
     }
 
     function hasVisibleContent(element) {
@@ -647,6 +681,25 @@ function removeAdsCode(options) {
         if (options.hide_bottom_grok && mobile) {
             document.querySelectorAll("nav a[href='/i/grok'], [data-testid='BottomBar'] a[href='/i/grok']").forEach(link => {
                 if (!link.closest('header, article')) hide(link)
+            })
+        }
+
+        if (options.hide_bottom_bar) {
+            document.querySelectorAll("[data-testid='BottomBar']").forEach(bar => hide(navigationItem(bar)))
+        }
+        if (options.hide_nav_notifications) {
+            document.querySelectorAll(notificationLinks).forEach(link => {
+                if (!link.closest('article')) hide(navigationItem(link))
+            })
+        }
+        if (options.hide_nav_messages) {
+            document.querySelectorAll(messageLinks).forEach(link => {
+                if (!link.closest('article')) hide(navigationItem(link))
+            })
+        }
+        if (options.hide_notification_badge) {
+            document.querySelectorAll(notificationLinks).forEach(link => {
+                if (!link.closest('article')) notificationBadges(link).forEach(hide)
             })
         }
 
@@ -748,12 +801,18 @@ function removeAds(document, options, diagnosticSource = null) {
                 sidebarColumn: "[data-testid='sidebarColumn']",
                 bottomBar: "[data-testid='BottomBar']",
                 bottomGrok: "nav a[href='/i/grok']:not(header a), [data-testid='BottomBar'] a[href='/i/grok']",
+                navNotifications: "a[data-testid='AppTabBar_Notifications_Link'], [data-testid='BottomBar'] a[href='/notifications']",
+                navMessages: "a[data-testid='AppTabBar_DirectMessage_Link'], [data-testid='BottomBar'] a[href='/messages'], [data-testid='BottomBar'] a[href^='/i/chat']",
             },
             settings: {
                 hide_top_nav: options.hide_top_nav,
                 hide_home_composer: options.hide_home_composer,
                 enable_custom_layout: options.enable_custom_layout,
                 center_primary_column: options.center_primary_column,
+                hide_bottom_bar: options.hide_bottom_bar,
+                hide_nav_notifications: options.hide_nav_notifications,
+                hide_nav_messages: options.hide_nav_messages,
+                hide_notification_badge: options.hide_notification_badge,
             },
         }))
         container.appendChild(diagnostic)

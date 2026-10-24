@@ -243,6 +243,32 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
         assert(page.visible('nav-grok') && page.visible('grok') && page.visible('bottom-home') && page.visible('bottom-search') && page.visible('tweet-grok-link'), 'Bottom Grok control affected other components');
         page.frame.remove();
     }
+    {
+        const bottomNavigation = ['hide_bottom_bar', 'hide_nav_notifications', 'hide_nav_messages', 'hide_notification_badge'];
+        assert(bottomNavigation.every(key => defaults[key] === false), 'Bottom navigation switches are not disabled by default');
+        const ids = ['bottom-shell', 'bottom-home', 'bottom-notifications-slot', 'bottom-badge', 'bottom-messages-slot', 'desktop-notifications', 'desktop-badge', 'desktop-notifications-label', 'desktop-messages', 'tweet-notifications-link'];
+        const expectedHidden = {
+            hide_bottom_bar: ['bottom-shell', 'bottom-home', 'bottom-notifications-slot', 'bottom-badge', 'bottom-messages-slot'],
+            hide_nav_notifications: ['bottom-notifications-slot', 'bottom-badge', 'desktop-notifications', 'desktop-badge', 'desktop-notifications-label'],
+            hide_nav_messages: ['bottom-messages-slot', 'desktop-messages'],
+            hide_notification_badge: ['bottom-badge', 'desktop-badge'],
+        };
+        for (const key of [null, ...bottomNavigation]) {
+            const options = { ...disabled, ...(key ? { [key]: true } : {}) };
+            const page = await fixture(options, '/home', 420);
+            page.doc.querySelector('header nav').insertAdjacentHTML('beforeend', '<a href="/notifications" data-testid="AppTabBar_Notifications_Link" aria-label="Notifications (3 unread notifications)" id="desktop-notifications"><div><div><svg></svg><div aria-label="3 unread items" id="desktop-badge"><span>3</span></div></div><div dir="ltr"><span id="desktop-notifications-label">Notifications</span></div></div></a><a href="/i/chat" data-testid="AppTabBar_DirectMessage_Link" id="desktop-messages">Chat</a>');
+            page.doc.body.insertAdjacentHTML('beforeend', '<div id="bottom-shell" style="position:fixed;bottom:0;height:53px;background:white"><div data-testid="BottomBar"><div role="tablist" style="display:flex"><div style="flex:1"><a id="bottom-home" href="/home">Home</a></div><div style="flex:1" id="bottom-notifications-slot"><a href="/notifications" aria-label="Notifications"><div><svg></svg><div><span id="bottom-badge">1</span></div></div></a></div><div style="flex:1" id="bottom-messages-slot"><a href="/messages">Messages</a></div></div></div></div><article><a id="tweet-notifications-link" href="/notifications">Link</a></article>');
+            page.timers.forEach(fn => fn());
+            const hidden = key ? expectedHidden[key] : [];
+            for (const id of ids) assert(page.visible(id) === !hidden.includes(id), `${key || 'disabled'} visibility wrong for ${id}`);
+            assert(page.visible('home') && page.visible('nav-grok'), `${key || 'disabled'} hid other navigation`);
+            if (!key) assert(page.timers.length === 0, 'Disabled bottom navigation switches started cleanup timer');
+            page.frame.remove();
+        }
+        const all = await fixture({ ...disabled, ...Object.fromEntries(bottomNavigation.map(key => [key, true])) }, '/home', 1440);
+        assert(all.timers.length === 1 && all.doc.getElementById('x-ad-blocker-style'), 'Bottom navigation switches did not install updates');
+        all.frame.remove();
+    }
     // Execute the complete response entrypoint, including argument parsing and $done.
     async function responseCheck(argument, contentType, expectedBody) {
         const result = await new Promise(resolve => {
