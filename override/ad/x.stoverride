@@ -35,6 +35,7 @@ desc: |-
     30. 详情页 Esc 返回（默认开）
     31. 页面布局诊断（默认关）：显示「复制诊断信息」按钮
     32. CSP 策略（默认移除 CSP）：保留 CSP 可能导致页面功能失效
+category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/x.png
 arguments-version: 1
 arguments:
@@ -221,5 +222,5 @@ http:
             debug: false
 script-providers:
     x:
-        url: https://raw.githubusercontent.com/qsoyq/stash/continue-x-stoverride-bottom-nav/script/ad/x.js
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/x.js
         interval: 86400
