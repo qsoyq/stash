@@ -33,9 +33,9 @@ desc: |-
     28. 其他页面阅读列宽度（默认 55%）
     29. 阅读列居中（默认开）：桌面端右侧栏收起时生效
     30. 详情页 Esc 返回（默认开）
-    31. 页面布局诊断（默认关）：显示「复制诊断信息」按钮
-    32. CSP 策略（默认移除 CSP）：保留 CSP 可能导致页面功能失效
-category: ad
+    31. 详情页双击返回（默认关）：正文或非交互留白处双击返回上一页；不作用于链接、媒体、回复卡片和输入区
+    32. 页面布局诊断（默认关）：显示「复制诊断信息」按钮
+    33. CSP 策略（默认移除 CSP）：保留 CSP 可能导致页面功能失效
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/x.png
 arguments-version: 1
 arguments:
@@ -182,6 +182,11 @@ arguments:
         title: 阅读与操作 · 详情页 Esc 返回
         description: 在推文详情按 Esc 返回上一页，输入框内不触发
         default: true
+    enable_double_tap_back:
+        type: switch
+        title: 阅读与操作 · 详情页双击返回
+        description: 手机单指快速点两次或鼠标双击正文/非交互留白处，按浏览器历史返回一页；排除链接、媒体、回复卡片、输入区、选中文字及弹窗，不模拟滑动动画；无上一页时不跳转
+        default: false
     enable_layout_diagnostics:
         type: switch
         title: 高级设置 · 页面布局诊断
@@ -190,7 +195,7 @@ arguments:
     csp_policy:
         type: select
         title: 高级设置 · CSP 策略
-        description: 保留 CSP 可能阻止页面组件隐藏、布局和 Esc 功能的注入代码；不影响接口广告与推荐过滤
+        description: 保留 CSP 可能阻止页面组件隐藏、布局、Esc 和双击返回功能的注入代码；不影响接口广告与推荐过滤
         default: ^https://x\.com/
         options:
             -   value: ^https://x\.com/
@@ -217,10 +222,10 @@ http:
             max-size: 2097152
             require-body: true
             timeout: 10
-            argument: '{"block_ads_and_recommendations":${args.block_ads_and_recommendations|json},"hide_top_nav":${args.hide_top_nav|json},"hide_home_composer":${args.hide_home_composer|json},"hide_chat_drawer":${args.hide_chat_drawer|json},"hide_sidebar_trends":${args.hide_sidebar_trends|json},"hide_nav_grok":${args.hide_nav_grok|json},"hide_bottom_grok":${args.hide_bottom_grok|json},"hide_nav_premium":${args.hide_nav_premium|json},"hide_nav_verified_orgs":${args.hide_nav_verified_orgs|json},"hide_nav_jobs":${args.hide_nav_jobs|json},"hide_account_menu":${args.hide_account_menu|json},"hide_grok_drawer":${args.hide_grok_drawer|json},"hide_floating_post_button":${args.hide_floating_post_button|json},"hide_reply_permissions":${args.hide_reply_permissions|json},"hide_grok_actions":${args.hide_grok_actions|json},"hide_translate_button":${args.hide_translate_button|json},"hide_automated_content":${args.hide_automated_content|json},"hide_probable_spam_prompt":${args.hide_probable_spam_prompt|json},"enable_custom_layout":${args.enable_custom_layout|json},"home_width_vw":${args.home_width_vw|json},"page_width_vw":${args.page_width_vw|json},"center_primary_column":${args.center_primary_column|json},"enable_escape_back":${args.enable_escape_back|json},"enable_layout_diagnostics":${args.enable_layout_diagnostics|json},"hide_bottom_bar":${args.hide_bottom_bar|json},"hide_bottom_bar_on_scroll":${args.hide_bottom_bar_on_scroll|json},"hide_nav_notifications":${args.hide_nav_notifications|json},"hide_nav_messages":${args.hide_nav_messages|json},"hide_notification_badge":${args.hide_notification_badge|json},"hide_show_posts_prompt":${args.hide_show_posts_prompt|json}}'
+            argument: '{"block_ads_and_recommendations":${args.block_ads_and_recommendations|json},"hide_top_nav":${args.hide_top_nav|json},"hide_home_composer":${args.hide_home_composer|json},"hide_chat_drawer":${args.hide_chat_drawer|json},"hide_sidebar_trends":${args.hide_sidebar_trends|json},"hide_nav_grok":${args.hide_nav_grok|json},"hide_bottom_grok":${args.hide_bottom_grok|json},"hide_nav_premium":${args.hide_nav_premium|json},"hide_nav_verified_orgs":${args.hide_nav_verified_orgs|json},"hide_nav_jobs":${args.hide_nav_jobs|json},"hide_account_menu":${args.hide_account_menu|json},"hide_grok_drawer":${args.hide_grok_drawer|json},"hide_floating_post_button":${args.hide_floating_post_button|json},"hide_reply_permissions":${args.hide_reply_permissions|json},"hide_grok_actions":${args.hide_grok_actions|json},"hide_translate_button":${args.hide_translate_button|json},"hide_automated_content":${args.hide_automated_content|json},"hide_probable_spam_prompt":${args.hide_probable_spam_prompt|json},"enable_custom_layout":${args.enable_custom_layout|json},"home_width_vw":${args.home_width_vw|json},"page_width_vw":${args.page_width_vw|json},"center_primary_column":${args.center_primary_column|json},"enable_escape_back":${args.enable_escape_back|json},"enable_double_tap_back":${args.enable_double_tap_back|json},"enable_layout_diagnostics":${args.enable_layout_diagnostics|json},"hide_bottom_bar":${args.hide_bottom_bar|json},"hide_bottom_bar_on_scroll":${args.hide_bottom_bar_on_scroll|json},"hide_nav_notifications":${args.hide_nav_notifications|json},"hide_nav_messages":${args.hide_nav_messages|json},"hide_notification_badge":${args.hide_notification_badge|json},"hide_show_posts_prompt":${args.hide_show_posts_prompt|json}}'
             type: response
             debug: false
 script-providers:
     x:
-        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/x.js
+        url: https://raw.githubusercontent.com/qsoyq/stash/add-x-double-tap-back-switch/script/ad/x.js
         interval: 86400

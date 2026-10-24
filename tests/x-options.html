@@ -28,6 +28,11 @@ try {
     for (const argument of ['', '{', 'null', '[]', 'false', '123']) {
         assert(JSON.stringify(parse(argument)) === JSON.stringify(defaults), `Bad fallback: ${argument}`);
     }
+    assert(defaults.enable_double_tap_back === false, 'Double-tap back must default off');
+    for (const value of [null, 0, 1, "true", "false", {}, []]) {
+        assert(parse(JSON.stringify({ enable_double_tap_back: value })).enable_double_tap_back === false, 'Invalid gesture setting accepted');
+    }
+    assert(parse('{"enable_double_tap_back":true}').enable_double_tap_back === true, 'Gesture switch cannot be enabled');
     assert(Object.values(parse(JSON.stringify(disabled))).filter(value => value === true).length === 0, 'False values lost');
     assert(parse('{"home_width_vw":0,"page_width_vw":"70","hide_top_nav":0}').home_width_vw === 65, 'Invalid width accepted');
     assert(parse('{"home_width_vw":30,"page_width_vw":100}').page_width_vw === 100, 'Valid boundaries rejected');

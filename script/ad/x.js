@@ -48,6 +48,7 @@ function getXOptions() {
         page_width_vw: 55,
         center_primary_column: true,
         enable_escape_back: true,
+        enable_double_tap_back: false,
         enable_layout_diagnostics: false,
         hide_bottom_bar: false,
         hide_bottom_bar_on_scroll: true,
@@ -83,7 +84,7 @@ function removeAdsCode(options) {
     const sidebarClass = 'x-ad-empty-sidebar'
     const autoHideBottomBar = options.hide_bottom_bar_on_scroll && !options.hide_bottom_bar
     const needsUpdates = Object.entries(options).some(([key, value]) =>
-        key !== 'enable_escape_back' && key !== 'enable_layout_diagnostics' && value === true)
+        !['enable_escape_back', 'enable_double_tap_back', 'enable_layout_diagnostics'].includes(key) && value === true)
     const simpleRules = [
         ['hide_chat_drawer', "[data-testid='chat-drawer-main']"],
         ['hide_nav_grok', "header a[aria-label='Grok'], header a[href='/i/grok']"],
@@ -156,6 +157,46 @@ function removeAdsCode(options) {
     const listeners = []
     const historyHooks = []
     let observedLayout = []
+    let touch = null
+    let firstTap = null
+    let lastTouchAt = -Infinity
+    let lastBackAt = -Infinity
+
+    function resetTaps() {
+        touch = firstTap = null
+    }
+
+    // Only ordinary detail routes, never a photo/video viewer or a nested route.
+    // Match the main article by its own timestamp permalink, not a quoted post's link.
+    function backRegion(target) {
+        const current = new URL(window.location.href).pathname.replace(/\/$/, '')
+        if (destroyed || document.visibilityState === 'hidden' || !/^\/(?:[^/]+\/status|i\/web\/status)\/\d+$/.test(current)) return null
+        if (!(target instanceof Element) || !target.isConnected || !target.closest("[data-testid='primaryColumn']")) return null
+        const editable = 'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]'
+        const excluded = `a, button, ${editable}, [role='button'], [role='link'], [role='menuitem'], [role='slider'], [role='checkbox'], [role='switch'], [role='tab'], img, video, audio, iframe, canvas, [data-testid='tweetPhoto'], [data-testid='videoPlayer'], [data-testid='card.wrapper'], [data-testid='quoteTweet'], [data-stash-layout-diagnostic]`
+        if (target.closest(excluded) || document.activeElement?.closest(editable) || window.getSelection()?.toString().trim()) return null
+        const overlays = document.querySelectorAll('[role="dialog"], [role="menu"], [aria-modal="true"]')
+        if (Array.from(overlays).some(element => element.getClientRects().length && window.getComputedStyle(element).visibility !== 'hidden')) return null
+        const article = target.closest('article')
+        if (article) {
+            const permalink = Array.from(article.querySelectorAll('a[href]')).some(link =>
+                link.closest('article') === article && !link.parentElement.closest("[role='link'], [data-testid='quoteTweet']") && link.querySelector('time') &&
+                new URL(link.getAttribute('href'), window.location.href).pathname.replace(/\/$/, '') === current)
+            return permalink ? article : null
+        }
+        // Unrecognized timeline cells may have React click handlers without a role.
+        if (target.closest("[data-testid='cellInnerDiv']")) return null
+        return target.closest("[data-testid='primaryColumn']")
+    }
+
+    function gestureBack(event) {
+        resetTaps()
+        if (event.timeStamp - lastBackAt < 700) return
+        lastBackAt = event.timeStamp
+        event.preventDefault()
+        event.stopPropagation()
+        window.history.back()
+    }
 
     function setClass(element, name, enabled) {
         if (element.classList.contains(name) !== enabled) element.classList.toggle(name, enabled)
@@ -485,6 +526,7 @@ function removeAdsCode(options) {
     function destroy() {
         if (destroyed) return
         destroyed = true
+        resetTaps()
         if (frame !== null) window.cancelAnimationFrame(frame)
         observer?.disconnect()
         resizeObserver?.disconnect()
@@ -511,13 +553,49 @@ function removeAdsCode(options) {
         event.stopPropagation()
         window.history.back()
     }, true)
+    if (options.enable_double_tap_back) {
+        listen(document, 'touchstart', event => {
+            lastTouchAt = event.timeStamp
+            const region = !event.defaultPrevented && event.touches.length === 1 && backRegion(event.target)
+            if (!region) { resetTaps(); return }
+            const point = event.touches[0]
+            touch = { id: point.identifier, x: point.clientX, y: point.clientY, at: event.timeStamp, href: window.location.href, region }
+        }, { capture: true, passive: true })
+        listen(document, 'touchmove', event => {
+            if (!touch) return
+            const point = Array.from(event.touches).find(item => item.identifier === touch.id)
+            if (event.touches.length !== 1 || !point || Math.hypot(point.clientX - touch.x, point.clientY - touch.y) > 10) resetTaps()
+        }, { capture: true, passive: true })
+        listen(document, 'touchend', event => {
+            lastTouchAt = event.timeStamp
+            const started = touch
+            touch = null
+            const point = started && Array.from(event.changedTouches).find(item => item.identifier === started.id)
+            if (!started || !point || event.defaultPrevented || event.touches.length || event.timeStamp - started.at > 250 ||
+                Math.hypot(point.clientX - started.x, point.clientY - started.y) > 10 || started.href !== window.location.href ||
+                backRegion(event.target) !== started.region) { resetTaps(); return }
+            const previous = firstTap
+            firstTap = { ...started, x: point.clientX, y: point.clientY, at: event.timeStamp }
+            if (previous && previous.href === started.href && previous.region === started.region &&
+                started.at - previous.at <= 300 && Math.hypot(point.clientX - previous.x, point.clientY - previous.y) <= 24) gestureBack(event)
+        }, { capture: true, passive: false })
+        listen(document, 'touchcancel', resetTaps, { capture: true, passive: true })
+        listen(document, 'scroll', resetTaps, { capture: true, passive: true })
+        listen(document, 'dblclick', event => {
+            if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey ||
+                event.timeStamp - lastTouchAt < 800 || !backRegion(event.target)) return
+            gestureBack(event)
+        }, true)
+        listen(window, 'pagehide', resetTaps)
+        listen(window, 'pageshow', resetTaps)
+        listen(document, 'visibilitychange', resetTaps)
+    }
     if (needsUpdates) {
         document.head.appendChild(style)
         flush()
         listen(window, 'resize', refresh)
         listen(window.visualViewport || window, 'resize', () => { layoutDirty = barsDirty = true; schedule() })
         if (autoHideBottomBar) listen(window, 'scroll', () => { scrollDirty = true; schedule() }, { passive: true })
-        listen(window, 'popstate', refresh)
         listen(window, 'pageshow', () => {
             paused = false
             scrollState = { lastY: currentScrollY(), distance: 0, direction: 0, collapsed: false }
@@ -544,12 +622,16 @@ function removeAdsCode(options) {
                 refresh()
             }
         })
+    }
+    if (needsUpdates || options.enable_double_tap_back) {
+        listen(window, 'popstate', () => { resetTaps(); if (needsUpdates) refresh() })
         for (const key of ['pushState', 'replaceState']) {
             const original = window.history[key]
             if (typeof original !== 'function') continue
             const wrapper = function (...args) {
                 const result = original.apply(this, args)
-                if (new URL(window.location.href).pathname !== path) refresh()
+                resetTaps()
+                if (needsUpdates && new URL(window.location.href).pathname !== path) refresh()
                 return result
             }
             window.history[key] = wrapper
@@ -558,7 +640,7 @@ function removeAdsCode(options) {
     }
 }
 
-const LAYOUT_DIAGNOSTICS_URL = 'https://raw.githubusercontent.com/qsoyq/stash/main/script/browser/layout-diagnostics.js'
+const LAYOUT_DIAGNOSTICS_URL = 'https://raw.githubusercontent.com/qsoyq/stash/add-x-double-tap-back-switch/script/browser/layout-diagnostics.js'
 
 async function loadLayoutDiagnosticsSource() {
     try {

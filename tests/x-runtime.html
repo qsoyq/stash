@@ -197,6 +197,12 @@ if (!new URL(location.href).searchParams.has('fixture')) {
         win.dispatchEvent(new win.Event('scroll'));
         await wait(120);
         assert(JSON.stringify(stats()) === JSON.stringify(stopped), 'Destroyed observers or listeners remain live');
+        // Keep idle measurement in this iframe, away from Playwright's page polling.
+        await start({ enable_double_tap_back: true });
+        const gestureIdle = stats();
+        await wait(150);
+        assert(JSON.stringify(stats()) === JSON.stringify(gestureIdle), 'Gesture-only mode performs idle work');
+        win.__stashXBlocker.destroy();
         win.history.replaceState({}, '', '/u/status/123');
         let backs = 0;
         win.history.back = () => backs++;
