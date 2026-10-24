@@ -79,6 +79,15 @@ When adding or modifying override functionality, consult the official [override 
 - Mention the client settings entry (override details → parameters) and required versions when introducing parameters: currently Beta, iOS/tvOS 3.7+ and macOS 4.4+. Recheck the official documentation as support changes.
 - Verify defaults, individual controls, all controls disabled, and missing/invalid script arguments, in addition to normal repository checks. Parameter substitution and client UI behavior require validation in a supported Stash version.
 
+### Override Description (`desc`)
+
+For overrides that declare `arguments`, write `desc` in Chinese using this layout:
+
+- Start with plain-text lines (not list items): first the required Stash versions for parameters, then where to change settings (覆写详情 → 参数) and the refresh hint, followed by a blank line.
+- End with an ordered list (`1.`, `2.`, …) with exactly one item per declared parameter, in declaration order, so it matches the client parameter form.
+- Each item uses the parameter title without its group prefix (e.g. `页面组件 · `), followed by its default in parentheses — `（默认开）`, `（默认关）`, or the default value such as `（默认 65%）`. Add a short `：` note only for scope or caveats the title does not convey (platform limits, what is preserved, dependencies between parameters).
+- Update `desc` whenever parameters are added, removed, reordered, renamed, or their defaults change.
+
 Keep `AGENTS.md` and `CLAUDE.md` aligned when changing repository-wide instructions.
 
 ### Script Runtime
