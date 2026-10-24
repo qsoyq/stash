@@ -351,7 +351,7 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
                 JSON.stringify({ ...disabled, enable_layout_diagnostics: true }), { type: 'response' },
                 { url: 'https://x.com/home' }, { headers: { 'content-type': 'text/html' }, body: '<html><head></head><body>Original</body></html>' }, resolve,
                 { get: (request, callback) => {
-                    assert(request.url === 'https://raw.githubusercontent.com/qsoyq/stash/main/script/browser/layout-diagnostics.js', 'Diagnostic download still uses a test branch');
+                    assert(request.url === 'https://raw.githubusercontent.com/qsoyq/stash/continue-x-stoverride-bottom-nav/script/browser/layout-diagnostics.js', 'Diagnostic download does not use the current test branch');
                     callback(success ? null : 'network', { status: success ? 200 : 503 }, success ? diagnosticSource + '\n// </scr' + 'ipt><div id="escaped-script-marker">unexpected</div>' : null);
                 } },
             );

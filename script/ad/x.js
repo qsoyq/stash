@@ -667,6 +667,20 @@ function removeAdsCode(options) {
     let lastScrollY = 0
     let lastScrollPath = null
     let bottomBarCollapsed = false
+    let bottomBarTargets = new Set()
+
+    function bottomBarContainer(bar) {
+        let target = bar
+        // Never transform an outer portal: it can re-anchor fixed descendants and
+        // gain unrelated children during React updates. Stop at the first fixed box.
+        for (;;) {
+            if (window.getComputedStyle(target).position === 'fixed') return target
+            const parent = target.parentElement
+            if (!parent || parent.children.length !== 1 || parent.matches("body, main, header, nav, [role='navigation'], [data-testid='primaryColumn'], #react-root, #layers")) break
+            target = parent
+        }
+        return bar
+    }
 
     function currentScrollY() {
         const y = Math.max(0, window.scrollY || window.pageYOffset || 0)
@@ -676,11 +690,17 @@ function removeAdsCode(options) {
     }
 
     function applyBottomBarAutoHide() {
-        document.querySelectorAll("[data-testid='BottomBar']").forEach(bar => {
-            const item = navigationItem(bar)
+        const targets = new Set(Array.from(document.querySelectorAll("[data-testid='BottomBar']"), bottomBarContainer))
+        // The owner can change when X reparents the bar or inserts sibling controls.
+        // Restore old owners first so a hidden ancestor cannot trap the new target.
+        bottomBarTargets.forEach(item => {
+            if (!targets.has(item)) item.classList.remove('x-ad-bottom-bar-autohide', 'x-ad-bottom-bar-collapsed')
+        })
+        targets.forEach(item => {
             item.classList.add('x-ad-bottom-bar-autohide')
             item.classList.toggle('x-ad-bottom-bar-collapsed', bottomBarCollapsed)
         })
+        bottomBarTargets = targets
     }
 
     function updateBottomBarOnScroll() {
@@ -823,7 +843,7 @@ function removeAdsCode(options) {
     }
 }
 
-const LAYOUT_DIAGNOSTICS_URL = 'https://raw.githubusercontent.com/qsoyq/stash/main/script/browser/layout-diagnostics.js'
+const LAYOUT_DIAGNOSTICS_URL = 'https://raw.githubusercontent.com/qsoyq/stash/continue-x-stoverride-bottom-nav/script/browser/layout-diagnostics.js'
 
 async function loadLayoutDiagnosticsSource() {
     try {
