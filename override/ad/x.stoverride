@@ -4,7 +4,7 @@ desc: |-
     - 页面组件分别开关：新推文提示、顶部导航、快捷发帖、聊天、趋势、导航入口、浮动按钮和详情页组件
     - 阅读与操作：阅读列宽度、居中、详情页 Esc 返回
     - 高级设置：移除 CSP，允许网页执行注入代码
-    - 底部导航：完整隐藏底部导航栏，或分别隐藏通知入口、对话入口、通知未读数角标（通知/对话/角标同时作用于桌面左侧导航）
+    - 底部导航：完整隐藏底部导航栏、上滑隐藏下滑显示底部导航栏，或分别隐藏通知入口、对话入口、通知未读数角标（通知/对话/角标同时作用于桌面左侧导航）
     - 页面布局诊断和底部导航相关开关默认关闭，其余功能默认开启；可在覆写详情 → 参数中调整，修改后请刷新已打开的 X 页面
     - 参数功能需要 Stash iOS/tvOS 3.7+ 或 macOS 4.4+（Beta）
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/x.png
@@ -50,6 +50,11 @@ arguments:
         type: switch
         title: 底部导航 · 完整隐藏底部导航栏
         description: 隐藏移动端底部整条导航栏；桌面端没有底部导航栏，不受影响
+        default: false
+    hide_bottom_bar_on_scroll:
+        type: switch
+        title: 底部导航 · 上滑隐藏底部导航栏
+        description: 浏览时向上滑动隐藏移动端底部导航栏，向下滑动或回到顶部时重新显示；开启「完整隐藏底部导航栏」时此项无效
         default: false
     hide_nav_notifications:
         type: switch
@@ -178,7 +183,7 @@ http:
             max-size: 2097152
             require-body: true
             timeout: 10
-            argument: '{"block_ads_and_recommendations":${args.block_ads_and_recommendations|json},"hide_top_nav":${args.hide_top_nav|json},"hide_home_composer":${args.hide_home_composer|json},"hide_chat_drawer":${args.hide_chat_drawer|json},"hide_sidebar_trends":${args.hide_sidebar_trends|json},"hide_nav_grok":${args.hide_nav_grok|json},"hide_bottom_grok":${args.hide_bottom_grok|json},"hide_nav_premium":${args.hide_nav_premium|json},"hide_nav_verified_orgs":${args.hide_nav_verified_orgs|json},"hide_nav_jobs":${args.hide_nav_jobs|json},"hide_account_menu":${args.hide_account_menu|json},"hide_grok_drawer":${args.hide_grok_drawer|json},"hide_floating_post_button":${args.hide_floating_post_button|json},"hide_reply_permissions":${args.hide_reply_permissions|json},"hide_grok_actions":${args.hide_grok_actions|json},"hide_translate_button":${args.hide_translate_button|json},"hide_automated_content":${args.hide_automated_content|json},"hide_probable_spam_prompt":${args.hide_probable_spam_prompt|json},"enable_custom_layout":${args.enable_custom_layout|json},"home_width_vw":${args.home_width_vw|json},"page_width_vw":${args.page_width_vw|json},"center_primary_column":${args.center_primary_column|json},"enable_escape_back":${args.enable_escape_back|json},"enable_layout_diagnostics":${args.enable_layout_diagnostics|json},"hide_bottom_bar":${args.hide_bottom_bar|json},"hide_nav_notifications":${args.hide_nav_notifications|json},"hide_nav_messages":${args.hide_nav_messages|json},"hide_notification_badge":${args.hide_notification_badge|json}}'
+            argument: '{"block_ads_and_recommendations":${args.block_ads_and_recommendations|json},"hide_top_nav":${args.hide_top_nav|json},"hide_home_composer":${args.hide_home_composer|json},"hide_chat_drawer":${args.hide_chat_drawer|json},"hide_sidebar_trends":${args.hide_sidebar_trends|json},"hide_nav_grok":${args.hide_nav_grok|json},"hide_bottom_grok":${args.hide_bottom_grok|json},"hide_nav_premium":${args.hide_nav_premium|json},"hide_nav_verified_orgs":${args.hide_nav_verified_orgs|json},"hide_nav_jobs":${args.hide_nav_jobs|json},"hide_account_menu":${args.hide_account_menu|json},"hide_grok_drawer":${args.hide_grok_drawer|json},"hide_floating_post_button":${args.hide_floating_post_button|json},"hide_reply_permissions":${args.hide_reply_permissions|json},"hide_grok_actions":${args.hide_grok_actions|json},"hide_translate_button":${args.hide_translate_button|json},"hide_automated_content":${args.hide_automated_content|json},"hide_probable_spam_prompt":${args.hide_probable_spam_prompt|json},"enable_custom_layout":${args.enable_custom_layout|json},"home_width_vw":${args.home_width_vw|json},"page_width_vw":${args.page_width_vw|json},"center_primary_column":${args.center_primary_column|json},"enable_escape_back":${args.enable_escape_back|json},"enable_layout_diagnostics":${args.enable_layout_diagnostics|json},"hide_bottom_bar":${args.hide_bottom_bar|json},"hide_bottom_bar_on_scroll":${args.hide_bottom_bar_on_scroll|json},"hide_nav_notifications":${args.hide_nav_notifications|json},"hide_nav_messages":${args.hide_nav_messages|json},"hide_notification_badge":${args.hide_notification_badge|json}}'
             type: response
             debug: false
 script-providers:

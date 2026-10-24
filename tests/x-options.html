@@ -69,14 +69,16 @@ try {
         await loaded;
         const doc = frame.contentDocument;
         const timers = [];
-        const state = { back: 0, width, path };
+        const state = { back: 0, width, path, scrollY: 0, listeners: {} };
         const browser = {
             navigator: { standalone },
             matchMedia: query => ({ matches: standalone && query === '(display-mode: standalone)' }),
             get location() { return { href: `https://x.com${state.path}` }; },
             get innerWidth() { return state.width; },
+            get innerHeight() { return 600; },
+            get scrollY() { return state.scrollY; },
             getComputedStyle: element => frame.contentWindow.getComputedStyle(element),
-            addEventListener() {}, setInterval: fn => timers.push(fn),
+            addEventListener: (type, fn) => (state.listeners[type] ||= []).push(fn), setInterval: fn => timers.push(fn),
             history: { back: () => state.back++ },
         };
         const run = new Function('document', 'window', 'Element', `${functions}
@@ -268,6 +270,48 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
         const all = await fixture({ ...disabled, ...Object.fromEntries(bottomNavigation.map(key => [key, true])) }, '/home', 1440);
         assert(all.timers.length === 1 && all.doc.getElementById('x-ad-blocker-style'), 'Bottom navigation switches did not install updates');
         all.frame.remove();
+    }
+    for (const [autoHide, hideBar] of [[false, false], [true, false], [true, true]]) {
+        const options = { ...disabled, hide_bottom_bar_on_scroll: autoHide, hide_bottom_bar: hideBar, hide_floating_post_button: true };
+        assert(defaults.hide_bottom_bar_on_scroll === false, 'Scroll auto-hide is not disabled by default');
+        const page = await fixture(options, '/home', 420);
+        page.doc.body.insertAdjacentHTML('beforeend', '<div style="height:5000px"></div><div id="autohide-shell" style="position:fixed;bottom:0;height:53px"><div data-testid="BottomBar"><div role="tablist"><a id="autohide-home" href="/home">Home</a><a href="/explore">Search</a></div></div></div>');
+        page.timers.forEach(fn => fn());
+        const shell = page.doc.getElementById('autohide-shell');
+        const scrollTo = y => { page.state.scrollY = y; (page.state.listeners.scroll || []).forEach(fn => fn()); };
+        const collapsed = () => shell.classList.contains('x-ad-bottom-bar-collapsed');
+        assert(!!page.state.listeners.scroll === (autoHide && !hideBar), `Scroll listener state wrong: ${autoHide}/${hideBar}`);
+        if (hideBar) {
+            assert(!page.visible('autohide-shell'), 'Full bottom bar hiding lost precedence');
+            page.frame.remove();
+            continue;
+        }
+        assert(!collapsed() && page.visible('autohide-home'), 'Bottom bar collapsed before scrolling');
+        if (!autoHide) {
+            assert(!shell.classList.contains('x-ad-bottom-bar-autohide') && !page.doc.getElementById('x-ad-blocker-style').textContent.includes('bottom-bar-collapsed'), 'Disabled auto-hide changed the bottom bar');
+            page.frame.remove();
+            continue;
+        }
+        scrollTo(300);
+        assert(collapsed(), 'Scrolling down did not collapse the bottom bar');
+        assert(page.doc.defaultView.getComputedStyle(shell).pointerEvents === 'none', 'Collapsed bottom bar still intercepts taps');
+        scrollTo(304);
+        assert(collapsed(), 'Small scroll jitter changed bottom bar state');
+        scrollTo(200);
+        assert(!collapsed(), 'Scrolling up did not restore the bottom bar');
+        scrollTo(800);
+        page.timers.forEach(fn => fn());
+        assert(collapsed(), 'Periodic update reset the collapsed bottom bar');
+        scrollTo(100000);
+        scrollTo(99000);
+        assert(collapsed(), 'Overscroll bounce at page end restored the bottom bar');
+        scrollTo(0);
+        assert(!collapsed(), 'Returning to top did not restore the bottom bar');
+        scrollTo(900);
+        page.state.path = '/explore';
+        page.timers.forEach(fn => fn());
+        assert(!collapsed(), 'Route change kept the bottom bar collapsed');
+        page.frame.remove();
     }
     // Execute the complete response entrypoint, including argument parsing and $done.
     async function responseCheck(argument, contentType, expectedBody) {

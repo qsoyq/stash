@@ -522,6 +522,7 @@ function getXOptions() {
         enable_escape_back: true,
         enable_layout_diagnostics: false,
         hide_bottom_bar: false,
+        hide_bottom_bar_on_scroll: false,
         hide_nav_notifications: false,
         hide_nav_messages: false,
         hide_notification_badge: false,
@@ -552,6 +553,13 @@ function removeAdsCode(options) {
     style.id = 'x-ad-blocker-style'
     style.textContent = `
         .${hiddenClass}, .${sidebarClass} { display: none !important; }
+        ${options.hide_bottom_bar_on_scroll && !options.hide_bottom_bar ? `
+        .x-ad-bottom-bar-autohide { transition: transform 0.2s ease, opacity 0.2s ease !important; }
+        .x-ad-bottom-bar-collapsed {
+            transform: translateY(calc(100% + env(safe-area-inset-bottom))) !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }` : ''}
         ${options.enable_custom_layout ? `
         @media (min-width: 1000px) {
             div[data-testid='primaryColumn'] {
@@ -649,6 +657,42 @@ function removeAdsCode(options) {
         column.style.setProperty('transform', `translateX(${offset}px)`, 'important')
     }
 
+    // Scrolling down (finger swipes up) collapses the bottom bar; scrolling up restores it.
+    const autoHideBottomBar = options.hide_bottom_bar_on_scroll && !options.hide_bottom_bar
+    const scrollThreshold = 8
+    let lastScrollY = 0
+    let lastScrollPath = null
+    let bottomBarCollapsed = false
+
+    function currentScrollY() {
+        const y = Math.max(0, window.scrollY || window.pageYOffset || 0)
+        // Ignore iOS rubber-band overscroll past the end of the page.
+        const max = document.documentElement.scrollHeight - (window.innerHeight || 0)
+        return max > 0 ? Math.min(y, max) : y
+    }
+
+    function applyBottomBarAutoHide() {
+        document.querySelectorAll("[data-testid='BottomBar']").forEach(bar => {
+            const item = navigationItem(bar)
+            item.classList.add('x-ad-bottom-bar-autohide')
+            item.classList.toggle('x-ad-bottom-bar-collapsed', bottomBarCollapsed)
+        })
+    }
+
+    function updateBottomBarOnScroll() {
+        const y = currentScrollY()
+        const delta = y - lastScrollY
+        if (y <= scrollThreshold) {
+            bottomBarCollapsed = false
+        } else if (Math.abs(delta) >= scrollThreshold) {
+            bottomBarCollapsed = delta > 0
+        } else {
+            return
+        }
+        lastScrollY = y
+        applyBottomBarAutoHide()
+    }
+
     function updatePage() {
         const path = new URL(window.location.href).pathname
         const mobile = window.innerWidth < 1000
@@ -684,6 +728,15 @@ function removeAdsCode(options) {
             })
         }
 
+        if (autoHideBottomBar) {
+            if (path !== lastScrollPath) {
+                // A new route starts with the bar visible.
+                lastScrollPath = path
+                lastScrollY = currentScrollY()
+                bottomBarCollapsed = false
+            }
+            applyBottomBarAutoHide()
+        }
         if (options.hide_bottom_bar) {
             document.querySelectorAll("[data-testid='BottomBar']").forEach(bar => hide(navigationItem(bar)))
         }
@@ -752,6 +805,7 @@ function removeAdsCode(options) {
         document.head.appendChild(style)
         updatePage()
         window.addEventListener('resize', updatePage)
+        if (autoHideBottomBar) window.addEventListener('scroll', updateBottomBarOnScroll, { passive: true })
         window.setInterval(updatePage, 500)
     }
 }
@@ -810,6 +864,7 @@ function removeAds(document, options, diagnosticSource = null) {
                 enable_custom_layout: options.enable_custom_layout,
                 center_primary_column: options.center_primary_column,
                 hide_bottom_bar: options.hide_bottom_bar,
+                hide_bottom_bar_on_scroll: options.hide_bottom_bar_on_scroll,
                 hide_nav_notifications: options.hide_nav_notifications,
                 hide_nav_messages: options.hide_nav_messages,
                 hide_notification_badge: options.hide_notification_badge,
