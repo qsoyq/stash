@@ -107,4 +107,13 @@ Stash executes each script as the body of an async function (same as Surge / Qua
 
 ### Script-to-Override Binding
 
-Each override's `script-providers` section references scripts via raw GitHub URLs pointing to `main` branch. When adding a new script, update the corresponding `.stoverride` file's `script-providers` URL.
+Each override's `script-providers` section references scripts via raw GitHub URLs. Production overrides use `main`; branch development follows the checks below. When adding a new script, update the corresponding `.stoverride` file's `script-providers` URL.
+
+### Branch Development Checks
+
+When modifying or implementing an override on a development branch, check all affected overrides before handing them over for client testing:
+
+- Comment out the top-level `category` field (for example, `# category: ad`) so the override is easier to locate in the client. If the format hook strips YAML comments, temporarily omit the field instead and record its original value in the change notes so it can be restored.
+- Change links to resources in this repository to their corresponding URLs on the current branch, preserving resource paths. Cover script providers, rule providers, and other repository resources referenced by the override, as well as repository resources loaded indirectly by its scripts. Leave links to other repositories and external services unchanged.
+- Verify the actual current branch name before preparing links, especially if the workspace branch has been renamed. When pushing for client testing, verify that the branch URLs resolve to the intended files.
+- Before merging into the default branch, restore the original `category` and change all temporary branch resource URLs back to the production branch (`main`).
