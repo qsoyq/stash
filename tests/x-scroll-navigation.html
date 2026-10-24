@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>X bottom navigation scroll regression</title>
+<pre id="result">Running...</pre>
+<script type="module">
+const output = document.querySelector('#result');
+try {
+    const source = await (await fetch('../script/ad/x.js')).text();
+    const functions = source.slice(source.indexOf('function getXOptions()'), source.indexOf('\nconst LAYOUT_DIAGNOSTICS_URL'));
+    let passed = 0;
+    const assert = (condition, message) => {
+        if (!condition) throw new Error(message);
+        passed++;
+    };
+    const wait = () => new Promise(resolve => setTimeout(resolve, 700));
+    const frame = document.createElement('iframe');
+    frame.style.cssText = 'width:390px;height:700px;border:0';
+    frame.srcdoc = `<!doctype html><html><head><style>
+        body { margin:0; font-family:sans-serif; }
+        main { height:5000px; background:#eee; }
+        #shell { position:fixed; bottom:0; left:0; right:0; height:54px; background:white; }
+        nav { display:flex; height:100%; justify-content:space-around; align-items:center; }
+    </style></head><body><main>Timeline</main>
+    <div id="portal"><div id="shell"><nav data-testid="BottomBar"><a href="#home">Home</a><a href="#search">Search</a></nav></div></div>
+    </body></html>`;
+    const loaded = new Promise(resolve => frame.onload = resolve);
+    document.body.appendChild(frame);
+    await loaded;
+    const win = frame.contentWindow;
+    const doc = frame.contentDocument;
+    const api = new win.Function(`${functions}; return { getXOptions, removeAdsCode };`)();
+    const options = Object.fromEntries(Object.entries(api.getXOptions()).map(([key, value]) => [key, typeof value === 'boolean' ? false : value]));
+    api.removeAdsCode({ ...options, hide_bottom_bar_on_scroll: true });
+    const bar = doc.querySelector('[data-testid="BottomBar"]');
+    function visible() {
+        for (let node = bar; node; node = node.parentElement) {
+            const css = win.getComputedStyle(node);
+            if (css.display === 'none' || css.visibility === 'hidden' || Number(css.opacity) === 0) return false;
+        }
+        const rect = bar.getBoundingClientRect();
+        return rect.height > 0 && rect.top < win.innerHeight && rect.bottom > 0;
+    }
+    const scroll = async y => { win.scrollTo(0, y); await wait(); };
+    await wait();
+    assert(visible(), 'Bar should be visible on initial load');
+    await scroll(600);
+    assert(!visible(), 'Bar should hide while scrolling down');
+    // React inserts a sibling in the portal while the bar is hidden.
+    doc.getElementById('portal').insertAdjacentHTML('beforeend', '<div id="new-sibling"></div>');
+    await scroll(400);
+    const state = Array.from(doc.querySelectorAll('#portal, #shell')).map(element => ({
+        id: element.id, classes: element.className, opacity: win.getComputedStyle(element).opacity,
+    }));
+    console.log('After upward scroll with changed wrappers:', JSON.stringify(state));
+    assert(visible(), 'Bar remained hidden after scrolling up when its wrapper gained a sibling');
+    const rect = bar.getBoundingClientRect();
+    assert(bar.contains(doc.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)), 'Restored bar cannot receive taps');
+    await scroll(900);
+    assert(!visible(), 'Second downward scroll did not hide bar');
+    await scroll(0);
+    assert(visible(), 'Top of page did not restore bar');
+    assert(!doc.getElementById('portal').classList.contains('x-ad-bottom-bar-autohide'), 'Animation escaped the fixed shell');
+
+    // Adding another control inside the fixed shell changes the animation owner.
+    await scroll(1200);
+    doc.getElementById('shell').insertAdjacentHTML('beforeend', '<button id="sibling-control">Other control</button>');
+    await wait();
+    assert(!doc.getElementById('shell').classList.contains('x-ad-bottom-bar-collapsed'), 'Old owner retained its hidden state after gaining a child');
+    assert(!visible(), 'Changing animation owner unexpectedly showed the bar');
+    await scroll(1000);
+    assert(visible(), 'Bar stayed hidden after changing animation owner');
+    assert(win.getComputedStyle(doc.getElementById('sibling-control')).pointerEvents !== 'none', 'Sibling control became untappable');
+
+    // Reparent the same bar while hidden, then restore it in its new fixed shell.
+    await scroll(1500);
+    const replacement = doc.createElement('div');
+    replacement.id = 'replacement-shell';
+    replacement.style.cssText = 'position:fixed;bottom:0;left:0;right:0;height:54px;background:white';
+    doc.body.appendChild(replacement);
+    replacement.appendChild(bar);
+    await wait();
+    assert(!bar.classList.contains('x-ad-bottom-bar-collapsed'), 'Reparented bar retained old owner styles');
+    assert(!visible(), 'Reparenting lost the collapsed state');
+    await scroll(1300);
+    assert(visible(), 'Reparented bar did not reappear');
+
+    // The test id can itself be on the fixed element, inside a plain portal.
+    await scroll(1800);
+    bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;height:54px;background:white';
+    replacement.style.cssText = '';
+    await wait();
+    assert(!replacement.classList.contains('x-ad-bottom-bar-collapsed'), 'Static ancestor retained hidden styles');
+    await scroll(1600);
+    assert(visible(), 'Fixed bar inside static portal did not reappear');
+    await scroll(2000);
+    bar.remove();
+    await wait();
+    assert(!bar.classList.contains('x-ad-bottom-bar-collapsed'), 'Unmounted bar kept hidden styles');
+    replacement.appendChild(bar);
+    await wait();
+    assert(!visible(), 'Remounted bar lost the current scroll state');
+    await scroll(1800);
+    assert(visible(), 'Remounted bar failed to restore on upward scroll');
+
+    await scroll(2600);
+    assert(!visible(), 'Bar did not hide before document shrink');
+    doc.querySelector('main').style.height = '2100px';
+    await wait();
+    assert(!visible(), 'Document-height clamp was mistaken for an upward gesture');
+    await scroll(Math.max(0, win.scrollY - 150));
+    assert(visible(), 'Upward gesture after document shrink did not restore bar');
+    await scroll(1800);
+    win.dispatchEvent(new win.PageTransitionEvent('pagehide', { persisted: true }));
+    win.dispatchEvent(new win.PageTransitionEvent('pageshow', { persisted: true }));
+    await wait();
+    assert(visible(), 'Page restoration kept navigation hidden');
+
+    let documentQueries = 0, frames = 0;
+    const originalQuery = doc.querySelectorAll.bind(doc);
+    doc.querySelectorAll = selector => { documentQueries++; return originalQuery(selector); };
+    const originalFrame = win.requestAnimationFrame.bind(win);
+    win.requestAnimationFrame = callback => originalFrame(timestamp => { frames++; callback(timestamp); });
+    for (let i = 0; i < 30; i++) win.dispatchEvent(new win.Event('scroll'));
+    await wait();
+    assert(frames <= 1, 'Scroll events were not coalesced into one frame');
+    assert(documentQueries === 0, 'Scroll handler performed global DOM queries');
+    await scroll(0);
+    output.textContent = `PASS: ${passed} real-scroll assertions`;
+} catch (error) {
+    output.textContent = `FAIL: ${error.stack || error}`;
+}
+</script>
+</html>

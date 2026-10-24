@@ -79,6 +79,15 @@ When adding or modifying override functionality, consult the official [override 
 - Mention the client settings entry (override details → parameters) and required versions when introducing parameters: currently Beta, iOS/tvOS 3.7+ and macOS 4.4+. Recheck the official documentation as support changes.
 - Verify defaults, individual controls, all controls disabled, and missing/invalid script arguments, in addition to normal repository checks. Parameter substitution and client UI behavior require validation in a supported Stash version.
 
+### Override Description (`desc`)
+
+For overrides that declare `arguments`, write `desc` in Chinese using this layout:
+
+- Start with plain-text lines (not list items): first the required Stash versions for parameters, then where to change settings (覆写详情 → 参数) and the refresh hint, followed by a blank line.
+- End with an ordered list (`1.`, `2.`, …) with exactly one item per declared parameter, in declaration order, so it matches the client parameter form.
+- Each item uses the parameter title without its group prefix (e.g. `页面组件 · `), followed by its default in parentheses — `（默认开）`, `（默认关）`, or the default value such as `（默认 65%）`. Add a short `：` note only for scope or caveats the title does not convey (platform limits, what is preserved, dependencies between parameters).
+- Update `desc` whenever parameters are added, removed, reordered, renamed, or their defaults change.
+
 Keep `AGENTS.md` and `CLAUDE.md` aligned when changing repository-wide instructions.
 
 ### Script Runtime
@@ -98,4 +107,13 @@ Stash executes each script as the body of an async function (same as Surge / Qua
 
 ### Script-to-Override Binding
 
-Each override's `script-providers` section references scripts via raw GitHub URLs pointing to `main` branch. When adding a new script, update the corresponding `.stoverride` file's `script-providers` URL.
+Each override's `script-providers` section references scripts via raw GitHub URLs. Production overrides use `main`; branch development follows the checks below. When adding a new script, update the corresponding `.stoverride` file's `script-providers` URL.
+
+### Branch Development Checks
+
+When modifying or implementing an override on a development branch, check all affected overrides before handing them over for client testing:
+
+- Comment out the top-level `category` field (for example, `# category: ad`) so the override is easier to locate in the client. If the format hook strips YAML comments, temporarily omit the field instead and record its original value in the change notes so it can be restored.
+- Change links to resources in this repository to their corresponding URLs on the current branch, preserving resource paths. Cover script providers, rule providers, and other repository resources referenced by the override, as well as repository resources loaded indirectly by its scripts. Leave links to other repositories and external services unchanged.
+- Verify the actual current branch name before preparing links, especially if the workspace branch has been renamed. When pushing for client testing, verify that the branch URLs resolve to the intended files.
+- Before merging into the default branch, restore the original `category` and change all temporary branch resource URLs back to the production branch (`main`).

@@ -10,6 +10,7 @@ try {
     const response = await fetch('../script/ad/x.js');
     if (!response.ok) throw new Error(`Script fetch failed: ${response.status}`);
     const source = await response.text();
+    const diagnosticUrl = source.match(/const LAYOUT_DIAGNOSTICS_URL = '([^']+)'/)?.[1];
     const start = source.indexOf('function getXOptions()');
     const end = source.indexOf('\nasync function main()', start);
     if (start < 0 || end < 0) throw new Error('Production functions not found');
@@ -38,7 +39,7 @@ try {
         hide_nav_premium: 'nav-premium', hide_nav_verified_orgs: 'nav-orgs', hide_nav_jobs: 'nav-jobs',
         hide_account_menu: 'account', hide_grok_drawer: 'grok', hide_floating_post_button: 'post',
         hide_reply_permissions: 'reply', hide_grok_actions: 'actions', hide_translate_button: 'translate',
-        hide_automated_content: 'automated', hide_probable_spam_prompt: 'spam',
+        hide_automated_content: 'automated', hide_probable_spam_prompt: 'spam', hide_show_posts_prompt: 'show-posts',
     };
     async function fixture(options, path = '/home', width = 1440, extraSidebar = '', standalone = false, mobileHeader = false) {
         const frame = document.createElement('iframe');
@@ -51,6 +52,7 @@ try {
                 <a aria-label="Jobs" id="nav-jobs">Jobs</a><button aria-label="Account menu" id="account">Account</button>
             </nav></header>
             <div style="display:flex"><div data-testid="primaryColumn" style="width:600px">
+                <div data-testid="cellInnerDiv" id="show-posts"><div><button role="button"><div dir="ltr"><span>Show 56 posts</span></div></button></div></div>
                 <div data-testid="cellInnerDiv" id="composer"><div data-testid="tweetTextarea_0">Compose</div></div>
                 <div data-testid="chat-drawer-main" id="chat">Chat</div>
                 <div data-testid="GrokDrawer" id="grok">Grok</div><div data-testid="FloatingActionButtonBase" id="post">Post</div>
@@ -58,8 +60,8 @@ try {
                 <div aria-live="polite" id="unrelated-live">Saved</div>
                 <button aria-label="Grok actions" id="actions">Actions</button>
                 <div id="translate-container"><button aria-label="Translate post" id="translate">Translate</button><button id="other-action">Other</button></div>
-                <div data-testid="cellInnerDiv" id="automated"><article><span>Automated</span></article></div>
-                <span id="spam">Show probable spam</span>
+                <div data-testid="cellInnerDiv" id="automated"><article><div data-testid="User-Name"><span>Automated</span></div></article></div>
+                <div role="button" id="spam"><span>Show probable spam</span></div>
             </div><div data-testid="sidebarColumn">
                 <aside data-testid="premium-signup" id="premium"><a href="/i/premium_sign_up">Subscribe</a></aside>
                 <section id="trends"><h2>Trends</h2><div data-testid="trend">Trend</div></section>${extraSidebar}
@@ -69,18 +71,26 @@ try {
         await loaded;
         const doc = frame.contentDocument;
         const timers = [];
-        const state = { back: 0, width, path };
+        const frames = new Map();
+        let nextFrame = 0;
+        const state = { back: 0, width, path, scrollY: 0, listeners: {} };
         const browser = {
             navigator: { standalone },
             matchMedia: query => ({ matches: standalone && query === '(display-mode: standalone)' }),
             get location() { return { href: `https://x.com${state.path}` }; },
             get innerWidth() { return state.width; },
+            get innerHeight() { return 600; },
+            get scrollY() { return state.scrollY; },
             getComputedStyle: element => frame.contentWindow.getComputedStyle(element),
-            addEventListener() {}, setInterval: fn => timers.push(fn),
+            addEventListener: (type, fn) => (state.listeners[type] ||= []).push(fn),
+            removeEventListener: (type, fn) => { state.listeners[type] = (state.listeners[type] || []).filter(listener => listener !== fn); },
+            requestAnimationFrame: fn => { frames.set(++nextFrame, fn); return nextFrame; },
+            cancelAnimationFrame: id => frames.delete(id),
+            setInterval: fn => timers.push(fn),
             history: { back: () => state.back++ },
         };
-        const run = new Function('document', 'window', 'Element', `${functions}
-${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics };`)(doc, browser, frame.contentWindow.Element);
+        const run = new Function('document', 'window', 'Element', 'MutationObserver', 'ResizeObserver', `${functions}
+${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics };`)(doc, browser, frame.contentWindow.Element, frame.contentWindow.MutationObserver, frame.contentWindow.ResizeObserver);
         run.removeAdsCode(options);
         if (options.enable_layout_diagnostics) run.startLayoutDiagnostics({
             site: 'x', hiddenClass: 'x-ad-hidden', publicRoutes: ['/home'],
@@ -94,7 +104,14 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
             }
             return true;
         };
-        return { frame, doc, timers, state, visible, run };
+        const flushFrames = () => {
+            for (let attempts = 0; frames.size && attempts < 10; attempts++) {
+                const callbacks = Array.from(frames.values()); frames.clear(); callbacks.forEach(fn => fn());
+            }
+            assert(frames.size === 0, 'Scheduler did not settle');
+        };
+        const update = () => { browser.__stashXBlocker?.refresh(); flushFrames(); };
+        return { frame, doc, timers, state, visible, run, update, flushFrames };
     }
     for (const [key, target] of Object.entries(targets)) {
         const page = await fixture({ ...disabled, [key]: true }, key === 'hide_reply_permissions' ? '/u/status/123' : '/home');
@@ -122,11 +139,11 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
         }
         assert(page.state.back === 1, 'Escape ignored repeat/composition/key guards');
         page.state.path = '/home';
-        page.timers.forEach(fn => fn());
+        page.update();
         assert(page.doc.documentElement.classList.contains('x-ad-home-layout'), 'SPA home layout missing');
         page.state.width = 500;
         page.state.path = '/explore';
-        page.timers.forEach(fn => fn());
+        page.update();
         assert(page.visible('top'), 'Mobile search header hidden');
         assert(!page.doc.querySelector('[data-testid="primaryColumn"]').style.transform, 'Mobile transform not cleared');
         page.frame.remove();
@@ -138,7 +155,7 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
         const recommendation = page.doc.createElement('aside');
         recommendation.innerHTML = '<h2>Who to follow</h2><div data-testid="UserCell">Suggested user</div>';
         page.doc.querySelector('[data-testid="sidebarColumn"]').appendChild(recommendation);
-        page.timers.forEach(fn => fn());
+        page.update();
         assert(recommendation.classList.contains('x-ad-hidden'), 'Dynamic sidebar recommendation not hidden');
         page.frame.remove();
     }
@@ -171,7 +188,7 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
         const wrapper = page.doc.createElement('div');
         wrapper.innerHTML = '<div role="progressbar"></div><div id="alternate-composer"><div data-testid="tweetTextarea_0">Compose</div></div><div id="regular-content">Keep</div>';
         page.doc.body.appendChild(wrapper);
-        page.timers.forEach(fn => fn());
+        page.update();
         assert(!page.visible('alternate-composer') && page.visible('regular-content'), 'Alternate composer detection hid unrelated content');
         page.frame.remove();
     }
@@ -180,16 +197,16 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
         assert(!page.visible('top') && !page.visible('mobile-spacer'), 'Mobile header spacer remained visible');
         assert(page.visible('desktop-banner') && page.visible('home') && page.visible('refresh-indicator'), 'Mobile header fix hid navigation or refresh content');
         page.state.path = '/explore';
-        page.timers.forEach(fn => fn());
+        page.update();
         assert(page.visible('top') && page.visible('mobile-spacer'), 'Mobile search header was not restored');
         page.state.path = '/home';
         page.state.width = 1440;
-        page.timers.forEach(fn => fn());
+        page.update();
         assert(page.visible('mobile-spacer') && page.visible('desktop-banner'), 'Desktop banner was collapsed');
         page.state.width = 420;
-        page.timers.forEach(fn => fn());
+        page.update();
         page.doc.getElementById('mobile-spacer').append('New visible banner content');
-        page.timers.forEach(fn => fn());
+        page.update();
         assert(page.visible('mobile-spacer'), 'Previously empty banner remained hidden after content appeared');
         page.frame.remove();
     }
@@ -238,9 +255,99 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
     for (const enabled of [false, true]) {
         const page = await fixture({ ...disabled, hide_bottom_grok: enabled, center_primary_column: true }, '/home', 420);
         page.doc.body.insertAdjacentHTML('beforeend', '<nav data-testid="BottomBar"><a id="bottom-home" href="/home">Home</a><a id="bottom-grok" href="/i/grok">Grok</a><a id="bottom-search" href="/explore">Search</a></nav><article><a id="tweet-grok-link" href="/i/grok">Link</a></article>');
-        page.timers.forEach(fn => fn());
+        page.update();
         assert(page.visible('bottom-grok') === !enabled, 'Bottom Grok control ignored');
         assert(page.visible('nav-grok') && page.visible('grok') && page.visible('bottom-home') && page.visible('bottom-search') && page.visible('tweet-grok-link'), 'Bottom Grok control affected other components');
+        page.frame.remove();
+    }
+    {
+        const bottomNavigation = ['hide_bottom_bar', 'hide_nav_notifications', 'hide_nav_messages', 'hide_notification_badge'];
+        assert(bottomNavigation.every(key => defaults[key] === false), 'Bottom navigation switches are not disabled by default');
+        const ids = ['bottom-shell', 'bottom-home', 'bottom-notifications-slot', 'bottom-badge', 'bottom-messages-slot', 'desktop-notifications', 'desktop-badge', 'desktop-notifications-label', 'desktop-messages', 'tweet-notifications-link'];
+        const expectedHidden = {
+            hide_bottom_bar: ['bottom-shell', 'bottom-home', 'bottom-notifications-slot', 'bottom-badge', 'bottom-messages-slot'],
+            hide_nav_notifications: ['bottom-notifications-slot', 'bottom-badge', 'desktop-notifications', 'desktop-badge', 'desktop-notifications-label'],
+            hide_nav_messages: ['bottom-messages-slot', 'desktop-messages'],
+            hide_notification_badge: ['bottom-badge', 'desktop-badge'],
+        };
+        for (const key of [null, ...bottomNavigation]) {
+            const options = { ...disabled, ...(key ? { [key]: true } : {}) };
+            const page = await fixture(options, '/home', 420);
+            page.doc.querySelector('header nav').insertAdjacentHTML('beforeend', '<a href="/notifications" data-testid="AppTabBar_Notifications_Link" aria-label="Notifications (3 unread notifications)" id="desktop-notifications"><div><div><svg></svg><div aria-label="3 unread items" id="desktop-badge"><span>3</span></div></div><div dir="ltr"><span id="desktop-notifications-label">Notifications</span></div></div></a><a href="/i/chat" data-testid="AppTabBar_DirectMessage_Link" id="desktop-messages">Chat</a>');
+            page.doc.body.insertAdjacentHTML('beforeend', '<div id="bottom-shell" style="position:fixed;bottom:0;height:53px;background:white"><div data-testid="BottomBar"><div role="tablist" style="display:flex"><div style="flex:1"><a id="bottom-home" href="/home">Home</a></div><div style="flex:1" id="bottom-notifications-slot"><a href="/notifications" aria-label="Notifications"><div><svg></svg><div><span id="bottom-badge">1</span></div></div></a></div><div style="flex:1" id="bottom-messages-slot"><a href="/messages">Messages</a></div></div></div></div><article><a id="tweet-notifications-link" href="/notifications">Link</a></article>');
+            page.update();
+            const hidden = key ? expectedHidden[key] : [];
+            for (const id of ids) assert(page.visible(id) === !hidden.includes(id), `${key || 'disabled'} visibility wrong for ${id}`);
+            assert(page.visible('home') && page.visible('nav-grok'), `${key || 'disabled'} hid other navigation`);
+            if (!key) assert(page.timers.length === 0, 'Disabled bottom navigation switches started cleanup timer');
+            page.frame.remove();
+        }
+        const all = await fixture({ ...disabled, ...Object.fromEntries(bottomNavigation.map(key => [key, true])) }, '/home', 1440);
+        assert(all.timers.length === 0 && all.doc.getElementById('x-ad-blocker-style'), 'Bottom navigation switches did not install event-driven updates');
+        all.frame.remove();
+    }
+    for (const [autoHide, hideBar] of [[false, false], [true, false], [true, true]]) {
+        const options = { ...disabled, hide_bottom_bar_on_scroll: autoHide, hide_bottom_bar: hideBar, hide_floating_post_button: true };
+        assert(defaults.hide_bottom_bar_on_scroll === true, 'Scroll auto-hide is not enabled by default');
+        const page = await fixture(options, '/home', 420);
+        page.doc.body.insertAdjacentHTML('beforeend', '<div style="height:5000px"></div><div id="autohide-shell" style="position:fixed;bottom:0;height:53px"><div data-testid="BottomBar"><div role="tablist"><a id="autohide-home" href="/home">Home</a><a href="/explore">Search</a></div></div></div>');
+        page.update();
+        const shell = page.doc.getElementById('autohide-shell');
+        const scrollTo = y => { page.state.scrollY = y; (page.state.listeners.scroll || []).forEach(fn => fn()); page.flushFrames(); };
+        const collapsed = () => shell.classList.contains('x-ad-bottom-bar-collapsed');
+        assert((page.state.listeners.scroll || []).length === (autoHide && !hideBar ? 1 : 0), `Scroll listener state wrong: ${autoHide}/${hideBar}`);
+        if (hideBar) {
+            assert(!page.visible('autohide-shell'), 'Full bottom bar hiding lost precedence');
+            page.frame.remove();
+            continue;
+        }
+        assert(!collapsed() && page.visible('autohide-home'), 'Bottom bar collapsed before scrolling');
+        if (!autoHide) {
+            assert(!shell.classList.contains('x-ad-bottom-bar-autohide') && !page.doc.getElementById('x-ad-blocker-style').textContent.includes('bottom-bar-collapsed'), 'Disabled auto-hide changed the bottom bar');
+            page.frame.remove();
+            continue;
+        }
+        scrollTo(300);
+        assert(collapsed(), 'Scrolling down did not collapse the bottom bar');
+        assert(page.doc.defaultView.getComputedStyle(shell).pointerEvents === 'none', 'Collapsed bottom bar still intercepts taps');
+        scrollTo(304);
+        assert(collapsed(), 'Small scroll jitter changed bottom bar state');
+        scrollTo(200);
+        assert(!collapsed(), 'Scrolling up did not restore the bottom bar');
+        scrollTo(800);
+        page.update();
+        assert(collapsed(), 'Periodic update reset the collapsed bottom bar');
+        scrollTo(100000);
+        scrollTo(99000);
+        assert(collapsed(), 'Overscroll bounce at page end restored the bottom bar');
+        scrollTo(0);
+        assert(!collapsed(), 'Returning to top did not restore the bottom bar');
+        scrollTo(900);
+        page.state.path = '/explore';
+        page.update();
+        assert(!collapsed(), 'Route change kept the bottom bar collapsed');
+        page.frame.remove();
+    }
+    {
+        assert(defaults.hide_show_posts_prompt === false, 'Show posts prompt switch is not disabled by default');
+        const page = await fixture({ ...disabled, hide_show_posts_prompt: true }, '/home', 420);
+        const column = page.doc.querySelector('[data-testid="primaryColumn"]');
+        const cells = {
+            'show-posts-zh': '<div role="button"><span>显示 56 帖子</span></div>',
+            'show-posts-zh-measure': '<button><span>显示 3 条帖子</span></button>',
+            'show-posts-hant': '<button><span>顯示 12 則貼文</span></button>',
+            'show-posts-compact': '<button><span>Show 1.2K posts</span></button>',
+            'show-posts-single': '<button><span>Show 1 post</span></button>',
+            'keep-more-replies': '<button><span>Show more replies</span></button>',
+            'keep-show-spam': '<button><span>Show probable spam</span></button>',
+            'keep-tweet': '<article><button><span>Show 56 posts</span></button></article>',
+            'keep-number-text': '<div><span>显示 56 帖子</span></div>',
+        };
+        for (const [id, html] of Object.entries(cells)) column.insertAdjacentHTML('afterbegin', `<div data-testid="cellInnerDiv" id="${id}">${html}</div>`);
+        page.doc.body.insertAdjacentHTML('beforeend', '<button id="outside-column">Show 56 posts</button>');
+        page.update();
+        for (const id of Object.keys(cells)) assert(page.visible(id) === id.startsWith('keep-'), `Show posts prompt visibility wrong for ${id}`);
+        assert(!page.visible('show-posts') && page.visible('outside-column'), 'Show posts prompt matched outside the timeline');
         page.frame.remove();
     }
     // Execute the complete response entrypoint, including argument parsing and $done.
@@ -258,7 +365,7 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
                 JSON.stringify({ ...disabled, enable_layout_diagnostics: true }), { type: 'response' },
                 { url: 'https://x.com/home' }, { headers: { 'content-type': 'text/html' }, body: '<html><head></head><body>Original</body></html>' }, resolve,
                 { get: (request, callback) => {
-                    assert(request.url === 'https://raw.githubusercontent.com/qsoyq/stash/main/script/browser/layout-diagnostics.js', 'Diagnostic download still uses a test branch');
+                    assert(request.url === diagnosticUrl, 'Diagnostic download does not use the configured resource URL');
                     callback(success ? null : 'network', { status: success ? 200 : 503 }, success ? diagnosticSource + '\n// </scr' + 'ipt><div id="escaped-script-marker">unexpected</div>' : null);
                 } },
             );

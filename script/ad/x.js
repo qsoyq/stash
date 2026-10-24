@@ -1,498 +1,26 @@
 /** @namespace x */
 
-/**
- * @typedef {Object} x.HTTPResponse
- * @property {string|null} error - 错误信息，如果没有错误则为 null
- * @property {object} response - HTTP 响应对象
- * @property {string|null} data - 返回的数据，如果没有数据则为 null
- */
-
-/**
- * @typedef {function(Error|string|null, Object, string|null): void} x.HTTPCallback
- * 回调函数类型，接受错误、响应和数据作为参数。
- * @param {Error|string|null} error - 错误信息，可以是 Error 对象、字符串或者 null
- * @param {Object} response - HTTP 响应对象
- * @param {string|null} data - 返回的数据，可以是字符串或者 null
- */
-
-/**
- * @typedef {function(Object, x.HTTPCallback): x.HTTPResponse} x.HTTPMethod
- */
-
-/**
- * @typedef {Object} x.HttpClient
- * @property {x.HTTPMethod} get - 发送 GET 请求
- * @property {x.HTTPMethod} post - 发送 POST 请求
- * @property {x.HTTPMethod} put - 发送 PUT 请求
- * @property {x.HTTPMethod} delete - 发送 DELETE 请求
- */
-
-/**
- * 对异步回调的 HTTP 调用包装成 async 函数
- * @param {'GET'|'POST'|'PUT'|'DELETE'} method - HTTP 方法类型，支持 GET、POST、PUT 和 DELETE
- * @param {Object} params - 请求参数对象，包含请求所需的各类信息
- * @returns {Promise<x.HTTPResponse>} 返回一个 Promise，解析为包含 error、response 和 data 的对象
- * @throws {Error} 如果请求失败，Promise 会被拒绝并返回错误信息
- */
-async function request(method, params) {
-    return new Promise((resolve, reject) => {
-        /** @type {x.HTTPMethod} */
-        const httpMethod = $httpClient[method.toLowerCase()]; // 通过 HTTP 方法选择对应的请求函数
-        httpMethod(params, (error, response, data) => {
-            if (error) {
-                echo(`[Request] Error: ${error}, Response: ${JSON.stringify(response)}, Data: ${data}`);
-                reject({ error, response, data }); // 请求失败，拒绝 Promise
-            } else {
-                resolve({ error, response, data }); // 请求成功，解析 Promise
-            }
-        });
-    });
+// Stash executes this file as an async function body. Do not redeclare injected globals.
+function echo(...args) {
+    console.log('[x-ad]', ...args)
 }
 
-/**
- * 请求封装
- * @param {object} params
- * @returns {Promise<x.HTTPResponse>}
- */
-async function get(params) {
-    return request('GET', params);
-}
-
-/**
- * 请求封装
- * @param {object} params
- * @returns {Promise<x.HTTPResponse>}
- */
-async function post(params) {
-    return request('POST', params);
-}
-
-/**
- * 请求封装
- * @param {object} params
- * @returns {Promise<x.HTTPResponse>}
- */
-async function put(params) {
-    return request('PUT', params);
-}
-
-/**
- * 请求封装
- * @param {object} params
- * @returns {Promise<x.HTTPResponse>}
- */
-async function delete_(params) {
-    return request('DELETE', params);
-}
-
-/**
- * 解析 cookies 字符串并返回对象
- * @param {string} cookie
- * @returns {object|null} 当返回为 null 表示解析失败
- */
-function parseCookie(cookie) {
-    if (typeof (cookie) !== "string") {
-        console.log(`illegally cookie: ${cookie}`)
-        return null
-    }
-    let body = {}
-    cookie.split(";").forEach(element => {
-        if (element) {
-            // let arr = element.trim().split("=")
-            element = element.trim()
-            let index = element.indexOf("=")
-            if (index === -1) {
-                console.log(`illegally cookie field: ${element}`)
-                return null
-            } else {
-                let key = element.substring(0, index)
-                let value = element.substring(index + 1)
-                body[key] = value
-            }
-        }
-    })
-    return body
-}
-/**
- * 读取 stash 内部持久化存储的值
- * @param {string} key
- */
-function read(key) {
-    $persistentStore.read(key)
-}
-
-/**
- * 更新 stash 内部持久化的值
- * @param {string} key
- * @param {string} val
- */
-function writePersistentArgument(key, val) {
-    $persistentStore.write(val, key)
-}
-
-/**
- *  基于持久化读取 Cookie
- * @param {string} key
- * @returns {string}
- */
-function getCookie(key) {
-    return $persistentStore.read(`Cookie.${key}`)
-}
-
-/**
- * 基于持久化写入 Cookie
- * @param {string} key
- * @param {string} val
- * @returns
- */
-function setCookie(key, val) {
-    return $persistentStore.write(val, `Cookie.${key}`)
-}
-/**
- * 发送 stash 通知
- * @param {string} title
- * @param {string} subtitle
- * @param {string} content
- * @param {string|undefined} [url]
- */
-function notificationPost(title, subtitle, content, url) {
-    const params = url ? { url } : {};
-    $notification.post(title, subtitle, content, params)
-}
-
-/**
- * 判断当前请求是否来自微信
- * @returns {Boolean}
- */
-function isWechat() {
-    if (typeof $request === 'undefined') {
-        return false
-    }
-    let ua = $request.headers["User-Agent"].toLowerCase()
-    return /micromessenger/.test(ua);
-}
-
-/**
- * 返回指定数量的随机字符
- * @param {number} num
- * @returns {string}
- */
-function randomChar(num) {
-    const min = 65; // 'A' 的 ASCII 码
-    const max = 90; // 'Z' 的 ASCII 码
-
-    return Array.from({ length: num }, () =>
-        String.fromCharCode(Math.floor(Math.random() * (max - min + 1)) + min)
-    ).join('');
-}
-
-/**
- * 将指定日期对象转为相应的日期时间字符串
- * 默认为当前日期时间
- * @param {Date|null} [date=null]
- * @returns {string} 表示当前时间的字符串
- */
-function getLocalDateString(date = null) {
-    if (!date) {
-        date = new Date()
-    }
-
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0'); // 月份从0开始，所以加1
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    return `${year}.${month}.${day} ${hours}:${minutes}:${seconds}`;
-}
-
-
-/**
- * 遍历并输出对象字面值
- * @param {object} body
- * @param {string|undefined} prefix
- */
-function visitAll(body, prefix = "", visited = new WeakSet()) {
-    if (typeof body !== 'object' || body === null) {
-        console.log(`Key: ${prefix}, Value: ${body}, Type: ${typeof body}`);
-        return;
-    }
-
-    if (visited.has(body)) {
-        console.log(`Key: ${prefix}, [Circular Reference Detected]`);
-        return;
-    }
-
-    visited.add(body);
-
-    for (const [key, value] of Object.entries(body)) {
-        const currentPrefix = prefix ? `${prefix}.${key}` : key;
-        if (typeof value === 'object' && value !== null) {
-            visitAll(value, currentPrefix, visited);
-        } else {
-            console.log(`Key: ${currentPrefix}, Value: ${value}, Type: ${typeof value}`);
-        }
-    }
-}
-/**
- * 解析 json 字符串， 失败返回 null
- * @param {*} string
- * @returns
- */
-function parseJsonBody(string) {
-    try {
-        return JSON.parse(string)
-    } catch (e) {
-        console.log(`[Warn] invalid json: ${e}, json: ${string}`)
-        return null
-    }
-}
-
-/**
- * 读取脚本参数
- * @param {string} key
- * @returns {any|undefined|null}
- */
-function getScriptArgument(key) {
-    if (typeof $argument === "undefined") {
-        return;
-    }
-
-    let body = parseJsonBody($argument)
-    if (!body) {
-        console.log(`[Warn] Invalid JSON: ${$argument}`);
-        return null; // JSON 解析失败返回 null
-    }
-    return body[key]
-}
-
-/**
- * 从环境中读取参数， 且参数不可为空，否则抛出异常
- * @param {string} key
- * @returns {any}
- * @throws {Error} 如果找不到对应的参数值，或参数值为 `null` 或 `undefined`，则抛出一个包含错误信息的异常。*
- */
-function mustGetScriptArgument(key) {
-    let val = getScriptArgument(key)
-    if (val === null || val === undefined) {
-        console.log(`can't find value for ${key}`)
-        throw `can't find value for ${key}`
-    }
-    return val
-}
-
-/**
- * 读取本地持久化参数
- * @param {string} key
- * @returns {string}
- */
-function getPersistentArgument(key) {
-    return $persistentStore.read(key);
-}
-
-/**
- * 返回当前的脚本类型
-* @returns {'request' | 'response' | 'tile' | 'cron' | 'undefined'}
- */
 function getScriptType() {
     return typeof $script !== 'undefined' ? $script.type : 'undefined'
 }
 
-/**
- *
- * @param {string} countryCode
- * @returns
- */
-function countryCodeToEmoji(countryCode) {
-    // 将代码转为大写
-    countryCode = countryCode.toUpperCase();
-
-    // 如果是三位代码，转换为两位代码
-    const threeToTwo = {
-        'USA': 'US',
-        'CAN': 'CA',
-        'GBR': 'GB',
-        'FRA': 'FR',
-        'DEU': 'DE',
-        // 继续添加你需要支持的三位代码
-    };
-
-    // 如果代码长度为3，尝试查找转换表
-    if (countryCode.length === 3) {
-        countryCode = threeToTwo[countryCode] || countryCode.slice(0, 2);
-    }
-
-    // 将两位代码转换为相应的Unicode字符
-    const codePoints = [...countryCode].map(char => 127397 + char.charCodeAt(0));
-
-    // 将Unicode字符转换为emoji
-    return String.fromCodePoint(...codePoints);
-}
-/**
- * 返回从 from 到 to 递增或递减的数组，步长为 1
- * @param {number} from
- * @param {number} to
- * @returns
- */
-function generateArray(from, to) {
-    const start = Math.min(from, to);
-    const end = Math.max(from, to);
-
-    // 如果 from 大于 to，生成逆序数组
-    if (from > to) {
-        return Array.from({ length: end - start + 1 }, (_, i) => end - i);
-    } else {
-        // 否则生成顺序数组
-        return Array.from({ length: end - start + 1 }, (_, i) => start + i);
-    }
-}
-
-/**
- * 解析响应脚本参数
- * @returns {string | undefined}
- */
 function getScriptResponseBody() {
-    let body = (typeof $response.body === 'object') ? (new TextDecoder('utf-8')).decode(new Uint8Array($response.body)) : $response.body;
-    return body
+    const body = $response.body
+    return typeof body === 'string' ? body : body == null ? '' : new TextDecoder('utf-8').decode(new Uint8Array(body))
 }
 
-/**
- *  处理 telegram.sendMessage MarkdownV2 格式消息体转义
- * @param {string} text
- * @returns
- */
-function telegramEscapeMarkdownV2(text) {
-    const escapeChars = [
-        { char: '_', replacement: '\\_' },
-        { char: '*', replacement: '\\*' },
-        { char: '[', replacement: '\\[' },
-        { char: ']', replacement: '\\]' },
-        { char: '(', replacement: '\\(' },
-        { char: ')', replacement: '\\)' },
-        { char: '~', replacement: '\\~' },
-        { char: '>', replacement: '\\>' },
-        { char: '#', replacement: '\\#' },
-        { char: '+', replacement: '\\+' },
-        { char: '-', replacement: '\\-' },
-        { char: '=', replacement: '\\=' },
-        { char: '|', replacement: '\\|' },
-        { char: '{', replacement: '\\{' },
-        { char: '}', replacement: '\\}' },
-        { char: '.', replacement: '\\.' },
-        { char: '!', replacement: '\\!' },
-        { char: '`', replacement: '\\`' }
-    ];
-
-    let escapedText = text;
-
-    escapeChars.forEach(({ char, replacement }) => {
-        const regex = new RegExp(`\\${char}`, 'g');
-        escapedText = escapedText.replace(regex, replacement);
-    });
-
-    return escapedText;
-}
-
-/** 获取当前 URL 中的参数
- * @param {any} key
- */
-function getUrlArgument(key) {
-    const url = new URL(window.location.href);
-    const params = new URLSearchParams(url.search);
-    return params.get(key) || null
-}
-
-/**
- * 生成推送消息格式
- * https://p.19940731.xyz/redoc#tag/notifications.push/operation/push_v3_api_notifications_push_v3_post
- * @param {*} title
- * @param {*} body
- * @param {*} url
- * @param {*} group
- * @param {*} icon
- * @param {*} level
- * @returns
- */
-function makePushMessage(title, body, url = null, group = null, icon = null, level = null) {
-    let payload = {}
-
-    let APNs = getScriptArgument("APNs")
-    let bark = getScriptArgument("bark")
-    group = getScriptArgument("group") || group || "Default"
-    level = getScriptArgument("level") || level || "passive"
-    icon = icon || getScriptArgument("icon")
-    if (APNs) {
-        payload.apple = {
-            group: group,
-            url: url,
-            icon: icon,
-            device_token: APNs.device_token,
-            aps: {
-                "thread-id": group,
-                "interruption-level": level,
-                alert: {
-                    title: title,
-                    body: body
-                }
-            }
-        }
-    }
-    if (bark) {
-        payload.bark = {
-            device_key: bark.device_key,
-            title: title,
-            body: body,
-            level: level,
-            icon: icon,
-            group: group,
-            url: url,
-            endpoint: bark?.endpoint || "https://api.day.app/push"
-
-        }
-    }
-    return payload
-}
-
-/**
- * 推送消息
- * https://p.19940731.xyz/redoc#tag/notifications.push/operation/push_v3_api_notifications_push_v3_post
- * @param {*} message
- * @returns
- */
-async function pushMessage(message) {
-    let url = 'https://p.19940731.xyz/api/notifications/push/v3'
-    let res = await post({ url, body: JSON.stringify({ messages: [message] }), headers: { "content-type": "application/json" } })
-    let now = getLocalDateString()
-    if (res.error || res.response.status >= 400) {
-        throw `${now} [Error] push messages error: ${res.error}, ${res.response.status}, ${res.data}`
-    }
-    return res
-}
-
-/**
- * @param {...any} args - Arguments to log
- */
-function echo(...args) {
-    let date = getLocalDateString()
-    let logMessage = `${args.join(' ')}`
-    logMessage = `[${date}] ${logMessage}`
-    console.log(logMessage)
-}
-
-/**
- * 在指定作用域中执行代码
- * @param {*} code 执行代码
- * @param {*} context 上下文作用域
- * @returns
- */
-function safeEval(code, context) {
-    const func = new Function(...Object.keys(context), code);
-    return func(...Object.values(context));
-}
-
-function parseDocument(body) {
-    let domParser = new DOMParser();
-    return domParser.parseFromString(body, 'text/html');
+async function get(params) {
+    return new Promise((resolve, reject) => {
+        $httpClient.get(params, (error, response, data) => {
+            if (error) reject(new Error(String(error)))
+            else resolve({ response, data })
+        })
+    })
 }
 
 function getXOptions() {
@@ -521,6 +49,12 @@ function getXOptions() {
         center_primary_column: true,
         enable_escape_back: true,
         enable_layout_diagnostics: false,
+        hide_bottom_bar: false,
+        hide_bottom_bar_on_scroll: true,
+        hide_nav_notifications: false,
+        hide_nav_messages: false,
+        hide_notification_badge: false,
+        hide_show_posts_prompt: false,
     }
     if (typeof $argument === 'undefined' || !$argument) return options
     let supplied
@@ -541,13 +75,44 @@ function getXOptions() {
     return options
 }
 
+// Runs only in the injected browser script. Keep helpers inside this function
+// so serialization does not depend on Stash globals or external page libraries.
 function removeAdsCode(options) {
+    window.__stashXBlocker?.destroy()
     const hiddenClass = 'x-ad-hidden'
     const sidebarClass = 'x-ad-empty-sidebar'
+    const autoHideBottomBar = options.hide_bottom_bar_on_scroll && !options.hide_bottom_bar
+    const needsUpdates = Object.entries(options).some(([key, value]) =>
+        key !== 'enable_escape_back' && key !== 'enable_layout_diagnostics' && value === true)
+    const simpleRules = [
+        ['hide_chat_drawer', "[data-testid='chat-drawer-main']"],
+        ['hide_nav_grok', "header a[aria-label='Grok'], header a[href='/i/grok']"],
+        ['hide_nav_premium', "header a[aria-label='Premium'], header a[href='/i/premium_sign_up']"],
+        ['hide_nav_verified_orgs', "header a[aria-label='Verified Orgs'], header a[href='/i/verified-orgs-signup']"],
+        ['hide_nav_jobs', "header a[aria-label='Jobs'], header a[href='/jobs']"],
+        ['hide_account_menu', "header button[aria-label='Account menu'], header [data-testid='SideNav_AccountSwitcher_Button']"],
+        ['hide_floating_post_button', "[data-testid='FloatingActionButtonBase']"],
+        ['hide_grok_drawer', "[data-testid='GrokDrawer']"],
+        ['hide_grok_actions', "button[aria-label='Grok actions']"],
+        ['hide_translate_button', "button[aria-label='Translate post']"],
+        ['hide_reply_permissions', "[data-testid='tweetReplyRestrictions'], [data-testid='reply-restrictions']"],
+        ['hide_sidebar_trends', "[data-testid='sidebarColumn'] [data-testid='trend'], [data-testid='sidebarColumn'] [data-testid='trends']"],
+        ['block_ads_and_recommendations', "[data-testid='sidebarColumn'] [data-testid='premium-signup'], [data-testid='sidebarColumn'] [data-testid='super-upsell-UpsellCardRenderProperties']"],
+    ].filter(([key]) => options[key])
     const style = document.createElement('style')
     style.id = 'x-ad-blocker-style'
     style.textContent = `
         .${hiddenClass}, .${sidebarClass} { display: none !important; }
+        ${simpleRules.map(([, selector]) => `${selector} { display: none !important; }`).join('\n')}
+        ${autoHideBottomBar ? `
+        .x-ad-bottom-bar-autohide { transition: transform 0.2s ease, opacity 0.2s ease !important; }
+        .x-ad-bottom-bar-collapsed {
+            transform: translateY(calc(100% + env(safe-area-inset-bottom))) !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+        @media (prefers-reduced-motion: reduce) { .x-ad-bottom-bar-autohide { transition: none !important; } }
+        ` : ''}
         ${options.enable_custom_layout ? `
         @media (min-width: 1000px) {
             div[data-testid='primaryColumn'] {
@@ -563,143 +128,433 @@ function removeAdsCode(options) {
         }` : ''}
     `
 
-    const componentRules = [
-        ['hide_chat_drawer', "[data-testid='chat-drawer-main']"],
-        ['hide_nav_grok', "header a[aria-label='Grok'], header a[href='/i/grok']"],
-        ['hide_nav_premium', "header a[aria-label='Premium'], header a[href='/i/premium_sign_up']"],
-        ['hide_nav_verified_orgs', "header a[aria-label='Verified Orgs'], header a[href='/i/verified-orgs-signup']"],
-        ['hide_nav_jobs', "header a[aria-label='Jobs'], header a[href='/jobs']"],
-        ['hide_account_menu', "header button[aria-label='Account menu'], header [data-testid='SideNav_AccountSwitcher_Button']"],
-        ['hide_floating_post_button', "[data-testid='FloatingActionButtonBase']"],
-        ['hide_grok_drawer', "[data-testid='GrokDrawer']"],
-        ['hide_grok_actions', "button[aria-label='Grok actions']"],
-        ['hide_translate_button', "button[aria-label='Translate post']"],
-        ['hide_reply_permissions', "[data-testid='tweetReplyRestrictions'], [data-testid='reply-restrictions']"],
-        ['hide_sidebar_trends', "[data-testid='sidebarColumn'] [data-testid='trend'], [data-testid='sidebarColumn'] [data-testid='trends']"],
-        ['block_ads_and_recommendations', "[data-testid='sidebarColumn'] [data-testid='premium-signup'], [data-testid='sidebarColumn'] [data-testid='super-upsell-UpsellCardRenderProperties']"],
-    ].filter(([key]) => options[key])
+    const scopes = ['header', 'nav', "[data-testid='BottomBar']"]
+    const scopedLinks = paths => scopes.flatMap(scope => paths.map(path => `${scope} a[href${path}]`)).join(', ')
+    const notificationLinks = "a[data-testid='AppTabBar_Notifications_Link'], " + scopedLinks(["='/notifications'", "='/notifications/'"])
+    const messageLinks = "a[data-testid='AppTabBar_DirectMessage_Link'], " + scopedLinks(["='/messages'", "='/messages/'", "^='/i/chat'"])
+    const showPostsPattern = /^(?:Show|显示|顯示)\s*[\d.,]+\s*[KkMm万萬]?\s*(?:posts?|Tweets?|(?:条|個|个|篇|則|则)?\s*(?:帖子|贴子|推文|貼文))$/
+    const detailPattern = /^\/[^/]+\/status\/\d+(?:\/|$)/
+    const managed = new Map()
+    const sidebarTargets = new Set()
+    let bottomBarTargets = new Set()
+    let barNodes = []
+    let centered = null
+    let column = null
+    let sidebar = null
+    let destroyed = false
+    let paused = false
+    let frame = null
+    let fullUpdate = true
+    let layoutDirty = true
+    let barsDirty = true
+    let scrollDirty = false
+    let domDirty = false
+    let roots = new Set()
+    let path = new URL(window.location.href).pathname
+    const previousHomeClass = document.documentElement.classList.contains('x-ad-home-layout')
+    let scrollState = { lastY: currentScrollY(), distance: 0, direction: 0, collapsed: false }
+    const listeners = []
+    const historyHooks = []
+    let observedLayout = []
 
-    function hide(element) {
-        if (element) element.classList.add(hiddenClass)
+    function setClass(element, name, enabled) {
+        if (element.classList.contains(name) !== enabled) element.classList.toggle(name, enabled)
     }
 
-    function hasVisibleContent(element) {
-        if (element.classList.contains(hiddenClass)) return false
-        const computed = window.getComputedStyle(element)
-        if (computed.display === 'none' || computed.visibility === 'hidden') return false
-        // Inspect leaves rather than the aggregate text of wrappers containing hidden cards.
-        const text = Array.from(element.childNodes).some(node => node.nodeType === 3 && node.textContent.trim())
-        if (text || element.matches('input, button, img, svg, video, canvas, iframe')) return true
-        return Array.from(element.children).some(hasVisibleContent)
+    function find(root, selector) {
+        const matches = Array.from(root.querySelectorAll(selector))
+        if (root instanceof Element && root.matches(selector)) matches.unshift(root)
+        return matches
     }
 
-    function updateSidebar() {
-        const sidebar = document.querySelector("[data-testid='sidebarColumn']")
-        if (!sidebar) return null
-        sidebar.classList.remove(sidebarClass)
-        // Only collapse an empty sidebar when this execution actually hides sidebar components.
-        if ((options.block_ads_and_recommendations || options.hide_sidebar_trends) && !hasVisibleContent(sidebar)) {
-            sidebar.classList.add(sidebarClass)
+    function navigationItem(element) {
+        const stop = "body, main, header, nav, [role='navigation'], [data-testid='BottomBar'], [data-testid='primaryColumn'], #react-root, #layers"
+        let target = element
+        for (let parent = target.parentElement; parent && parent.children.length === 1 && !parent.matches(stop); parent = parent.parentElement) target = parent
+        return target
+    }
+
+    function bottomBarContainer(bar) {
+        let target = bar
+        for (;;) {
+            if (window.getComputedStyle(target).position === 'fixed') return target
+            const parent = target.parentElement
+            if (!parent || parent.children.length !== 1 || parent.matches("body, main, header, nav, [role='navigation'], [data-testid='primaryColumn'], #react-root, #layers")) break
+            target = parent
         }
-        return sidebar
+        return bar
     }
 
-    function centerPrimaryColumn(sidebar) {
-        const column = document.querySelector("[data-testid='primaryColumn']")
-        if (!column || !options.center_primary_column) return
-        column.style.removeProperty('transform')
-        if (window.innerWidth < 1000) return
-        if (sidebar && window.getComputedStyle(sidebar).display !== 'none') return
-        const rect = column.getBoundingClientRect()
-        const offset = (window.innerWidth - rect.width) / 2 - rect.left
-        column.style.setProperty('transform', `translateX(${offset}px)`, 'important')
+    function refreshBars() {
+        barNodes = Array.from(document.querySelectorAll("[data-testid='BottomBar']"))
+        const targets = new Set(barNodes.map(bottomBarContainer))
+        bottomBarTargets.forEach(item => {
+            if (!targets.has(item)) item.classList.remove('x-ad-bottom-bar-autohide', 'x-ad-bottom-bar-collapsed')
+        })
+        bottomBarTargets = targets
+        bottomBarTargets.forEach(item => setClass(item, 'x-ad-bottom-bar-autohide', true))
+        renderBars()
     }
 
-    function updatePage() {
-        const path = new URL(window.location.href).pathname
-        const mobile = window.innerWidth < 1000
-        if (options.enable_custom_layout) {
-            document.documentElement.classList.toggle('x-ad-home-layout', path.startsWith('/home'))
+    function renderBars() {
+        bottomBarTargets.forEach(item => setClass(item, 'x-ad-bottom-bar-collapsed', scrollState.collapsed))
+    }
+
+    function maxScrollY() {
+        return Math.max(0, document.documentElement.scrollHeight - window.innerHeight)
+    }
+
+    function currentScrollY() {
+        const y = Math.max(0, window.scrollY || window.pageYOffset || 0)
+        return Math.min(y, maxScrollY())
+    }
+
+    // A pure direction decision: accumulate small movements, but reset the
+    // distance when direction reverses. Page-end rubber banding is clamped above.
+    function nextScrollState(previous, y) {
+        const delta = y - previous.lastY
+        const direction = Math.sign(delta)
+        const distance = direction && direction !== previous.direction ? delta : previous.distance + delta
+        return {
+            lastY: y,
+            direction: direction || previous.direction,
+            distance: y <= 8 ? 0 : distance,
+            collapsed: y <= 8 ? false : Math.abs(distance) >= 8 ? distance > 0 : previous.collapsed,
         }
-        if (options.hide_top_nav) {
-            const preserveSearch = mobile && path.startsWith('/explore')
-            document.querySelectorAll("[data-testid='TopNavBar']").forEach(element => {
-                element.classList.toggle(hiddenClass, !preserveSearch)
-            })
-            // Mobile X renders the visible TopNavBar in a fixed layer and keeps an empty
-            // banner in document flow to reserve its height. Collapse only that spacer.
-            document.querySelectorAll("header[role='banner']").forEach(header => {
-                // Re-evaluate the site's contents without our previous hiding state.
-                header.classList.remove(hiddenClass)
-                const hasNavigation = header.querySelector("nav, a, button, input, [data-testid='TopNavBar']") !== null
-                const collapse = mobile && !preserveSearch && !hasNavigation && !hasVisibleContent(header)
-                header.classList.toggle(hiddenClass, collapse)
-            })
+    }
+
+    function notificationBadges(link) {
+        const badges = []
+        link.querySelectorAll('span, [aria-label]').forEach(element => {
+            if (element.closest('svg') || element.querySelector('svg')) return
+            const label = element.getAttribute('aria-label') || ''
+            const text = element.textContent.trim()
+            if (!/^\d+\+?$/.test(text) && !/unread|未读|未讀/i.test(label)) return
+            if (!badges.some(badge => badge.contains(element))) badges.push(element)
+        })
+        return badges
+    }
+
+    function collect(root, hits) {
+        function hide(element, reason) {
+            if (!element) return
+            if (!hits.has(element)) hits.set(element, new Set())
+            hits.get(element).add(reason)
+        }
+        if (options.hide_top_nav && !(window.innerWidth < 1000 && path.startsWith('/explore'))) {
+            find(root, "[data-testid='TopNavBar']").forEach(element => hide(element, 'top-nav'))
         }
         if (options.hide_home_composer && path === '/home') {
-            document.querySelectorAll("[data-testid='tweetTextarea_0']").forEach(composer => {
-                const container = composer.closest("[data-testid='cellInnerDiv']") || composer.closest("[data-testid='tweetComposer']")
-                    || Array.from(document.querySelectorAll("div[role='progressbar'] + div")).find(element => element.contains(composer))
-                hide(container)
+            find(root, "[data-testid='tweetTextarea_0']").forEach(composer => {
+                const container = composer.closest("[data-testid='cellInnerDiv'], [data-testid='tweetComposer']")
+                    || (composer.parentElement?.previousElementSibling?.matches("[role='progressbar']") ? composer.parentElement : null)
+                hide(container, 'composer')
             })
         }
-        componentRules.forEach(([, selector]) => document.querySelectorAll(selector).forEach(hide))
-        if (options.hide_bottom_grok && mobile) {
-            document.querySelectorAll("nav a[href='/i/grok'], [data-testid='BottomBar'] a[href='/i/grok']").forEach(link => {
-                if (!link.closest('header, article')) hide(link)
+        if (options.hide_bottom_grok && window.innerWidth < 1000) {
+            find(root, "nav a[href='/i/grok'], [data-testid='BottomBar'] a[href='/i/grok']").forEach(link => {
+                if (!link.closest('header, article')) hide(link, 'bottom-grok')
             })
         }
-
+        if (options.hide_bottom_bar) find(root, "[data-testid='BottomBar']").forEach(bar => hide(navigationItem(bar), 'bottom-bar'))
+        if (options.hide_nav_notifications || options.hide_notification_badge) {
+            find(root, notificationLinks).forEach(link => {
+                if (link.closest('article')) return
+                if (options.hide_nav_notifications) hide(navigationItem(link), 'notifications')
+                if (options.hide_notification_badge) notificationBadges(link).forEach(badge => hide(badge, 'notification-badge'))
+            })
+        }
+        if (options.hide_nav_messages) find(root, messageLinks).forEach(link => {
+            if (!link.closest('article')) hide(navigationItem(link), 'messages')
+        })
         if (options.block_ads_and_recommendations) {
-            document.querySelectorAll("[data-testid='sidebarColumn'] a[href^='/i/premium_sign_up']").forEach(link => {
-                hide(link.closest('aside') || link.closest('section') || link)
-            })
-            document.querySelectorAll("[data-testid='sidebarColumn'] aside").forEach(card => {
-                if (card.querySelector("[data-testid='UserCell']")) hide(card)
+            find(root, "[data-testid='sidebarColumn'] a[href^='/i/premium_sign_up']").forEach(link => hide(link.closest('aside, section') || link, 'premium'))
+            find(root, "[data-testid='sidebarColumn'] aside").forEach(card => {
+                if (card.querySelector("[data-testid='UserCell']")) hide(card, 'recommendation')
             })
         }
-        if (options.hide_sidebar_trends) {
-            document.querySelectorAll("[data-testid='sidebarColumn'] [data-testid='trend']").forEach(trend => {
-                // A trend's enclosing section is the trends component, including its heading.
-                hide(trend.closest('section') || trend)
+        if (options.hide_sidebar_trends) find(root, "[data-testid='sidebarColumn'] [data-testid='trend']").forEach(trend => hide(trend.closest('section') || trend, 'trends'))
+        if (options.hide_reply_permissions && detailPattern.test(path)) {
+            find(root, "[data-testid='primaryColumn'] [aria-live='polite']").forEach(region => {
+                if (!region.closest('article') && ['Who can reply', '谁可以回复', '誰可以回覆'].includes(region.textContent.trim())) hide(region, 'reply-permissions')
             })
         }
-        if (options.hide_reply_permissions && /^\/[^/]+\/status\/\d+(?:\/|$)/.test(path)) {
-            // Never hide every aria-live region: unrelated status messages use the same attribute.
-            document.querySelectorAll('span').forEach(span => {
-                if (['Who can reply', '谁可以回复', '誰可以回覆'].includes(span.textContent.trim())) {
-                    hide(span.closest("[aria-live='polite']") || span)
+        if (options.hide_show_posts_prompt || options.hide_probable_spam_prompt) {
+            find(root, "[data-testid='primaryColumn'] [role='button'], [data-testid='primaryColumn'] button").forEach(button => {
+                if (button.closest('article')) return
+                const text = button.textContent.replace(/\s+/g, ' ').trim()
+                if (options.hide_show_posts_prompt && showPostsPattern.test(text)) {
+                    const cell = button.closest("[data-testid='cellInnerDiv']")
+                    // A reused cell may contain both a prompt and a tweet: never hide the tweet.
+                    hide(cell && !cell.querySelector('article') ? cell : button, 'show-posts')
                 }
+                if (options.hide_probable_spam_prompt && text === 'Show probable spam') hide(button, 'spam')
             })
         }
-        if (options.hide_automated_content || options.hide_probable_spam_prompt) {
-            document.querySelectorAll('span').forEach(span => {
-                if (options.hide_automated_content && span.textContent.trim() === 'Automated') {
-                    hide(span.closest("[data-testid='cellInnerDiv']") || span.closest('article'))
-                }
-                if (options.hide_probable_spam_prompt && span.textContent.trim() === 'Show probable spam') hide(span)
+        if (options.hide_automated_content) {
+            // Text in tweetText or an unstructured article is not metadata. Prefer
+            // explicit automation labels, with author metadata as a narrow fallback.
+            find(root, "[data-testid='primaryColumn'] [data-testid='automationLabel'], [data-testid='primaryColumn'] [data-testid='automatedLabel'], [data-testid='primaryColumn'] [data-testid='User-Name'] span").forEach(label => {
+                if (label.closest("[data-testid='tweetText']") || label.textContent.trim() !== 'Automated') return
+                const article = label.closest('article')
+                if (article && !article.parentElement?.closest('article')) hide(article.closest("[data-testid='cellInnerDiv']") || article, 'automated')
             })
         }
-        centerPrimaryColumn(updateSidebar())
     }
 
-    if (options.enable_escape_back) {
-        document.addEventListener('keydown', event => {
-            if (event.key !== 'Escape' || event.isComposing || event.repeat) return
-            if (!/^\/[^/]+\/status\/\d+(?:\/|$)/.test(new URL(window.location.href).pathname)) return
-            if (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return
-            event.preventDefault()
-            event.stopPropagation()
-            window.history.back()
-        }, true)
+    function reconcile(changedRoots) {
+        const hits = new Map()
+        changedRoots.forEach(root => collect(root, hits))
+        managed.forEach((reasons, element) => {
+            if (!element.isConnected || changedRoots.some(root => root === document || root.contains(element) || element.contains(root))) {
+                managed.delete(element)
+                if (!hits.has(element)) setClass(element, hiddenClass, false)
+            }
+        })
+        hits.forEach((reasons, element) => {
+            managed.set(element, reasons)
+            setClass(element, hiddenClass, true)
+        })
     }
 
-    const needsUpdates = Object.keys(options).some(key => key !== 'enable_escape_back' && key !== 'enable_layout_diagnostics' && typeof options[key] === 'boolean' && options[key])
+    function hasVisibleContent(element, ignoreOwnDisplay = false) {
+        if (!ignoreOwnDisplay && managed.has(element)) return false
+        const computed = window.getComputedStyle(element)
+        if ((!ignoreOwnDisplay && computed.display === 'none') || computed.visibility === 'hidden') return false
+        const text = Array.from(element.childNodes).some(node => node.nodeType === 3 && node.textContent.trim())
+        if (text || element.matches('input, button, img, svg, video, canvas, iframe')) return true
+        return Array.from(element.children).some(child => hasVisibleContent(child))
+    }
+
+    function restoreCenter() {
+        if (!centered) return
+        if (centered.element.style.getPropertyValue('transform') === centered.applied) {
+            if (centered.original) centered.element.style.setProperty('transform', centered.original, centered.priority)
+            else centered.element.style.removeProperty('transform')
+        }
+        centered = null
+    }
+
+    function updateLayout() {
+        if (options.enable_custom_layout) setClass(document.documentElement, 'x-ad-home-layout', path.startsWith('/home'))
+        if (options.hide_top_nav) {
+            document.querySelectorAll("header[role='banner']").forEach(header => {
+                const hasNavigation = header.querySelector("nav, a, button, input, [data-testid='TopNavBar']") !== null
+                const collapse = window.innerWidth < 1000 && !path.startsWith('/explore') && !hasNavigation && !hasVisibleContent(header, true)
+                const reasons = new Set(managed.get(header) || [])
+                reasons.delete('banner')
+                if (collapse) reasons.add('banner')
+                if (reasons.size) managed.set(header, reasons)
+                else managed.delete(header)
+                setClass(header, hiddenClass, reasons.size > 0)
+            })
+        }
+        column = document.querySelector("[data-testid='primaryColumn']")
+        sidebar = document.querySelector("[data-testid='sidebarColumn']")
+        sidebarTargets.forEach(old => { if (old !== sidebar) { setClass(old, sidebarClass, false); sidebarTargets.delete(old) } })
+        const empty = sidebar && (options.block_ads_and_recommendations || options.hide_sidebar_trends) && !hasVisibleContent(sidebar, true)
+        if (sidebar) {
+            setClass(sidebar, sidebarClass, !!empty)
+            sidebarTargets.add(sidebar)
+        }
+        const showSidebar = sidebar && !empty && window.getComputedStyle(sidebar).display !== 'none'
+        if (centered && (centered.element !== column || column.style.getPropertyValue('transform') !== centered.applied)) restoreCenter()
+        if (!column || !options.center_primary_column || window.innerWidth < 1000 || showSidebar) restoreCenter()
+        else {
+            if (!centered) centered = { element: column, original: column.style.getPropertyValue('transform'), priority: column.style.getPropertyPriority('transform'), offset: 0, applied: null }
+            // Account for our previous translation instead of clearing it and forcing two layouts.
+            const rect = column.getBoundingClientRect()
+            const offset = (window.innerWidth - rect.width) / 2 - rect.left + centered.offset
+            const applied = `translateX(${offset}px)${centered.original ? ` ${centered.original}` : ''}`
+            if (centered.applied !== applied) column.style.setProperty('transform', applied, 'important')
+            centered.offset = offset
+            centered.applied = applied
+        }
+        if (resizeObserver) {
+            const elements = [column, column?.parentElement, sidebar].filter(Boolean)
+            if (elements.length !== observedLayout.length || elements.some((element, index) => element !== observedLayout[index])) {
+                resizeObserver.disconnect()
+                observedLayout = elements
+                elements.forEach(element => resizeObserver.observe(element))
+            }
+        }
+    }
+
+    function addRoot(element) {
+        if (!element?.isConnected) return
+        const boundary = element.closest("[data-testid='cellInnerDiv'], [data-testid='sidebarColumn'], header, nav, [data-testid='BottomBar'], [data-testid='primaryColumn']") || element
+        for (const existing of roots) if (existing.contains(boundary)) return
+        for (const existing of roots) if (boundary.contains(existing)) roots.delete(existing)
+        roots.add(boundary)
+    }
+
+    function mutations(records) {
+        let changed = false
+        for (const record of records) {
+            const target = record.target.nodeType === 1 ? record.target : record.target.parentElement
+            if (!target || target.closest('script, style, [data-stash-layout-diagnostic]')) continue
+            const nodes = record.type === 'childList' ? [...record.addedNodes, ...record.removedNodes] : []
+            if (nodes.length && nodes.every(node => node.nodeType === 1 && node.matches('script, style, [data-stash-layout-diagnostic]'))) continue
+            changed = domDirty = true
+            if (barNodes.some(bar => target.contains(bar) || bar.contains(target)) || target.closest("[data-testid='BottomBar']")) barsDirty = true
+            if (record.type === 'childList') {
+                for (const node of nodes) {
+                    if (node.nodeType === 1 && (node.matches("[data-testid='BottomBar']") || node.querySelector("[data-testid='BottomBar']"))) barsDirty = true
+                }
+            }
+            if (target === document.body || target === document.documentElement) {
+                const added = Array.from(record.addedNodes || []).filter(node => node.nodeType === 1 && !node.matches('script, style, [data-stash-layout-diagnostic]'))
+                added.forEach(addRoot)
+                if (record.type === 'attributes') layoutDirty = true
+            } else addRoot(target)
+            if (nodes.some(node => node.nodeType === 1 && (node.matches("header, [data-testid='primaryColumn'], [data-testid='sidebarColumn']") || node.querySelector("header, [data-testid='primaryColumn'], [data-testid='sidebarColumn']")))) layoutDirty = true
+            // Timeline text updates do not change horizontal layout. Header/sidebar,
+            // structural changes and external styles can change available column space.
+            if (target.closest("header, [data-testid='sidebarColumn']") || target === column || record.type === 'attributes' && ['style', 'class'].includes(record.attributeName) || !column?.isConnected) layoutDirty = true
+        }
+        if (changed) schedule()
+    }
+
+    const observer = needsUpdates ? new MutationObserver(mutations) : null
+    const observedWidths = new WeakMap()
+    const resizeObserver = needsUpdates && (options.center_primary_column || options.hide_top_nav) ? new ResizeObserver(entries => {
+        let widthChanged = false
+        entries.forEach(entry => {
+            if (observedWidths.get(entry.target) !== entry.contentRect.width) widthChanged = true
+            observedWidths.set(entry.target, entry.contentRect.width)
+        })
+        if (widthChanged) { layoutDirty = true; schedule() }
+    }) : null
+    function observe() {
+        observer?.observe(document.documentElement, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class', 'style', 'href', 'aria-label', 'role', 'data-testid'] })
+    }
+
+    function schedule() {
+        if (destroyed || paused || document.visibilityState === 'hidden' || frame !== null || !needsUpdates) return
+        frame = window.requestAnimationFrame(flush)
+    }
+
+    function flush() {
+        frame = null
+        if (destroyed || paused || document.visibilityState === 'hidden') return
+        mutationsPending()
+        observer?.disconnect()
+        try {
+            const nextPath = new URL(window.location.href).pathname
+            if (nextPath !== path) {
+                path = nextPath
+                fullUpdate = layoutDirty = barsDirty = true
+                scrollState = { lastY: currentScrollY(), distance: 0, direction: 0, collapsed: false }
+            }
+            if (fullUpdate || domDirty || roots.size) reconcile(fullUpdate ? [document] : Array.from(roots))
+            if (fullUpdate || layoutDirty) updateLayout()
+            if (autoHideBottomBar && (fullUpdate || barsDirty)) refreshBars()
+            if (autoHideBottomBar && scrollDirty) {
+                const max = maxScrollY()
+                // Shrinking content can clamp the window's position without a user
+                // gesture. Do not interpret that clamp as an upward scroll.
+                const previous = scrollState.lastY > max ? { ...scrollState, lastY: max, distance: 0 } : scrollState
+                const next = nextScrollState(previous, currentScrollY())
+                const changed = next.collapsed !== scrollState.collapsed
+                scrollState = next
+                if (changed) renderBars()
+            }
+            fullUpdate = layoutDirty = barsDirty = scrollDirty = domDirty = false
+            roots.clear()
+        } finally { observe() }
+    }
+
+    function mutationsPending() {
+        const records = observer?.takeRecords()
+        if (records?.length) mutations(records)
+        // mutations() may schedule another frame. This flush already includes its work.
+        if (frame !== null) window.cancelAnimationFrame(frame)
+        frame = null
+    }
+
+    function listen(target, type, callback, settings) {
+        target.addEventListener(type, callback, settings)
+        listeners.push(() => target.removeEventListener(type, callback, settings))
+    }
+
+    function refresh() {
+        fullUpdate = layoutDirty = barsDirty = true
+        schedule()
+    }
+
+    function destroy() {
+        if (destroyed) return
+        destroyed = true
+        if (frame !== null) window.cancelAnimationFrame(frame)
+        observer?.disconnect()
+        resizeObserver?.disconnect()
+        listeners.forEach(remove => remove())
+        historyHooks.forEach(([key, original, wrapper]) => { if (window.history[key] === wrapper) window.history[key] = original })
+        managed.forEach((_, element) => setClass(element, hiddenClass, false))
+        sidebarTargets.forEach(element => setClass(element, sidebarClass, false))
+        bottomBarTargets.forEach(element => element.classList.remove('x-ad-bottom-bar-autohide', 'x-ad-bottom-bar-collapsed'))
+        restoreCenter()
+        setClass(document.documentElement, 'x-ad-home-layout', previousHomeClass)
+        style.remove()
+        managed.clear()
+        sidebarTargets.clear()
+        bottomBarTargets.clear()
+        roots.clear()
+        if (window.__stashXBlocker?.destroy === destroy) delete window.__stashXBlocker
+    }
+
+    window.__stashXBlocker = { refresh, destroy }
+    if (options.enable_escape_back) listen(document, 'keydown', event => {
+        if (event.key !== 'Escape' || event.isComposing || event.repeat || !detailPattern.test(new URL(window.location.href).pathname)) return
+        if (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return
+        event.preventDefault()
+        event.stopPropagation()
+        window.history.back()
+    }, true)
     if (needsUpdates) {
         document.head.appendChild(style)
-        updatePage()
-        window.addEventListener('resize', updatePage)
-        window.setInterval(updatePage, 500)
+        flush()
+        listen(window, 'resize', refresh)
+        listen(window.visualViewport || window, 'resize', () => { layoutDirty = barsDirty = true; schedule() })
+        if (autoHideBottomBar) listen(window, 'scroll', () => { scrollDirty = true; schedule() }, { passive: true })
+        listen(window, 'popstate', refresh)
+        listen(window, 'pageshow', () => {
+            paused = false
+            scrollState = { lastY: currentScrollY(), distance: 0, direction: 0, collapsed: false }
+            refresh()
+        })
+        listen(window, 'pagehide', () => {
+            paused = true
+            if (frame !== null) window.cancelAnimationFrame(frame)
+            frame = null
+            observer.disconnect()
+            resizeObserver?.disconnect()
+            observedLayout = []
+        })
+        listen(document, 'visibilitychange', () => {
+            paused = document.visibilityState === 'hidden'
+            if (paused) {
+                if (frame !== null) window.cancelAnimationFrame(frame)
+                frame = null
+                observer.disconnect()
+                resizeObserver?.disconnect()
+                observedLayout = []
+            } else {
+                scrollState = { lastY: currentScrollY(), distance: 0, direction: 0, collapsed: false }
+                refresh()
+            }
+        })
+        for (const key of ['pushState', 'replaceState']) {
+            const original = window.history[key]
+            if (typeof original !== 'function') continue
+            const wrapper = function (...args) {
+                const result = original.apply(this, args)
+                if (new URL(window.location.href).pathname !== path) refresh()
+                return result
+            }
+            window.history[key] = wrapper
+            historyHooks.push([key, original, wrapper])
+        }
     }
 }
 
@@ -748,12 +603,20 @@ function removeAds(document, options, diagnosticSource = null) {
                 sidebarColumn: "[data-testid='sidebarColumn']",
                 bottomBar: "[data-testid='BottomBar']",
                 bottomGrok: "nav a[href='/i/grok']:not(header a), [data-testid='BottomBar'] a[href='/i/grok']",
+                navNotifications: "a[data-testid='AppTabBar_Notifications_Link'], [data-testid='BottomBar'] a[href='/notifications']",
+                navMessages: "a[data-testid='AppTabBar_DirectMessage_Link'], [data-testid='BottomBar'] a[href='/messages'], [data-testid='BottomBar'] a[href^='/i/chat']",
             },
             settings: {
                 hide_top_nav: options.hide_top_nav,
                 hide_home_composer: options.hide_home_composer,
                 enable_custom_layout: options.enable_custom_layout,
                 center_primary_column: options.center_primary_column,
+                hide_bottom_bar: options.hide_bottom_bar,
+                hide_bottom_bar_on_scroll: options.hide_bottom_bar_on_scroll,
+                hide_nav_notifications: options.hide_nav_notifications,
+                hide_nav_messages: options.hide_nav_messages,
+                hide_notification_badge: options.hide_notification_badge,
+                hide_show_posts_prompt: options.hide_show_posts_prompt,
             },
         }))
         container.appendChild(diagnostic)
@@ -782,7 +645,10 @@ async function main() {
                     $done({})
                     break
                 }
-                $done({ body: document.documentElement.outerHTML })
+                // Keep the original document mode; outerHTML alone drops the doctype.
+                const doctype = document.doctype
+                const declaration = doctype ? `<!DOCTYPE ${doctype.name}${doctype.publicId ? ` PUBLIC "${doctype.publicId}"` : ''}${doctype.systemId ? `${doctype.publicId ? '' : ' SYSTEM'} "${doctype.systemId}"` : ''}>` : ''
+                $done({ body: declaration + document.documentElement.outerHTML })
                 break
             }
         default:
@@ -790,14 +656,7 @@ async function main() {
     }
 }
 
-(async () => {
-    main().then(_ => {
-
-    }).catch(error => {
-        if (typeof error === 'object') {
-            error = error.toString()
-        }
-        echo(`[Error]: ${error}`)
-        $done({})
-    })
-})();
+main().catch(error => {
+    echo('[Error]', error instanceof Error ? error.message : String(error))
+    $done({})
+})

@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>X runtime correctness and scheduling checks</title>
+<pre id="result">Running...</pre>
+<script type="module">
+if (!new URL(location.href).searchParams.has('fixture')) {
+    const output = document.querySelector('#result');
+    try {
+        const source = await (await fetch('../script/ad/x.js')).text();
+        const functions = source.slice(source.indexOf('function getXOptions()'), source.indexOf('\nconst LAYOUT_DIAGNOSTICS_URL'));
+        let passed = 0;
+        function assert(condition, message) { if (!condition) throw new Error(message); passed++; }
+        const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+        const frame = document.createElement('iframe');
+        frame.style.cssText = 'width:390px;height:700px;border:0';
+        frame.src = './x-runtime.html?fixture';
+        const loaded = new Promise(resolve => frame.onload = resolve);
+        document.body.appendChild(frame);
+        await loaded;
+        const win = frame.contentWindow, doc = frame.contentDocument;
+        doc.body.innerHTML = `<header role="banner"><nav><a id="premium" href="/i/premium_sign_up">Premium</a></nav></header>
+            <div data-testid="primaryColumn"><div data-testid="cellInnerDiv" id="row"><button>Show 56 posts</button></div></div>
+            <div data-testid="sidebarColumn"><aside id="card"><a href="/i/premium_sign_up">Subscribe</a><div data-testid="UserCell">Suggested</div></aside></div>`;
+        const api = new win.Function(`${functions}; return { getXOptions, removeAdsCode };`)();
+        const defaults = api.getXOptions();
+        const originalPushState = win.history.pushState;
+        const originalReplaceState = win.history.replaceState;
+        const disabled = Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, typeof value === 'boolean' ? false : value]));
+        let queries = 0, globalSpanScans = 0, frames = 0, rects = 0, intervals = 0;
+        const originalQuery = doc.querySelectorAll.bind(doc);
+        doc.querySelectorAll = selector => { queries++; if (selector === 'span') globalSpanScans++; return originalQuery(selector); };
+        const originalFrame = win.requestAnimationFrame.bind(win);
+        win.requestAnimationFrame = fn => originalFrame(timestamp => { frames++; fn(timestamp); });
+        const originalInterval = win.setInterval.bind(win);
+        win.setInterval = (...args) => { intervals++; return originalInterval(...args); };
+        const originalRect = win.Element.prototype.getBoundingClientRect;
+        win.Element.prototype.getBoundingClientRect = function () { rects++; return originalRect.call(this); };
+        const stats = () => ({ queries, globalSpanScans, frames, rects, intervals });
+        const difference = (before, after) => Object.fromEntries(Object.keys(before).map(key => [key, after[key] - before[key]]));
+        const row = doc.getElementById('row');
+        const visible = element => {
+            for (let node = element; node; node = node.parentElement) if (win.getComputedStyle(node).display === 'none') return false;
+            return true;
+        };
+        const start = async options => { api.removeAdsCode({ ...disabled, ...options }); await wait(120); };
+        await start({ hide_show_posts_prompt: true });
+        assert(!visible(row), 'Show posts cell not hidden');
+        row.innerHTML = '<article><div data-testid="tweetText">Ordinary post</div></article>';
+        await wait(120);
+        assert(visible(row), 'Reused timeline cell stayed hidden');
+        row.innerHTML = '<button>Show 2 posts</button><article>Existing post</article>';
+        await wait(120);
+        assert(visible(row) && !visible(row.querySelector('button')), 'Prompt hiding affected a coexisting post');
+        await start({ hide_nav_premium: true });
+        const premium = doc.getElementById('premium');
+        assert(!visible(premium), 'CSS navigation rule not applied');
+        premium.href = '/home';
+        await wait(120);
+        assert(visible(premium), 'CSS rule did not restore a changed link');
+        row.innerHTML = '<article><span>Automated</span><div data-testid="tweetText"><span>Automated</span></div></article>';
+        await start({ hide_automated_content: true });
+        assert(visible(row), 'Ordinary Automated text was hidden');
+        row.innerHTML = '<article>Normal post<article><div data-testid="User-Name"><span>Automated</span></div>Quoted content</article></article>';
+        await wait(120);
+        assert(visible(row), 'Automation metadata in a quoted article hid the main post');
+        row.innerHTML = '<article><div data-testid="User-Name"><span>Automated</span></div><div data-testid="tweetText">Content</div></article>';
+        await wait(120);
+        assert(!visible(row), 'Recognized automation metadata did not hide its post');
+        row.querySelector('[data-testid="User-Name"] span').firstChild.data = 'Verified';
+        await wait(120);
+        assert(visible(row), 'Automation metadata characterData change did not restore its post');
+        row.innerHTML = '<article><button>Show probable spam</button></article><button id="spam">Show probable spam</button>';
+        await start({ hide_probable_spam_prompt: true });
+        assert(visible(row.querySelector('article button')) && !visible(doc.getElementById('spam')), 'Spam rule exceeded its structural scope');
+        doc.getElementById('spam').textContent = 'Show more replies';
+        await wait(120);
+        assert(visible(doc.getElementById('spam')), 'Changed spam button remained hidden');
+        await start({ block_ads_and_recommendations: true });
+        const card = doc.getElementById('card');
+        assert(!visible(card), 'Sidebar recommendation not hidden');
+        card.querySelector('a').remove();
+        await wait(120);
+        assert(!visible(card), 'Removing one hiding reason restored the whole card');
+        card.querySelector('[data-testid="UserCell"]').remove();
+        card.textContent = 'Unrelated card';
+        await wait(120);
+        assert(visible(card), 'Card did not restore after its last hiding reason disappeared');
+
+        // Route-specific controls and the website's own transform must be restored.
+        row.innerHTML = '<div data-testid="tweetTextarea_0">Compose</div><div aria-live="polite" id="permissions">Who can reply</div>';
+        win.history.replaceState({}, '', '/home');
+        await start({ hide_home_composer: true, hide_reply_permissions: true });
+        assert(!visible(row), 'Home composer not hidden');
+        win.history.pushState({}, '', '/u/status/123');
+        await wait(120);
+        assert(visible(row) && !visible(doc.getElementById('permissions')), 'SPA route change did not reconcile independent reasons');
+        win.history.replaceState({}, '', '/explore');
+        await wait(120);
+        assert(visible(doc.getElementById('permissions')), 'Detail permission hint stayed hidden after leaving detail');
+        row.innerHTML = '<button>Show 10 posts</button>';
+        await start({ hide_show_posts_prompt: true });
+        assert(!visible(row), 'Prompt not hidden before detachment');
+        row.remove();
+        await wait(120);
+        assert(!row.classList.contains('x-ad-hidden'), 'Detached timeline cell retained managed state');
+        doc.querySelector('[data-testid="primaryColumn"]').appendChild(row);
+        row.innerHTML = 'Recycled content';
+        await wait(120);
+        assert(visible(row), 'Detached and reattached cell stayed hidden');
+        const column = doc.querySelector('[data-testid="primaryColumn"]');
+        const sidebar = doc.querySelector('[data-testid="sidebarColumn"]');
+        sidebar.remove();
+        column.style.transform = 'translateY(3px)';
+        await start({ center_primary_column: true });
+        // This frame is mobile; a separate desktop viewport exercises centering below.
+        frame.style.width = '1100px';
+        await wait(150);
+        assert(column.style.transform.includes('translateX') && column.style.transform.includes('translateY(3px)'), 'Centering discarded site transform');
+        const lateSidebar = doc.createElement('div');
+        lateSidebar.setAttribute('data-testid', 'sidebarColumn');
+        lateSidebar.textContent = 'Visible sidebar inserted late';
+        doc.body.appendChild(lateSidebar);
+        await wait(120);
+        assert(column.style.transform === 'translateY(3px)', 'Late sidebar insertion did not restore site transform');
+        lateSidebar.remove();
+        await wait(120);
+        assert(column.style.transform.includes('translateX'), 'Removing sidebar did not re-enable centering');
+        const beforeMeasure = stats();
+        row.textContent = 'Only a vertical content change';
+        await wait(120);
+        assert(rects === beforeMeasure.rects, 'Timeline text change caused horizontal layout measurement');
+        win.__stashXBlocker.destroy();
+        assert(column.style.transform === 'translateY(3px)', 'Destroy did not restore site transform');
+        frame.style.width = '390px';
+        await wait(120);
+
+        column.innerHTML = Array.from({ length: 200 }, (_, index) => `<div data-testid="cellInnerDiv"><article>${Array.from({ length: 20 }, () => `<span>post ${index}</span>`).join('')}</article></div>`).join('');
+        await start(defaults);
+        const idleBefore = stats();
+        await wait(10000);
+        const idleAfter = stats();
+        assert(JSON.stringify(idleAfter) === JSON.stringify(idleBefore), 'Stable page still performs periodic work');
+        assert(intervals === 0 && globalSpanScans === 0, 'Blocker installed an interval or scanned every span');
+        const diagnostic = doc.createElement('div');
+        diagnostic.setAttribute('data-stash-layout-diagnostic', '');
+        const beforeDiagnostic = stats();
+        doc.body.appendChild(diagnostic);
+        diagnostic.remove();
+        await wait(120);
+        assert(JSON.stringify(stats()) === JSON.stringify(beforeDiagnostic), 'Diagnostic-only DOM changes triggered blocker work');
+        const batchBefore = stats();
+        for (let i = 0; i < 20; i++) column.firstElementChild.querySelector('span').firstChild.data = `update ${i}`;
+        await wait(120);
+        assert(frames - batchBefore.frames <= 2, 'Mutation burst was not batched');
+        assert(queries === batchBefore.queries, 'One recycled row caused global document scans');
+        console.log('X synthetic 200-post performance:', JSON.stringify({ idle10s: difference(idleBefore, idleAfter), singleRowBurst: difference(batchBefore, stats()) }));
+
+        const previousController = win.__stashXBlocker;
+        api.removeAdsCode(defaults);
+        await wait(120);
+        const currentController = win.__stashXBlocker;
+        assert(currentController !== previousController && originalQuery('#x-ad-blocker-style').length === 1, 'Repeated initialization duplicated the instance');
+        const stable = stats();
+        previousController.refresh();
+        await wait(120);
+        assert(JSON.stringify(stats()) === JSON.stringify(stable), 'Destroyed instance still schedules work');
+        win.dispatchEvent(new win.PageTransitionEvent('pagehide', { persisted: true }));
+        const beforePageShow = stats();
+        currentController.refresh();
+        win.dispatchEvent(new win.Event('resize'));
+        await wait(120);
+        assert(JSON.stringify(stats()) === JSON.stringify(beforePageShow), 'Pagehide did not pause while document was still visible');
+        win.dispatchEvent(new win.PageTransitionEvent('pageshow', { persisted: true }));
+        await wait(120);
+        assert(frames > beforePageShow.frames, 'Pageshow did not resume the instance');
+        let hidden = false;
+        Object.defineProperty(doc, 'visibilityState', { configurable: true, get: () => hidden ? 'hidden' : 'visible' });
+        hidden = true;
+        doc.dispatchEvent(new win.Event('visibilitychange'));
+        const paused = stats();
+        column.appendChild(doc.createElement('div'));
+        currentController.refresh();
+        win.dispatchEvent(new win.Event('scroll'));
+        await wait(120);
+        assert(JSON.stringify(stats()) === JSON.stringify(paused), 'Hidden page performed DOM/layout work');
+        hidden = false;
+        doc.dispatchEvent(new win.Event('visibilitychange'));
+        await wait(120);
+        assert(frames > paused.frames, 'Visible page did not resume work');
+        currentController.destroy();
+        assert(!win.__stashXBlocker && !doc.getElementById('x-ad-blocker-style'), 'Destroy left a live instance/style');
+        assert(win.history.pushState === originalPushState && win.history.replaceState === originalReplaceState, 'Destroy did not restore history hooks');
+        const stopped = stats();
+        column.appendChild(doc.createElement('div'));
+        win.dispatchEvent(new win.Event('resize'));
+        win.dispatchEvent(new win.Event('scroll'));
+        await wait(120);
+        assert(JSON.stringify(stats()) === JSON.stringify(stopped), 'Destroyed observers or listeners remain live');
+        win.history.replaceState({}, '', '/u/status/123');
+        let backs = 0;
+        win.history.back = () => backs++;
+        await start({ enable_escape_back: true });
+        await start({ enable_escape_back: true });
+        doc.body.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        assert(backs === 1, 'Repeated Escape-only initialization duplicated keyboard listeners');
+        win.__stashXBlocker.destroy();
+        doc.body.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        assert(backs === 1, 'Destroyed keyboard handler still navigates');
+        frame.remove();
+
+        // Verify complete response navigation, doctype and async $done paths.
+        for (const [doctype, expectedMode] of [['<!doctype html>', 'CSS1Compat'], ['', 'BackCompat'], ['<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">', 'CSS1Compat']]) {
+            const result = await new Promise(resolve => new Function('$argument', '$script', '$request', '$response', '$done', source)(
+                JSON.stringify({ ...disabled, hide_chat_drawer: true }), { type: 'response' }, { url: 'https://x.com/home' },
+                { headers: { 'content-type': 'text/html' }, body: `${doctype}<html><head></head><body>Original</body></html>` }, resolve));
+            const navigation = document.createElement('iframe');
+            const ready = new Promise(resolve => navigation.onload = resolve);
+            navigation.src = URL.createObjectURL(new Blob([result.body], { type: 'text/html' }));
+            document.body.appendChild(navigation);
+            await ready;
+            assert(navigation.contentDocument.compatMode === expectedMode, `Response changed document mode: ${doctype}`);
+            assert(!!navigation.contentDocument.doctype === !!doctype, 'Response lost or synthesized doctype');
+            URL.revokeObjectURL(navigation.src);
+            navigation.remove();
+        }
+        output.textContent = `PASS: ${passed} correctness, lifecycle and performance assertions`;
+    } catch (error) { output.textContent = `FAIL: ${error.stack || error}`; }
+}
+</script>
+</html>
