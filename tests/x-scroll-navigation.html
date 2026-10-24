@@ -102,6 +102,29 @@ try {
     assert(!visible(), 'Remounted bar lost the current scroll state');
     await scroll(1800);
     assert(visible(), 'Remounted bar failed to restore on upward scroll');
+
+    await scroll(2600);
+    assert(!visible(), 'Bar did not hide before document shrink');
+    doc.querySelector('main').style.height = '2100px';
+    await wait();
+    assert(!visible(), 'Document-height clamp was mistaken for an upward gesture');
+    await scroll(Math.max(0, win.scrollY - 150));
+    assert(visible(), 'Upward gesture after document shrink did not restore bar');
+    await scroll(1800);
+    win.dispatchEvent(new win.PageTransitionEvent('pagehide', { persisted: true }));
+    win.dispatchEvent(new win.PageTransitionEvent('pageshow', { persisted: true }));
+    await wait();
+    assert(visible(), 'Page restoration kept navigation hidden');
+
+    let documentQueries = 0, frames = 0;
+    const originalQuery = doc.querySelectorAll.bind(doc);
+    doc.querySelectorAll = selector => { documentQueries++; return originalQuery(selector); };
+    const originalFrame = win.requestAnimationFrame.bind(win);
+    win.requestAnimationFrame = callback => originalFrame(timestamp => { frames++; callback(timestamp); });
+    for (let i = 0; i < 30; i++) win.dispatchEvent(new win.Event('scroll'));
+    await wait();
+    assert(frames <= 1, 'Scroll events were not coalesced into one frame');
+    assert(documentQueries === 0, 'Scroll handler performed global DOM queries');
     await scroll(0);
     output.textContent = `PASS: ${passed} real-scroll assertions`;
 } catch (error) {

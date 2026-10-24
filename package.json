@@ -1,0 +1,11 @@
+{
+    "name": "stash-resource-tests",
+    "private": true,
+    "scripts": {
+        "test:x": "node tests/x-rewrites.cjs && node tests/run-x-browser.cjs",
+        "test:x:browser": "node tests/run-x-browser.cjs"
+    },
+    "devDependencies": {
+        "playwright": "1.57.0"
+    }
+}

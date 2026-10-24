@@ -33,3 +33,29 @@ jobs:
 
             - name: Run pre-commit checks
               run: uv run pre-commit run -a
+
+    x-tests:
+        name: X script browser and rewrite tests
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v7
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v6
+              with:
+                  node-version: '22'
+                  cache: npm
+
+            - name: Install rewrite test prerequisites
+              run: sudo apt-get update && sudo apt-get install -y ruby jq
+
+            - name: Install test dependencies
+              run: npm ci
+
+            - name: Install Chromium and WebKit
+              run: npx playwright install --with-deps chromium webkit
+
+            - name: Run X tests
+              run: npm run test:x

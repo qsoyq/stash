@@ -11,6 +11,8 @@ function expand(text, values = defaults) {
     });
 }
 const source = readFileSync('script/ad/x.js', 'utf8');
+const diagnosticUrl = source.match(/const LAYOUT_DIAGNOSTICS_URL = '([^']+)'/)?.[1];
+assert.equal(diagnosticUrl, override['script-providers'].x.url.replace('/script/ad/x.js', '/script/browser/layout-diagnostics.js'), 'Indirect diagnostic resource uses a different branch');
 const parser = source.slice(source.indexOf('function getXOptions()'), source.indexOf('function removeAdsCode('));
 const scriptDefaults = new Function(`${parser}; return getXOptions();`)();
 assert.deepEqual(JSON.parse(expand(override.http.script[0].argument)), scriptDefaults, 'Override and script defaults differ');
@@ -64,4 +66,24 @@ for (const [operation, input] of [['TweetDetail', detail], ['UserTweets', profil
 const header = override.http['header-rewrite'][0];
 assert(new RegExp(expand(header).split(' ')[0]).test('https://x.com/home'));
 assert(!new RegExp(expand(header, { ...defaults, csp_policy: '^$' }).split(' ')[0]).test('https://x.com/home'));
-console.log(`PASS: ${passed + 9} rewrite, parameter-binding and CSP checks`);
+console.log(`PASS: ${passed + 10} rewrite, parameter-binding and CSP checks`);
+
+// Exercise the pure direction decision used by the injected runtime.
+const decisionSource = source.slice(source.indexOf('    function nextScrollState('), source.indexOf('    function notificationBadges('));
+const nextScrollState = new Function(`${decisionSource}; return nextScrollState;`)();
+const initial = () => ({ lastY: 0, distance: 0, direction: 0, collapsed: false });
+let scroll = initial();
+for (const y of [100, 104, 107]) scroll = nextScrollState(scroll, y);
+assert.equal(scroll.collapsed, true);
+for (const y of [105, 102, 98]) scroll = nextScrollState(scroll, y);
+assert.equal(scroll.collapsed, false, 'Small upward movements did not accumulate');
+scroll = nextScrollState(scroll, 99);
+assert.equal(scroll.collapsed, false, 'A small direction reversal changed visibility');
+scroll = nextScrollState(scroll, 110);
+assert.equal(scroll.collapsed, true);
+scroll = nextScrollState(scroll, 7);
+assert.equal(scroll.collapsed, false, 'Top threshold must restore navigation');
+const previous = { lastY: 500, direction: 1, distance: 20, collapsed: true };
+assert.deepEqual(nextScrollState(previous, 500), previous, 'No movement changed the scroll decision');
+assert.deepEqual(previous, { lastY: 500, direction: 1, distance: 20, collapsed: true }, 'Decision mutated its input');
+console.log('PASS: 7 pure scroll-direction checks');
