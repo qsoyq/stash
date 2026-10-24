@@ -184,5 +184,5 @@ http:
             debug: false
 script-providers:
     x:
-        url: https://raw.githubusercontent.com/qsoyq/stash/homeless-jaguar/script/ad/x.js
+        url: https://raw.githubusercontent.com/qsoyq/stash/continue-x-stoverride-bottom-nav/script/ad/x.js
         interval: 86400
