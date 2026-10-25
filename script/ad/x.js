@@ -666,7 +666,7 @@ function removeAdsCode(options) {
     }
 }
 
-const LAYOUT_DIAGNOSTICS_URL = 'https://raw.githubusercontent.com/qsoyq/stash/add-x-double-tap-back-switch/script/browser/layout-diagnostics.js'
+const LAYOUT_DIAGNOSTICS_URL = 'https://raw.githubusercontent.com/qsoyq/stash/main/script/browser/layout-diagnostics.js'
 
 async function loadLayoutDiagnosticsSource() {
     try {

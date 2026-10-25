@@ -36,6 +36,7 @@ desc: |-
     31. 详情页双击返回（默认关）：正文或非交互留白处双击返回上一页；不作用于链接、媒体、回复卡片和输入区
     32. 页面布局诊断（默认关）：显示「复制诊断信息」按钮
     33. CSP 策略（默认移除 CSP）：保留 CSP 可能导致页面功能失效
+category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/x.png
 arguments-version: 1
 arguments:
@@ -227,5 +228,5 @@ http:
             debug: false
 script-providers:
     x:
-        url: https://raw.githubusercontent.com/qsoyq/stash/add-x-double-tap-back-switch/script/ad/x.js
+        url: https://raw.githubusercontent.com/qsoyq/stash/main/script/ad/x.js
         interval: 86400

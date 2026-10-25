@@ -81,5 +81,3 @@ Linux 上首次安装浏览器及系统依赖时，使用
   时不跳首页；上一页为外站时按浏览器历史离开 X。参数需要 iOS/tvOS 3.7+ 或 macOS 4.4+（Beta）。
 
 分支测试应暂时移除分类并让本仓库资源 URL 指向测试分支；合并前恢复分类及 main URL。
-本次 `add-x-double-tap-back-switch` 测试分支原分类为 `ad`；格式钩子会删除注释，
-因此覆写暂时省略 `category`，合并前恢复 `category: ad`，并将主脚本和间接诊断脚本 URL 恢复为 main。
