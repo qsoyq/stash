@@ -48,7 +48,7 @@ try {
     };
     async function fixture(options, path = '/home', width = 1440, extraSidebar = '', standalone = false, mobileHeader = false) {
         const frame = document.createElement('iframe');
-        frame.style.width = '1440px';
+        frame.style.width = `${width}px`;
         frame.srcdoc = `<!doctype html><html><head></head><body>
             ${mobileHeader ? '<div style="position:fixed;top:0;left:0;width:420px;height:107px"><div data-testid="TopNavBar" id="top" style="height:107px">Top</div></div><header role="banner" id="mobile-spacer" style="height:106px"><div style="height:106px;opacity:0"></div></header><div id="refresh-indicator" style="position:absolute;top:46px;height:60px">Refresh</div>' : ''}
             <header role="banner" id="desktop-banner">${mobileHeader ? '' : '<div data-testid="TopNavBar" id="top">Top</div>'}<nav>
@@ -115,7 +115,7 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
             }
             assert(frames.size === 0, 'Scheduler did not settle');
         };
-        const update = () => { browser.__stashXBlocker?.refresh(); flushFrames(); };
+        const update = () => { frame.style.width = `${state.width}px`; browser.__stashXBlocker?.refresh(); flushFrames(); };
         return { frame, doc, timers, state, visible, run, update, flushFrames };
     }
     for (const [key, target] of Object.entries(targets)) {

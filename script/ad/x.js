@@ -105,6 +105,10 @@ function removeAdsCode(options) {
     style.textContent = `
         .${hiddenClass}, .${sidebarClass} { display: none !important; }
         ${simpleRules.map(([, selector]) => `${selector} { display: none !important; }`).join('\n')}
+        ${options.hide_top_nav ? `
+        html.x-ad-hide-top-nav [data-testid='TopNavBar'] { display: none !important; }
+        @media (min-width: 1000px) { [data-testid='TopNavBar'] { display: none !important; } }
+        ` : ''}
         ${autoHideBottomBar ? `
         .x-ad-bottom-bar-autohide { transition: transform 0.2s ease, opacity 0.2s ease !important; }
         .x-ad-bottom-bar-collapsed {
@@ -153,6 +157,7 @@ function removeAdsCode(options) {
     let roots = new Set()
     let path = new URL(window.location.href).pathname
     const previousHomeClass = document.documentElement.classList.contains('x-ad-home-layout')
+    const previousTopNavClass = document.documentElement.classList.contains('x-ad-hide-top-nav')
     let scrollState = { lastY: currentScrollY(), distance: 0, direction: 0, collapsed: false }
     const listeners = []
     const historyHooks = []
@@ -282,9 +287,6 @@ function removeAdsCode(options) {
             if (!hits.has(element)) hits.set(element, new Set())
             hits.get(element).add(reason)
         }
-        if (options.hide_top_nav && !(window.innerWidth < 1000 && path.startsWith('/explore'))) {
-            find(root, "[data-testid='TopNavBar']").forEach(element => hide(element, 'top-nav'))
-        }
         if (options.hide_home_composer && path === '/home') {
             find(root, "[data-testid='tweetTextarea_0']").forEach(composer => {
                 const container = composer.closest("[data-testid='cellInnerDiv'], [data-testid='tweetComposer']")
@@ -346,7 +348,7 @@ function removeAdsCode(options) {
     function reconcile(changedRoots) {
         // A nested nav/cell update also invalidates its managed ancestors. Scan
         // those containers before replacing their reasons; scanning only the
-        // descendant cannot rediscover TopNavBar (or a hidden card) itself.
+        // descendant cannot rediscover a hidden card/container itself.
         const boundaries = new Set(changedRoots.map(root => {
             let boundary = root
             for (let parent = root.parentElement; parent; parent = parent.parentElement) {
@@ -530,9 +532,37 @@ function removeAdsCode(options) {
         listeners.push(() => target.removeEventListener(type, callback, settings))
     }
 
+    function syncTopNavPolicy() {
+        if (options.hide_top_nav) setClass(document.documentElement, 'x-ad-hide-top-nav', !new URL(window.location.href).pathname.startsWith('/explore'))
+    }
+
     function refresh() {
+        if (destroyed) return
+        syncTopNavPolicy()
         fullUpdate = layoutDirty = barsDirty = true
         schedule()
+    }
+
+    function pause() {
+        paused = true
+        if (frame !== null) window.cancelAnimationFrame(frame)
+        frame = null
+        observer?.disconnect()
+        resizeObserver?.disconnect()
+        observedLayout = []
+    }
+
+    function resume() {
+        if (destroyed || document.visibilityState === 'hidden') return
+        paused = false
+        if (frame !== null) window.cancelAnimationFrame(frame)
+        frame = null
+        syncTopNavPolicy()
+        scrollState = { lastY: currentScrollY(), distance: 0, direction: 0, collapsed: false }
+        fullUpdate = layoutDirty = barsDirty = true
+        // Foreground rAF delivery can lag behind lifecycle events. Reconcile and
+        // reconnect observers now; don't wait for scrolling to wake the page.
+        flush()
     }
 
     function destroy() {
@@ -549,6 +579,7 @@ function removeAdsCode(options) {
         bottomBarTargets.forEach(element => element.classList.remove('x-ad-bottom-bar-autohide', 'x-ad-bottom-bar-collapsed'))
         restoreCenter()
         setClass(document.documentElement, 'x-ad-home-layout', previousHomeClass)
+        if (options.hide_top_nav) setClass(document.documentElement, 'x-ad-hide-top-nav', previousTopNavClass)
         style.remove()
         managed.clear()
         sidebarTargets.clear()
@@ -603,36 +634,18 @@ function removeAdsCode(options) {
         listen(document, 'visibilitychange', resetTaps)
     }
     if (needsUpdates) {
+        syncTopNavPolicy()
         document.head.appendChild(style)
         flush()
         listen(window, 'resize', refresh)
         listen(window.visualViewport || window, 'resize', () => { layoutDirty = barsDirty = true; schedule() })
         if (autoHideBottomBar) listen(window, 'scroll', () => { scrollDirty = true; schedule() }, { passive: true })
-        listen(window, 'pageshow', () => {
-            paused = false
-            scrollState = { lastY: currentScrollY(), distance: 0, direction: 0, collapsed: false }
-            refresh()
-        })
-        listen(window, 'pagehide', () => {
-            paused = true
-            if (frame !== null) window.cancelAnimationFrame(frame)
-            frame = null
-            observer.disconnect()
-            resizeObserver?.disconnect()
-            observedLayout = []
-        })
+        listen(window, 'pageshow', resume)
+        listen(window, 'focus', resume)
+        listen(window, 'pagehide', pause)
         listen(document, 'visibilitychange', () => {
-            paused = document.visibilityState === 'hidden'
-            if (paused) {
-                if (frame !== null) window.cancelAnimationFrame(frame)
-                frame = null
-                observer.disconnect()
-                resizeObserver?.disconnect()
-                observedLayout = []
-            } else {
-                scrollState = { lastY: currentScrollY(), distance: 0, direction: 0, collapsed: false }
-                refresh()
-            }
+            if (document.visibilityState === 'hidden') pause()
+            else resume()
         })
     }
     if (needsUpdates || options.enable_double_tap_back) {
@@ -641,9 +654,10 @@ function removeAdsCode(options) {
             const original = window.history[key]
             if (typeof original !== 'function') continue
             const wrapper = function (...args) {
+                const previousPath = new URL(window.location.href).pathname
                 const result = original.apply(this, args)
                 resetTaps()
-                if (needsUpdates && new URL(window.location.href).pathname !== path) refresh()
+                if (needsUpdates && new URL(window.location.href).pathname !== previousPath) refresh()
                 return result
             }
             window.history[key] = wrapper
