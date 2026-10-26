@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>X double-tap back checks</title>
+<style>
+    body { margin: 0; }
+    [data-testid="primaryColumn"] { width: 320px; }
+    #blank { height: 100px; background: #eee; }
+    /* Separate the text from links: mobile hit testing otherwise snaps taps to the permalink. */
+    #text { min-height: 60px; margin-top: 40px; }
+    #spacer { height: 2000px; }
+</style>
+<div data-testid="primaryColumn">
+    <div id="blank"></div>
+    <article id="main-tweet" data-testid="tweet">
+        <a href="/u/status/123" role="link"><time>Now</time></a>
+        <div id="text" data-testid="tweetText">Ordinary detail text for reading and selection</div>
+        <button id="like"><span id="like-label">Like</span></button>
+        <a id="link" href="#external">Link</a>
+        <img id="photo" alt="Photo" width="20" height="20">
+        <div data-testid="videoPlayer"><span id="player">Video controls</span></div>
+        <div role="link"><span id="quote">Quoted post</span></div>
+        <div data-testid="card.wrapper"><span id="card">Card</span></div>
+    </article>
+    <article id="reply"><a href="/u/status/456"><time>Reply time</time></a><span id="reply-text">Reply</span>
+        <article><a href="/u/status/123"><time>Quoted main tweet</time></a></article>
+    </article>
+    <div data-testid="cellInnerDiv"><span id="unknown-cell">Unknown clickable row</span></div>
+    <input id="input"><textarea id="textarea"></textarea><div id="editable" contenteditable>Editor</div>
+</div>
+<div data-testid="sidebarColumn" id="sidebar">Sidebar</div>
+<div id="spacer"></div>
+<pre id="result">Running...</pre>
+<script type="module">
+try {
+    const source = await (await fetch('/script/ad/x.js')).text();
+    const functions = source.slice(source.indexOf('function getXOptions()'), source.indexOf('\nconst LAYOUT_DIAGNOSTICS_URL'));
+    const api = new Function(`${functions}; return { getXOptions, removeAdsCode };`)();
+    const defaults = api.getXOptions();
+    const disabled = Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, typeof value === 'boolean' ? false : value]));
+    const nativeBack = history.back;
+    const nativePush = history.pushState;
+    const nativeReplace = history.replaceState;
+    let backs = 0, clock = 10000, queries = 0, frames = 0, observers = 0;
+    const nativeQuery = document.querySelectorAll.bind(document);
+    document.querySelectorAll = (...args) => { queries++; return nativeQuery(...args); };
+    const nativeFrame = window.requestAnimationFrame;
+    window.requestAnimationFrame = (...args) => { frames++; return nativeFrame.apply(window, args); };
+    const NativeObserver = window.MutationObserver;
+    window.MutationObserver = class extends NativeObserver { constructor(...args) { super(...args); observers++; } };
+    const element = id => document.getElementById(id);
+    function start(options = { enable_double_tap_back: true }, count = true, path = '/u/status/123') {
+        window.__stashXBlocker?.destroy();
+        history.replaceState({}, '', path);
+        document.activeElement?.blur();
+        window.getSelection().removeAllRanges();
+        document.querySelector('[data-test-overlay]')?.remove();
+        backs = 0;
+        clock += 2000;
+        history.back = count ? () => backs++ : nativeBack;
+        api.removeAdsCode({ ...disabled, ...options });
+    }
+    window.xGestureTest = { start, defaults, disabled, api, backs: () => backs };
+    if (!new URL(location.href).searchParams.has('fixture')) {
+        let passed = 0;
+        const assert = (condition, message) => { if (!condition) throw new Error(message); passed++; };
+        function touchEvent(id, type, points, changed = points, at = clock) {
+            const event = new Event(type, { bubbles: true, cancelable: true });
+            Object.defineProperties(event, {
+                touches: { value: points }, changedTouches: { value: changed }, timeStamp: { value: at },
+            });
+            element(id).dispatchEvent(event);
+            return event;
+        }
+        const point = (x = 50, y = 50, identifier = 1) => ({ clientX: x, clientY: y, identifier });
+        function tap(id = 'blank', { x = 50, y = 50, duration = 30, gap = 80 } = {}) {
+            const p = point(x, y);
+            touchEvent(id, 'touchstart', [p]);
+            const end = touchEvent(id, 'touchend', [], [p], clock + duration);
+            clock += duration + gap;
+            return end;
+        }
+        function doubleClick(id = 'blank', properties = {}) {
+            const event = new MouseEvent('dblclick', { bubbles: true, cancelable: true, button: 0, ...properties });
+            Object.defineProperty(event, 'timeStamp', { value: clock });
+            element(id).dispatchEvent(event);
+            return event;
+        }
+        start(disabled);
+        tap(); tap(); doubleClick();
+        assert(backs === 0 && history.pushState === nativePush && history.replaceState === nativeReplace, 'Disabled gestures installed handlers/hooks');
+        start(defaults);
+        tap(); tap();
+        assert(backs === 0, 'Default settings enabled gestures');
+        const beforeGesture = [frames, observers].join();
+        start();
+        assert(!document.getElementById('x-ad-blocker-style'), 'Gesture-only mode injected layout CSS');
+        assert([frames, observers].join() === beforeGesture, 'Gesture-only initialization installed observers or scheduled work');
+        const first = tap();
+        assert(backs === 0 && !first.defaultPrevented, 'First tap intercepted');
+        assert(tap().defaultPrevented && backs === 1, 'Double tap did not consume second tap and navigate once');
+        doubleClick(); tap(); tap();
+        assert(backs === 1, 'Compatibility mouse event or rapid taps navigated twice');
+        start();
+        tap('text'); tap('text');
+        assert(backs === 1, 'Main tweet text did not navigate');
+        start();
+        assert(doubleClick().defaultPrevented && backs === 1, 'Mouse double-click failed');
+        for (const id of ['like-label', 'link', 'photo', 'player', 'quote', 'card', 'reply-text', 'unknown-cell', 'input', 'textarea', 'editable', 'sidebar']) {
+            start(); doubleClick(id);
+            tap(id); tap(id);
+            assert(backs === 0, `Interactive/unrecognized target navigated: ${id}`);
+        }
+        for (const path of ['/home', '/explore', '/u', '/u/status/123/photo/1', '/u/status/123/video/1', '/u/status/123/analytics']) {
+            start(undefined, true, path); doubleClick(); tap(); tap();
+            assert(backs === 0, `Non-detail route navigated: ${path}`);
+        }
+        for (const path of ['/u/status/123/', '/i/web/status/123']) {
+            start(undefined, true, path); tap(); tap();
+            assert(backs === 1, `Detail route not supported: ${path}`);
+        }
+        start(); tap('blank'); tap('text');
+        assert(backs === 0, 'Taps in different regions combined');
+        start(); tap('blank', { gap: 301 }); tap();
+        assert(backs === 0, 'Slow taps navigated');
+        start(); tap('blank', { duration: 251 }); tap();
+        assert(backs === 0, 'Long press counted as tap');
+        start(); tap(); tap('blank', { x: 75 });
+        assert(backs === 0, 'Distant taps combined');
+        for (const cancel of ['move', 'cancel', 'scroll', 'multi', 'endpoint']) {
+            start(); tap();
+            touchEvent('blank', 'touchstart', [point()]);
+            if (cancel === 'move') touchEvent('blank', 'touchmove', [point(61)]);
+            if (cancel === 'cancel') touchEvent('blank', 'touchcancel', []);
+            if (cancel === 'scroll') document.dispatchEvent(new Event('scroll'));
+            if (cancel === 'multi') touchEvent('blank', 'touchstart', [point(), point(55, 55, 2)]);
+            touchEvent('blank', 'touchend', [], [cancel === 'endpoint' ? point(61) : point()], clock + 30);
+            assert(backs === 0, `Canceled gesture navigated: ${cancel}`);
+        }
+        for (const reset of ['pushState', 'replaceState', 'popstate', 'pagehide', 'pageshow', 'visibilitychange']) {
+            start(); tap();
+            if (reset === 'pushState' || reset === 'replaceState') history[reset]({}, '', '/u/status/123');
+            else (reset === 'visibilitychange' ? document : window).dispatchEvent(new Event(reset));
+            tap();
+            assert(backs === 0, `Stale first tap survived ${reset}`);
+        }
+        start(); tap();
+        history.pushState({}, '', '/u/status/456');
+        tap();
+        assert(backs === 0, 'Taps crossed detail navigation');
+        start();
+        const p = point();
+        touchEvent('blank', 'touchstart', [p]);
+        history.pushState({}, '', '/u/status/456');
+        touchEvent('blank', 'touchend', [], [p], clock + 20);
+        tap();
+        assert(backs === 0, 'Touch spanning navigation became a tap');
+        start(); element('input').focus(); doubleClick(); tap(); tap();
+        assert(backs === 0, 'Focused editor did not guard page gestures');
+        start();
+        const range = document.createRange(); range.selectNodeContents(element('text'));
+        window.getSelection().addRange(range);
+        doubleClick(); tap(); tap();
+        assert(backs === 0, 'Text selection was intercepted');
+        for (const role of ['dialog', 'menu']) {
+            start();
+            const overlay = document.createElement('div');
+            overlay.dataset.testOverlay = ''; overlay.setAttribute('role', role); overlay.textContent = role;
+            document.body.appendChild(overlay);
+            doubleClick(); tap(); tap();
+            assert(backs === 0, `Visible ${role} did not guard gestures`);
+            overlay.hidden = true;
+            clock += 1000; doubleClick();
+            assert(backs === 1, `Hidden ${role} unnecessarily blocked gestures`);
+        }
+        for (const properties of [{ button: 2 }, { ctrlKey: true }, { metaKey: true }, { altKey: true }, { shiftKey: true }]) {
+            start(); doubleClick('blank', properties);
+            assert(backs === 0, 'Modified mouse action navigated');
+        }
+        start({ enable_double_tap_back: true, enable_escape_back: true });
+        doubleClick();
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        assert(backs === 2, 'Escape and gesture switches are not independent');
+        start();
+        const controller = window.__stashXBlocker;
+        api.removeAdsCode({ ...disabled, enable_double_tap_back: true });
+        controller.destroy();
+        doubleClick();
+        assert(backs === 1, 'Repeated initialization duplicated/removed new handlers');
+        window.__stashXBlocker.destroy();
+        clock += 1000; doubleClick(); tap(); tap();
+        assert(backs === 1 && history.pushState === nativePush && history.replaceState === nativeReplace, 'Destroy left listeners/history hooks');
+        document.getElementById('result').textContent = `PASS: ${passed} gesture assertions`;
+    } else document.getElementById('result').textContent = 'READY';
+} catch (error) { document.getElementById('result').textContent = `FAIL: ${error.stack || error}`; }
+</script>
+</html>

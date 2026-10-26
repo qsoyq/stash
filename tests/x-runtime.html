@@ -87,6 +87,38 @@ if (!new URL(location.href).searchParams.has('fixture')) {
         await wait(120);
         assert(visible(card), 'Card did not restore after its last hiding reason disappeared');
 
+        // A nested update root must rescan the hidden ancestor before replacing its reasons.
+        const top = doc.createElement('div');
+        top.dataset.testid = 'TopNavBar';
+        top.innerHTML = '<nav><span>For you</span><section><nav><span id="deep-tab">Following</span></nav></section></nav>';
+        doc.body.appendChild(top);
+        win.history.replaceState({}, '', '/home');
+        await start({ hide_top_nav: true });
+        assert(!visible(top), 'Top navigation not initially hidden');
+        const beforeNested = stats();
+        top.querySelector('#deep-tab').firstChild.data = 'Updated following';
+        await wait(120);
+        assert(!visible(top), 'Deep navigation update restored hidden ancestor');
+        assert(queries === beforeNested.queries, 'Nested top navigation update scanned the whole document');
+        top.removeAttribute('data-testid');
+        top.querySelector('#deep-tab').textContent = 'Ordinary navigation';
+        await wait(120);
+        assert(visible(top), 'Reused top navigation retained an obsolete hiding reason');
+        top.remove();
+
+        // Also cover another collect rule whose hidden container can contain a nav root.
+        card.innerHTML = '<section><nav><span id="card-label">Premium</span></nav></section><a href="/i/premium_sign_up">Subscribe</a><div data-testid="UserCell">Suggested</div>';
+        await start({ block_ads_and_recommendations: true });
+        card.querySelector('#card-label').textContent = 'Updated premium';
+        await wait(120);
+        assert(!visible(card), 'Nested card update removed ancestor hiding reasons');
+        card.querySelector('a').remove();
+        await wait(120);
+        assert(!visible(card), 'Nested card reconciliation lost the remaining recommendation reason');
+        card.querySelector('[data-testid="UserCell"]').remove();
+        await wait(120);
+        assert(visible(card), 'Nested card reconciliation retained stale hiding reasons');
+
         // Route-specific controls and the website's own transform must be restored.
         row.innerHTML = '<div data-testid="tweetTextarea_0">Compose</div><div aria-live="polite" id="permissions">Who can reply</div>';
         win.history.replaceState({}, '', '/home');
@@ -173,7 +205,7 @@ if (!new URL(location.href).searchParams.has('fixture')) {
         assert(JSON.stringify(stats()) === JSON.stringify(beforePageShow), 'Pagehide did not pause while document was still visible');
         win.dispatchEvent(new win.PageTransitionEvent('pageshow', { persisted: true }));
         await wait(120);
-        assert(frames > beforePageShow.frames, 'Pageshow did not resume the instance');
+        assert(queries > beforePageShow.queries, 'Pageshow did not reconcile the instance');
         let hidden = false;
         Object.defineProperty(doc, 'visibilityState', { configurable: true, get: () => hidden ? 'hidden' : 'visible' });
         hidden = true;
@@ -187,7 +219,7 @@ if (!new URL(location.href).searchParams.has('fixture')) {
         hidden = false;
         doc.dispatchEvent(new win.Event('visibilitychange'));
         await wait(120);
-        assert(frames > paused.frames, 'Visible page did not resume work');
+        assert(queries > paused.queries, 'Visible page did not reconcile work');
         currentController.destroy();
         assert(!win.__stashXBlocker && !doc.getElementById('x-ad-blocker-style'), 'Destroy left a live instance/style');
         assert(win.history.pushState === originalPushState && win.history.replaceState === originalReplaceState, 'Destroy did not restore history hooks');
@@ -197,6 +229,12 @@ if (!new URL(location.href).searchParams.has('fixture')) {
         win.dispatchEvent(new win.Event('scroll'));
         await wait(120);
         assert(JSON.stringify(stats()) === JSON.stringify(stopped), 'Destroyed observers or listeners remain live');
+        // Keep idle measurement in this iframe, away from Playwright's page polling.
+        await start({ enable_double_tap_back: true });
+        const gestureIdle = stats();
+        await wait(150);
+        assert(JSON.stringify(stats()) === JSON.stringify(gestureIdle), 'Gesture-only mode performs idle work');
+        win.__stashXBlocker.destroy();
         win.history.replaceState({}, '', '/u/status/123');
         let backs = 0;
         win.history.back = () => backs++;
@@ -207,6 +245,79 @@ if (!new URL(location.href).searchParams.has('fixture')) {
         win.__stashXBlocker.destroy();
         doc.body.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
         assert(backs === 1, 'Destroyed keyboard handler still navigates');
+        // Hold every animation frame: foreground repair must not depend on a
+        // later scroll/frame. CSS must also hide newly hydrated/remounted nodes.
+        const nativeCancelFrame = win.cancelAnimationFrame;
+        const heldFrames = new Map();
+        let nextHeldFrame = 0;
+        win.requestAnimationFrame = callback => { heldFrames.set(++nextHeldFrame, callback); return nextHeldFrame; };
+        win.cancelAnimationFrame = id => heldFrames.delete(id);
+        const headerFixture = () => {
+            doc.body.innerHTML = '<div data-testid="TopNavBar" id="foreground-top"><nav>Home tabs</nav></div>' +
+                '<header role="banner" id="foreground-spacer"><div style="height:100px;opacity:0"></div></header>' +
+                '<header role="banner" id="desktop-nav"><a href="/home">Home</a></header>' +
+                '<div data-testid="primaryColumn" style="height:2500px">Timeline</div>';
+        };
+        const topVisible = () => visible(doc.getElementById('foreground-top'));
+        for (const enabled of [true, false]) {
+            hidden = false;
+            win.history.replaceState({}, '', '/home');
+            headerFixture();
+            api.removeAdsCode({ ...disabled, hide_top_nav: enabled, hide_chat_drawer: true });
+            assert(topVisible() === !enabled, 'Initial top navigation requires an animation frame');
+            doc.getElementById('foreground-top').className = 'site-hydration';
+            assert(topVisible() === !enabled, 'Hydration overwrote top hiding before the next frame');
+            doc.getElementById('foreground-top').remove();
+            doc.body.insertAdjacentHTML('afterbegin', '<div data-testid="TopNavBar" id="foreground-top">Late hydration</div>');
+            assert(topVisible() === !enabled, 'Late hydration exposed top navigation until a frame/scroll');
+            for (const event of ['visibilitychange', 'pageshow', 'focus']) {
+                hidden = true;
+                doc.dispatchEvent(new win.Event('visibilitychange'));
+                if (event === 'pageshow') win.dispatchEvent(new win.PageTransitionEvent('pagehide', { persisted: true }));
+                headerFixture();
+                // React can replace the top bar and its spacer while observation is paused.
+                assert(topVisible() === !enabled, 'Background remount lost persistent top hiding');
+                hidden = false;
+                if (event === 'visibilitychange') doc.dispatchEvent(new win.Event(event));
+                else win.dispatchEvent(new win.Event(event));
+                assert(topVisible() === !enabled, `${event} exposed top navigation`);
+                assert(visible(doc.getElementById('foreground-spacer')) === !enabled, `${event} waits for a frame to reconcile the header spacer`);
+                assert(visible(doc.getElementById('desktop-nav')), `${event} hid the desktop navigation`);
+                const chat = doc.createElement('div'); chat.dataset.testid = 'chat-drawer-main';
+                heldFrames.clear(); doc.body.appendChild(chat);
+                await Promise.resolve();
+                assert(heldFrames.size > 0, `${event} did not reconnect DOM observation before a frame`);
+                chat.remove();
+            }
+            // Route changes while paused must use the current URL on foreground.
+            hidden = true; doc.dispatchEvent(new win.Event('visibilitychange'));
+            win.history.replaceState({}, '', '/explore');
+            hidden = false; doc.dispatchEvent(new win.Event('visibilitychange'));
+            assert(topVisible(), 'Foreground hid mobile search input');
+            win.history.pushState({}, '', '/home');
+            assert(topVisible() === !enabled, 'Search → home waits for a frame to hide top navigation');
+            win.history.replaceState({}, '', '/explore');
+            assert(topVisible(), 'Home → search waits for a frame to restore top navigation');
+            frame.style.width = '1100px';
+            assert(topVisible() === !enabled, 'Desktop search incorrectly inherits the mobile exception');
+            frame.style.width = '390px';
+            win.__stashXBlocker.destroy();
+            assert(topVisible() && visible(doc.getElementById('foreground-spacer')), 'Destroy left foreground CSS/layout changes');
+            assert(!doc.documentElement.classList.contains('x-ad-hide-top-nav'), 'Destroy left top-nav policy state');
+            heldFrames.clear();
+        }
+        // A page initialized while hidden still needs the CSS policy before hydration.
+        hidden = true;
+        win.history.replaceState({}, '', '/home');
+        headerFixture();
+        api.removeAdsCode({ ...disabled, hide_top_nav: true });
+        assert(!topVisible(), 'Background initialization defers top hiding until a frame');
+        hidden = false;
+        win.dispatchEvent(new win.Event('pageshow'));
+        assert(!visible(doc.getElementById('foreground-spacer')), 'Background initialization did not reconcile on pageshow');
+        win.__stashXBlocker.destroy();
+        win.requestAnimationFrame = originalFrame;
+        win.cancelAnimationFrame = nativeCancelFrame;
         frame.remove();
 
         // Verify complete response navigation, doctype and async $done paths.
