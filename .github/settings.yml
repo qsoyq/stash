@@ -22,6 +22,7 @@ branches:
               strict: true
               contexts:
                   - Pre-commit validation
+                  - X script browser and rewrite tests
           enforce_admins: false
           required_conversation_resolution: true
           restrictions: null
