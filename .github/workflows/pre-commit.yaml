@@ -36,7 +36,8 @@ jobs:
 
     x-tests:
         name: X script browser and rewrite tests
-        runs-on: ubuntu-latest
+        # Keep the OS within Playwright 1.57.0 support; review when upgrading Playwright.
+        runs-on: ubuntu-24.04
         timeout-minutes: 15
         steps:
             - name: Checkout repository
