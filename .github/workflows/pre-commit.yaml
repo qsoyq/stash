@@ -36,7 +36,7 @@ jobs:
 
     x-tests:
         name: X script browser and rewrite tests
-        # Keep the OS within Playwright 1.57.0 support; review when upgrading Playwright.
+        # Keep the OS within Playwright 1.64.1 support; review when upgrading Playwright.
         runs-on: ubuntu-24.04
         timeout-minutes: 15
         steps:

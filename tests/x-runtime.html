@@ -86,6 +86,24 @@ if (!new URL(location.href).searchParams.has('fixture')) {
         card.textContent = 'Unrelated card';
         await wait(120);
         assert(visible(card), 'Card did not restore after its last hiding reason disappeared');
+        const cardSidebar = card.parentElement;
+        assert(!card.classList.contains('x-ad-hidden') && !cardSidebar.classList.contains('x-ad-empty-sidebar'), 'Restored card or sidebar retained a managed hiding class');
+        card.innerHTML = '<div data-testid="UserCell">Suggested again</div>';
+        await wait(120);
+        assert(!visible(card) && cardSidebar.classList.contains('x-ad-empty-sidebar'), 'Restored sidebar did not collapse when recommendations returned');
+        card.textContent = 'Unrelated card';
+        card.style.display = 'none';
+        await wait(120);
+        assert(cardSidebar.classList.contains('x-ad-empty-sidebar') && card.style.display === 'none', 'Site-hidden content incorrectly restored the sidebar');
+        card.style.removeProperty('display');
+        await wait(120);
+        assert(visible(card) && !cardSidebar.classList.contains('x-ad-empty-sidebar'), 'Removing site display hiding did not restore the sidebar');
+        card.style.visibility = 'hidden';
+        await wait(120);
+        assert(cardSidebar.classList.contains('x-ad-empty-sidebar'), 'Site visibility hiding incorrectly counted as visible content');
+        card.style.removeProperty('visibility');
+        await wait(120);
+        assert(visible(card) && !cardSidebar.classList.contains('x-ad-empty-sidebar'), 'Removing site visibility hiding did not restore the sidebar');
 
         // A nested update root must rescan the hidden ancestor before replacing its reasons.
         const top = doc.createElement('div');
