@@ -407,6 +407,9 @@ function removeAdsCode(options) {
         column = document.querySelector("[data-testid='primaryColumn']")
         sidebar = document.querySelector("[data-testid='sidebarColumn']")
         sidebarTargets.forEach(old => { if (old !== sidebar) { setClass(old, sidebarClass, false); sidebarTargets.delete(old) } })
+        // WebKit can report display:none for descendants of our collapsed sidebar.
+        // Remove only our hiding class before measuring the site's own content.
+        if (sidebar) setClass(sidebar, sidebarClass, false)
         const empty = sidebar && (options.block_ads_and_recommendations || options.hide_sidebar_trends) && !hasVisibleContent(sidebar, true)
         if (sidebar) {
             setClass(sidebar, sidebarClass, !!empty)
