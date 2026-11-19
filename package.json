@@ -6,6 +6,6 @@
         "test:x:browser": "node tests/run-x-browser.cjs"
     },
     "devDependencies": {
-        "playwright": "1.65.0"
+        "playwright": "1.65.1"
     }
 }
