@@ -36,6 +36,11 @@ desc: |-
     31. 详情页双击返回（默认关）：正文或非交互留白处双击返回上一页；不作用于链接、媒体、回复卡片和输入区
     32. 页面布局诊断（默认关）：显示「复制诊断信息」按钮
     33. CSP 策略（默认移除 CSP）：保留 CSP 可能导致页面功能失效
+    34. 视频文件（默认开）：在网页视频下方提供画质选择、打开原文件、复制地址、保存视频及调试信息；不改变账号订阅状态
+    35. 分享菜单下载（实验）（默认关）：点击网页分享菜单的「下载视频」按保存方式处理最高画质 MP4；不改变账号订阅状态，作者明确禁止下载时保留原行为
+    36. 视频保存方式（默认浏览器下载）：作用于两个视频保存入口；系统分享由设备提供操作，iPhone 可尝试「存储视频」，不支持时提供浏览器下载
+    37. 图片文件（默认关）：在帖子图片区域下方选择全部或部分原图保存，也可复制单张原图地址；引用帖独立处理，不包含视频封面
+    38. 图片保存方式（默认系统分享）：所选图片一次交给系统分享面板，iPhone 可尝试存储到相册；不支持时提供浏览器下载，也可选择逐张浏览器下载
 category: ad
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/x.png
 arguments-version: 1
@@ -196,13 +201,48 @@ arguments:
     csp_policy:
         type: select
         title: 高级设置 · CSP 策略
-        description: 保留 CSP 可能阻止页面组件隐藏、布局、Esc 和双击返回功能的注入代码；不影响接口广告与推荐过滤
+        description: 保留 CSP 可能阻止页面组件隐藏、布局、Esc、双击返回、视频文件、图片文件和分享菜单下载功能的注入代码；不影响接口广告与推荐过滤
         default: ^https://x\.com/
         options:
             -   value: ^https://x\.com/
                 label: 移除 CSP（允许页面功能）
             -   value: ^$
                 label: 保留 CSP
+    enable_video_tools:
+        type: switch
+        title: 阅读与操作 · 视频文件
+        description: 在 X 网页视频下方显示「视频文件」入口，支持选择 MP4 画质、打开、复制和保存，以及复制调试信息；保存方式由下方参数控制；分享菜单由独立实验开关控制，不改变账号订阅状态
+        default: true
+    enable_share_menu_download:
+        type: switch
+        title: 阅读与操作 · 分享菜单下载（实验）
+        description: 保留网页帖子分享菜单的下载项外观，点击后按保存方式处理最高画质 MP4，多视频逐个下载或一起系统分享；没有下载项时补充入口，与视频下方入口独立，作者明确禁止下载时保留原行为；需真机验证
+        default: false
+    video_save_method:
+        type: select
+        title: 阅读与操作 · 视频保存方式
+        description: 浏览器下载保持原行为；系统分享准备 MP4 后调起设备分享面板，必要时需再次点击「系统分享」。iPhone 可尝试「存储视频」，Mac 以系统提供的操作为准；无法直接写入相册，不支持时提供浏览器下载
+        default: browser
+        options:
+            -   value: browser
+                label: 浏览器下载
+            -   value: system_share
+                label: 系统分享
+    enable_image_tools:
+        type: switch
+        title: 阅读与操作 · 图片文件
+        description: 在 X 网页帖子的图片区域下方提供原图选择、批量保存和单张地址复制；默认全选，支持部分选择；不收集头像、视频封面和链接预览，引用帖独立处理
+        default: false
+    image_save_method:
+        type: select
+        title: 阅读与操作 · 图片保存方式
+        description: 系统分享将所选原图一次交给设备分享面板，必要时需再次点击「系统分享」，iPhone 可尝试存储图像；不支持时提供浏览器下载。浏览器下载逐张保存，可能需要允许多个文件下载；批量准备总量上限 64 MB
+        default: system_share
+        options:
+            -   value: system_share
+                label: 系统分享
+            -   value: browser
+                label: 浏览器下载
 http:
     mitm:
         - x.com
@@ -223,7 +263,7 @@ http:
             max-size: 2097152
             require-body: true
             timeout: 10
-            argument: '{"block_ads_and_recommendations":${args.block_ads_and_recommendations|json},"hide_top_nav":${args.hide_top_nav|json},"hide_home_composer":${args.hide_home_composer|json},"hide_chat_drawer":${args.hide_chat_drawer|json},"hide_sidebar_trends":${args.hide_sidebar_trends|json},"hide_nav_grok":${args.hide_nav_grok|json},"hide_bottom_grok":${args.hide_bottom_grok|json},"hide_nav_premium":${args.hide_nav_premium|json},"hide_nav_verified_orgs":${args.hide_nav_verified_orgs|json},"hide_nav_jobs":${args.hide_nav_jobs|json},"hide_account_menu":${args.hide_account_menu|json},"hide_grok_drawer":${args.hide_grok_drawer|json},"hide_floating_post_button":${args.hide_floating_post_button|json},"hide_reply_permissions":${args.hide_reply_permissions|json},"hide_grok_actions":${args.hide_grok_actions|json},"hide_translate_button":${args.hide_translate_button|json},"hide_automated_content":${args.hide_automated_content|json},"hide_probable_spam_prompt":${args.hide_probable_spam_prompt|json},"enable_custom_layout":${args.enable_custom_layout|json},"home_width_vw":${args.home_width_vw|json},"page_width_vw":${args.page_width_vw|json},"center_primary_column":${args.center_primary_column|json},"enable_escape_back":${args.enable_escape_back|json},"enable_double_tap_back":${args.enable_double_tap_back|json},"enable_layout_diagnostics":${args.enable_layout_diagnostics|json},"hide_bottom_bar":${args.hide_bottom_bar|json},"hide_bottom_bar_on_scroll":${args.hide_bottom_bar_on_scroll|json},"hide_nav_notifications":${args.hide_nav_notifications|json},"hide_nav_messages":${args.hide_nav_messages|json},"hide_notification_badge":${args.hide_notification_badge|json},"hide_show_posts_prompt":${args.hide_show_posts_prompt|json}}'
+            argument: '{"block_ads_and_recommendations":${args.block_ads_and_recommendations|json},"hide_top_nav":${args.hide_top_nav|json},"hide_home_composer":${args.hide_home_composer|json},"hide_chat_drawer":${args.hide_chat_drawer|json},"hide_sidebar_trends":${args.hide_sidebar_trends|json},"hide_nav_grok":${args.hide_nav_grok|json},"hide_bottom_grok":${args.hide_bottom_grok|json},"hide_nav_premium":${args.hide_nav_premium|json},"hide_nav_verified_orgs":${args.hide_nav_verified_orgs|json},"hide_nav_jobs":${args.hide_nav_jobs|json},"hide_account_menu":${args.hide_account_menu|json},"hide_grok_drawer":${args.hide_grok_drawer|json},"hide_floating_post_button":${args.hide_floating_post_button|json},"hide_reply_permissions":${args.hide_reply_permissions|json},"hide_grok_actions":${args.hide_grok_actions|json},"hide_translate_button":${args.hide_translate_button|json},"hide_automated_content":${args.hide_automated_content|json},"hide_probable_spam_prompt":${args.hide_probable_spam_prompt|json},"enable_custom_layout":${args.enable_custom_layout|json},"home_width_vw":${args.home_width_vw|json},"page_width_vw":${args.page_width_vw|json},"center_primary_column":${args.center_primary_column|json},"enable_escape_back":${args.enable_escape_back|json},"enable_double_tap_back":${args.enable_double_tap_back|json},"enable_layout_diagnostics":${args.enable_layout_diagnostics|json},"hide_bottom_bar":${args.hide_bottom_bar|json},"hide_bottom_bar_on_scroll":${args.hide_bottom_bar_on_scroll|json},"hide_nav_notifications":${args.hide_nav_notifications|json},"hide_nav_messages":${args.hide_nav_messages|json},"hide_notification_badge":${args.hide_notification_badge|json},"hide_show_posts_prompt":${args.hide_show_posts_prompt|json},"enable_video_tools":${args.enable_video_tools|json},"enable_share_menu_download":${args.enable_share_menu_download|json},"video_save_method":${args.video_save_method|json},"enable_image_tools":${args.enable_image_tools|json},"image_save_method":${args.image_save_method|json}}'
             type: response
             debug: false
 script-providers:
