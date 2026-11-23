@@ -676,6 +676,7 @@ function removeAdsCode(options) {
 function startVideoTools(options) {
     window.__stashXVideos?.destroy()
     const marker = '[data-stash-x-video]'
+    const playerSelector = 'video, [data-testid="videoPlayer"], [data-testid="previewInterstitial"]'
     const posts = new Map()
     const entries = new Map()
     const scripts = new WeakMap()
@@ -700,6 +701,13 @@ function startVideoTools(options) {
     let shareContext = null
     let shareRow = null
     const shareDiagnostics = { enabled: options.enable_share_menu_download, trigger: false, menu: false, action: null }
+
+    // iPhone X can render only a poster and play button until playback starts.
+    // Require the play control so unrelated interstitials are not treated as video.
+    function players(scope) {
+        return Array.from(scope.querySelectorAll(playerSelector)).filter(player =>
+            !player.matches('[data-testid="previewInterstitial"]') || player.querySelector('[data-testid="playButton"]'))
+    }
 
     /* Lucide v0.468.0 (ISC), Copyright (c) Lucide Contributors.
      * Permission to use, copy, modify, and/or distribute this software for any
@@ -993,9 +1001,10 @@ function startVideoTools(options) {
         const share = trigger && (/^(?:share|shareButton|share-button|tweetShare)$/i.test(trigger.getAttribute('data-testid') || '') || /^(?:share(?: post| tweet)?|分享(?:帖子|推文)?|共享(?:帖子|推文)?|分享貼文|分享推文)$/i.test(label.trim()))
         const scope = share ? trigger.closest('article') : null
         const id = scope && identify(scope)
-        if (id && (posts.has(id) || Array.from(scope.querySelectorAll('video, [data-testid="videoPlayer"]')).some(player => player.closest('article') === scope && !player.closest('[data-testid="quoteTweet"], [role="link"]')))) {
+        if (trigger?.closest('article')) shareDiagnostics.lastAttempt = !share ? 'unrecognized-trigger' : !id ? 'unidentified-post' : 'no-own-video'
+        if (id && (posts.has(id) || players(scope).some(player => player.closest('article') === scope && !player.closest('[data-testid="quoteTweet"], [role="link"]')))) {
             clearShareRow()
-            Object.assign(shareDiagnostics, { trigger: true, menu: false, action: null })
+            Object.assign(shareDiagnostics, { trigger: true, menu: false, action: null, lastAttempt: 'recognized' })
             shareContext = { id, scope, trigger, path: location.pathname, before: new Set(Array.from(document.querySelectorAll(menuSelector)).filter(visibleMenu)), menu: null }
             schedule()
         } else if (!shareContext?.menu?.contains(target)) {
@@ -1016,12 +1025,12 @@ function startVideoTools(options) {
                 if (wasOpen) { panel.dialog.close(); panel.dialog.showModal() }
             }
             for (const [scope, entry] of entries) {
-                if (!scope.isConnected || !entry.host.isConnected || identify(scope) !== entry.post || !scope.querySelector('video, [data-testid="videoPlayer"]')) {
+                if (!scope.isConnected || !entry.host.isConnected || identify(scope) !== entry.post || !players(scope).length) {
                     entry.host.remove()
                     entries.delete(scope)
                 }
             }
-            if (options.enable_video_tools) document.querySelectorAll('video, [data-testid="videoPlayer"]').forEach(player => {
+            if (options.enable_video_tools) players(document).forEach(player => {
                 if (player.closest(marker)) return
                 const quote = player.closest('[data-testid="quoteTweet"], [role="link"]')
                 const scope = quote && identify(quote) ? quote : player.closest('article')
@@ -1327,6 +1336,20 @@ function startVideoTools(options) {
     }
     window.__stashXVideos = {
         isOpen: () => !!panel?.dialog.open,
+        diagnostics: () => ({
+            toolbarEnabled: options.enable_video_tools,
+            shareEnabled: options.enable_share_menu_download,
+            players: players(document).length,
+            previews: document.querySelectorAll('[data-testid="previewInterstitial"]').length,
+            identifiedPlayers: players(document).filter(player => {
+                const scope = player.closest('[data-testid="quoteTweet"], [role="link"], article')
+                return scope && !!identify(scope)
+            }).length,
+            entries: Array.from(entries.values()).filter(entry => entry.host.isConnected).length,
+            postsWithMedia: posts.size,
+            share: { ...shareDiagnostics },
+            visibleMenuRoles: Array.from(document.querySelectorAll(menuSelector)).filter(visibleMenu).map(menu => menu.getAttribute('role')).slice(0, 8),
+        }),
         destroy() {
             if (destroyed) return
             destroyed = true
@@ -1383,7 +1406,7 @@ function removeAds(document, options, diagnosticSource = null) {
     if (options.enable_video_tools || options.enable_share_menu_download) {
         const video = document.createElement('script')
         video.setAttribute('data-stash-x-video', 'bootstrap')
-        video.textContent = `(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download })});`
+        video.textContent = `window.__stashXVideoStatus={version:"20261123.1",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
         const head = document.head || document.documentElement
         const firstScript = head.querySelector('script')
         if (firstScript) firstScript.before(video)
@@ -1419,6 +1442,8 @@ function removeAds(document, options, diagnosticSource = null) {
                 hide_nav_messages: options.hide_nav_messages,
                 hide_notification_badge: options.hide_notification_badge,
                 hide_show_posts_prompt: options.hide_show_posts_prompt,
+                enable_video_tools: options.enable_video_tools,
+                enable_share_menu_download: options.enable_share_menu_download,
             },
         }))
         container.appendChild(diagnostic)

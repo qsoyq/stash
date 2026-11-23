@@ -115,6 +115,21 @@ module.exports = async function checkShareMenu(browser, engine, width) {
         await open('909');
         await settle();
         assert.equal(await replacement.count(), 0, 'Text-only tweet acquired a video action');
+        // The device report contains previewInterstitial/playButton, with no
+        // videoPlayer or <video>. No metadata has arrived for this post either.
+        await page.evaluate(() => {
+            const preview = document.createElement('div');
+            preview.setAttribute('data-testid', 'previewInterstitial');
+            preview.innerHTML = '<button data-testid="playButton">Play</button><img alt="" />';
+            document.querySelector('#post-909').appendChild(preview);
+        });
+        await open('909');
+        await replacement.waitFor();
+        await replacement.click();
+        await panel.waitFor();
+        await panel.locator('summary').click();
+        assert.equal(JSON.parse(await panel.locator('pre').textContent()).postId, '909', 'Unplayed preview did not acquire its own download action');
+        await close();
         await open();
         await replacement.waitFor();
         await page.evaluate(() => { document.querySelector('#post-101 a').href = '/u/status/999'; });

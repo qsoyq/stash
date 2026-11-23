@@ -27,7 +27,7 @@ module.exports = async function checkVideoTools(browser, engine, width) {
         <style>body{margin:0;font:16px -apple-system,sans-serif;background:white;color:#0f1419}main{max-width:580px;margin:auto;padding:16px}article{padding:16px 0;border-bottom:1px solid #ddd}video{display:block;width:100%;height:120px;background:#eee}a{color:#536471}[data-testid=quoteTweet]{margin:12px;padding:12px;border:1px solid #ddd}</style>
         <script>window.__INITIAL_STATE__=${JSON.stringify(initial)};</script>
         <script>window.fetchBody=fetch('/i/api/graphql/early/TweetDetail').then(r=>r.json());var earlyXHR=new XMLHttpRequest();earlyXHR.open('GET','/i/api/graphql/xhr/TweetDetail');earlyXHR.send();</script>
-        </head><body><main data-testid="primaryColumn">${article('101', quote)}${newArticle}${article('404')}${article('505')}${article('606')}${article('707')}</main></body></html>`;
+        </head><body><main data-testid="primaryColumn">${article('101', quote)}${newArticle}${article('404')}${article('505')}${article('606')}${article('707')}${article('808').replace('<div data-testid="videoPlayer"><video controls playsinline></video></div>', '<div style="overflow:hidden;aspect-ratio:1"><div data-testid="previewInterstitial"><button data-testid="playButton">Play</button><img alt="" /></div></div>')}</main></body></html>`;
     try {
         const render = async (body, enabled) => page.evaluate(async ({ source, body, enabled }) => {
             const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
@@ -66,6 +66,19 @@ module.exports = async function checkVideoTools(browser, engine, width) {
         await page.goto('https://x.com/u/status/101');
         const entry = id => page.locator(`#post-${id}`).getByRole('button', { name: '视频文件', exact: true });
         await entry('101').first().waitFor();
+        await entry('808').waitFor();
+        assert(await entry('808').isVisible(), 'Unplayed iPhone preview must have an entry before a video element exists');
+        await page.evaluate(() => document.querySelector('#post-808 [data-testid="playButton"]').remove());
+        await entry('808').waitFor({ state: 'hidden' });
+        assert.equal(await entry('808').count(), 0, 'A non-video interstitial acquired an entry');
+        await page.evaluate(() => {
+            const video = document.createElement('video');
+            video.controls = true;
+            document.querySelector('#post-808 [data-testid="previewInterstitial"]').replaceWith(video);
+        });
+        await entry('808').waitFor();
+        assert.equal(await entry('808').count(), 1, 'Transition from preview to playback lost or duplicated its entry');
+        assert.equal(await page.evaluate(() => window.__stashXVideoStatus.phase), 'ready');
         await page.waitForFunction(() => window.fetchBody);
         assert.equal((await page.evaluate(() => window.fetchBody)).data.result.rest_id, '303', 'Fetch capture consumed the original body');
         const dialog = page.getByRole('dialog', { name: '视频文件' });

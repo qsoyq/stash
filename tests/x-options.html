@@ -367,7 +367,7 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
     for (const success of [true, false]) {
         const result = await new Promise(resolve => {
             new Function('$argument', '$script', '$request', '$response', '$done', '$httpClient', source)(
-                JSON.stringify({ ...disabled, enable_layout_diagnostics: true }), { type: 'response' },
+                JSON.stringify({ ...disabled, enable_layout_diagnostics: true, enable_video_tools: success, enable_share_menu_download: success }), { type: 'response' },
                 { url: 'https://x.com/home' }, { headers: { 'content-type': 'text/html' }, body: '<html><head></head><body>Original</body></html>' }, resolve,
                 { get: (request, callback) => {
                     assert(request.url === diagnosticUrl, 'Diagnostic download does not use the configured resource URL');
@@ -385,6 +385,11 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
         assert(!doc.getElementById('escaped-script-marker'), 'Downloaded script closed its HTML script element');
         if (success) {
             assert(frame.contentWindow.__stashLayoutDiagnostics?.collect().site === 'x', 'Actual inline script did not initialize with X configuration');
+            const report = frame.contentWindow.__stashLayoutDiagnostics.collect();
+            assert(report.options.enable_video_tools && report.options.enable_share_menu_download, 'Diagnostic report lost the video switches');
+            assert(report.videoTools.bootstrapPresent && report.videoTools.runtimePresent && report.videoTools.startup.phase === 'ready', 'Diagnostic report cannot distinguish video startup from the layout runtime');
+            assert(report.videoTools.startup.version === '20261123.1' && report.videoTools.state.entries === 0, 'Diagnostic report lost video version or scan state');
+            assert(report.videoTools.state.toolbarEnabled && report.videoTools.state.shareEnabled, 'Diagnostic report lost actual runtime options');
             assert(doc.querySelector('[data-stash-layout-diagnostic-button]'), 'Actual inline script did not render its button');
             assert(!doc.querySelector('script[src]'), 'Response still depends on browser external loading');
         } else {

@@ -122,6 +122,12 @@ function startLayoutDiagnostics(config) {
                 documentTop: Math.round(document.scrollingElement?.scrollTop || 0),
             },
             options,
+            ...(site === 'x' ? { videoTools: {
+                bootstrapPresent: !!document.querySelector('script[data-stash-x-video="bootstrap"]'),
+                runtimePresent: !!window.__stashXVideos,
+                startup: window.__stashXVideoStatus || null,
+                state: window.__stashXVideos?.diagnostics?.() || null,
+            } } : {}),
             targets: Object.fromEntries(targets.map(([name, selector]) => {
                 const element = findTarget(selector)
                 return [name, element ? { element: describeElement(element), ancestors: ancestorChain(element) } : null]
