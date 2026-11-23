@@ -1214,7 +1214,11 @@ function startVideoTools(options) {
             while (mount.parentElement && mount.parentElement !== scope) {
                 const parent = mount.parentElement
                 const computed = getComputedStyle(parent)
-                if (parent.children.length !== 1 && computed.aspectRatio === 'auto' && !['hidden', 'clip'].includes(computed.overflow)) break
+                // Media rows can also contain placeholders or overlay controls.
+                // Follow the whole row so the entry cannot shift or shrink its images.
+                const mediaRow = ['flex', 'inline-flex'].includes(computed.display) && computed.flexDirection.startsWith('row') &&
+                    !parent.querySelector('[data-testid="tweetText"], time, [role="group"], [data-testid="quoteTweet"], [data-testid="card.wrapper"]')
+                if (!mediaRow && parent.children.length !== 1 && computed.aspectRatio === 'auto' && !['hidden', 'clip'].includes(computed.overflow)) break
                 mount = parent
             }
             if (mount === scope) scope.appendChild(host)
@@ -2056,7 +2060,7 @@ function removeAds(document, options, diagnosticSource = null) {
     if (options.enable_video_tools || options.enable_share_menu_download || options.enable_image_tools) {
         const video = document.createElement('script')
         video.setAttribute('data-stash-x-video', 'bootstrap')
-        video.textContent = `window.__stashXVideoStatus={version:"20261123.8",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download, video_save_method: options.video_save_method, enable_image_tools: options.enable_image_tools, image_save_method: options.image_save_method })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
+        video.textContent = `window.__stashXVideoStatus={version:"20261123.9",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download, video_save_method: options.video_save_method, enable_image_tools: options.enable_image_tools, image_save_method: options.image_save_method })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
         const head = document.head || document.documentElement
         const firstScript = head.querySelector('script')
         if (firstScript) firstScript.before(video)

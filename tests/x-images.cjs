@@ -22,8 +22,10 @@ module.exports = async function checkImages(browser, engine, width) {
     const tiles = (id, indices) => `<div class="photos">${indices.map(index => `<div class="tile"><img alt="Photo ${index}" src="https://pbs.twimg.com/media/img${id}_${index}?format=${index === 2 ? 'png' : 'jpg'}&name=small"><a aria-label="View media" href="/u/status/${id}/photo/${index}"></a></div>`).join('')}</div>`;
     const quote = `<div role="link" data-testid="quoteTweet"><a href="/u/status/202"><time>Quote</time></a>${tiles('202', [1])}</div>`;
     const article = (id, indices, extra = '') => `<article id="post-${id}"><a href="/u/status/${id}"><time>Post ${id}</time></a>${tiles(id, indices)}${extra}</article>`;
-    const data = [tweet('101', [1, 2, 3, 4].map(index => photo('101', index))), tweet('202', [photo('202', 1)]), tweet('404', [{ type: 'video', media_url_https: 'https://pbs.twimg.com/amplify_video_thumb/404/img/poster.jpg' }, photo('404', 2), photo('404', 3)])];
+    const timeline = `<article id="post-909"><div class="timeline"><div class="avatar"></div><div class="post-content"><a href="/u/status/909"><time>Post 909</time></a><div data-testid="tweetText">Timeline post with two images</div><div class="media-row">${tiles('909', [1, 2])}<span hidden></span></div><div role="group">Reply · Like · Share</div></div></div></article>`;
+    const data = [tweet('101', [1, 2, 3, 4].map(index => photo('101', index))), tweet('202', [photo('202', 1)]), tweet('404', [{ type: 'video', media_url_https: 'https://pbs.twimg.com/amplify_video_thumb/404/img/poster.jpg' }, photo('404', 2), photo('404', 3)]), tweet('909', [photo('909', 1), photo('909', 2)])];
     const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font:15px -apple-system,sans-serif;margin:0;color:#0f1419;background:white}main{max-width:580px;margin:auto;padding:16px}article{padding:16px 0;border-bottom:1px solid #ddd}.photos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px}.tile{position:relative;aspect-ratio:4/3;overflow:hidden}.tile img{width:100%;height:100%;object-fit:cover}.tile a{position:absolute;inset:0}[data-testid=quoteTweet]{margin:12px;border:1px solid #ccc;padding:8px}</style><script>window.__INITIAL_STATE__=${JSON.stringify({ data })}</script></head><body><main>${article('101', [1, 2, 3, 4], quote)}${article('303', [], '<img src="https://pbs.twimg.com/profile_images/avatar.jpg"><div data-testid="card.wrapper"><img src="https://pbs.twimg.com/media/card?format=jpg&name=small"></div>')}${article('404', [2, 3], '<div data-testid="videoPlayer"><img src="https://pbs.twimg.com/amplify_video_thumb/404/img/poster.jpg"></div>')}${article('505', [1])}${article('707', [1])}${article('606', []).replace('<div class="photos"></div>', '<a href="/u/status/606/photo/1"><img src="https://example.com/foreign.jpg"></a>')}</main></body></html>`;
+    const layoutHTML = html.replace('</style>', '.timeline{display:flex;gap:12px}.avatar{width:40px;height:40px;border-radius:50%;background:#ddd;flex:none}.post-content{flex:1;min-width:0}.media-row{display:flex;flex-direction:row;align-items:center;justify-content:center}.media-row>.photos{flex:none;width:100%}[data-testid=tweetText]{margin:8px 0}</style>').replace('</main>', `${timeline}</main>`);
     let rewritten;
     let failThird = false;
     const originals = [];
@@ -73,7 +75,7 @@ module.exports = async function checkImages(browser, engine, width) {
                 let result;
                 await new AsyncFunction('$request', '$response', '$script', '$argument', '$done', source)({ url: 'https://x.com/u/status/101' }, { headers: { 'content-type': 'text/html' }, body: html }, { type: 'response' }, JSON.stringify(settings), value => { result = value; });
                 return result.body || html;
-            }, { source, html, enabled, method });
+            }, { source, html: layoutHTML, enabled, method });
             await page.goto('https://x.com/u/status/101');
         };
         const entry = id => page.locator(`#post-${id}`).getByRole('button', { name: /^图片文件/ });
@@ -84,8 +86,33 @@ module.exports = async function checkImages(browser, engine, width) {
         await boot(false);
         assert.equal(await page.evaluate(() => !!window.__stashXVideos), false, 'Disabled image tools installed media runtime');
         assert.equal(await page.getByRole('button', { name: /^图片文件/ }).count(), 0);
+        const originalLayout = await page.locator('#post-909 .photos').evaluate(node => ({ left: node.getBoundingClientRect().left, width: node.getBoundingClientRect().width }));
         await boot(true);
         await entry('101').first().waitFor();
+        const layout = await entry('909').evaluate(button => {
+            const scope = document.querySelector('#post-909');
+            const text = scope.querySelector('[data-testid="tweetText"]').getBoundingClientRect();
+            const photos = scope.querySelector('.photos').getBoundingClientRect();
+            const entry = button.getBoundingClientRect();
+            return { textLeft: text.left, photoLeft: photos.left, photoWidth: photos.width, photoBottom: photos.bottom, entryLeft: entry.left, entryTop: entry.top };
+        });
+        console.log(`${engine.name()} ${width}px image entry layout: ${JSON.stringify(layout)}`);
+        assert(Math.abs(layout.photoLeft - layout.textLeft) < 1, 'Image toolbar shifted photos away from the post text alignment');
+        assert(Math.abs(layout.photoLeft - originalLayout.left) < 1 && Math.abs(layout.photoWidth - originalLayout.width) < 1, 'Image toolbar changed the original media geometry');
+        assert(layout.entryTop >= layout.photoBottom, 'Image entry sits beside the photos instead of below them');
+        assert(Math.abs(layout.entryLeft - layout.photoLeft) < 1, 'Image entry is not aligned with the photos');
+        for (const scope of ['#post-101', '[data-testid="quoteTweet"]']) {
+            const position = await page.locator(scope).getByRole('button', { name: /^图片文件/ }).first().evaluate(button => {
+                const scope = button.getRootNode().host.parentElement;
+                const photos = scope.querySelector('.photos').getBoundingClientRect();
+                const entry = button.getBoundingClientRect();
+                return { below: entry.top >= photos.bottom, aligned: Math.abs(entry.left - photos.left) < 1 };
+            });
+            assert(position.below && position.aligned, `${scope}: image entry moved into a grid or quote`);
+        }
+        const layoutArtifacts = path.join(os.tmpdir(), 'stash-x-image-verification');
+        await mkdir(layoutArtifacts, { recursive: true });
+        await page.locator('#post-909').screenshot({ path: path.join(layoutArtifacts, `${engine.name()}-${width}-entry-layout.png`) });
         assert.equal(await entry('101').count(), 2, 'Quote should have an independent entry');
         assert.equal(await entry('303').count(), 0, 'Avatar or link preview acquired an image entry');
         assert.equal(await entry('606').count(), 0, 'Foreign image acquired an entry');
