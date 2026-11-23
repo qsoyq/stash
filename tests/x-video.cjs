@@ -21,7 +21,7 @@ module.exports = async function checkVideoTools(browser, engine, width) {
     const quote = '<div data-testid="quoteTweet" role="link"><a href="/u/status/202"><time>Quoted video</time></a><div data-testid="videoPlayer"><video controls></video></div></div>';
     const newPlayer = '<div style="overflow:hidden;aspect-ratio:1"><div style="position:relative;aspect-ratio:1;overflow:hidden"><video controls playsinline></video><button style="position:absolute;inset:0">Play</button></div></div>';
     const newArticle = article('303').replace('<time>2026-11-22</time>', '<span>2026-11-22</span>').replace('href="/u/status/303"', 'href="https://m.x.com/u/status/303?launch_app_store=true"').replace('<div data-testid="videoPlayer"><video controls playsinline></video></div>', newPlayer);
-    const initial = { data: { result: tweet('101', [video('101', 'v101a'), video('101', 'v101b')]), quote: tweet('202', [video('202', 'v202')]) } };
+    const initial = { data: { result: { ...tweet('101', [video('101', 'v101a'), video('101', 'v101b')]), quoted_status_result: { result: tweet('202', [video('202', 'v202')]) } } } };
     // The first API requests run in <head>, before the injected body script.
     const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
         <style>body{margin:0;font:16px -apple-system,sans-serif;background:white;color:#0f1419}main{max-width:580px;margin:auto;padding:16px}article{padding:16px 0;border-bottom:1px solid #ddd}video{display:block;width:100%;height:120px;background:#eee}a{color:#536471}[data-testid=quoteTweet]{margin:12px;padding:12px;border:1px solid #ddd}</style>
@@ -54,7 +54,7 @@ module.exports = async function checkVideoTools(browser, engine, width) {
             if (url.pathname.startsWith('/i/web/status/')) { shellRequests++; return route.fulfill({ contentType: 'text/html', body: '<!doctype html><html><body>No media</body></html>' }); }
             if (url.pathname.includes('/early/')) return route.fulfill({ json: { data: { result: tweet('303', [video('303', '2124490488032137216')]) } } });
             if (url.pathname.includes('/xhr/')) return route.fulfill({ json: { data: { result: { rest_id: '404', legacy: { extended_entities: { media: [video('404', 'v404')] } } } } } });
-            if (url.pathname.includes('/late/')) return route.fulfill({ json: { data: { result: tweet('505', [video('505', 'v505')]) } } });
+            if (url.pathname.includes('/late/')) return route.fulfill({ json: { data: { result: tweet('505', [{ ...video('202', 'v505'), source_status_id_str: '202' }]) } } });
             return route.fulfill({ json: {} });
         });
         await page.route('https://video.twimg.com/**', route => route.fulfill({ contentType: 'video/mp4', headers: { 'access-control-allow-origin': '*' }, body: Buffer.from('000000186674797069736f6d0000000169736f6d69736f34', 'hex') }));
@@ -159,7 +159,7 @@ module.exports = async function checkVideoTools(browser, engine, width) {
         await dialog.getByText('尚未收到视频地址，可播放视频后重新读取。').waitFor();
         await page.evaluate(async () => { window.lateResult = await (await fetch('/i/api/graphql/late/TweetDetail')).json(); });
         await address.waitFor();
-        assert.equal(await address.inputValue(), high, 'Late response did not populate an already-open panel');
+        assert.equal(await address.inputValue(), high, 'Embedded video from another post did not populate the current post from an API response');
         await close();
         // JSON string literals in new X SSR hydration are parsed without eval.
         await page.evaluate(payload => {
@@ -167,10 +167,10 @@ module.exports = async function checkVideoTools(browser, engine, width) {
             script.type = 'application/x-hydration-fixture';
             script.textContent = `window.notExecuted=${JSON.stringify(JSON.stringify(payload))};`;
             document.head.appendChild(script);
-        }, { data: { result: tweet('606', [video('606', 'v606')]) } });
+        }, { data: { result: { __typename: 'Tweet', id_str: '606', mediaDetails: [{ ...video('202', 'v606'), source_status_id_str: '202' }] } } });
         await entry('606').click();
         await address.waitFor();
-        assert.equal(await address.inputValue(), high, 'Serialized SSR JSON not extracted');
+        assert.equal(await address.inputValue(), high, 'Embedded video in serialized SSR JSON was not associated with its displaying post');
         await close();
         // No MP4 must not become a misleading download; unsafe URLs never surface.
         await page.evaluate(payload => {

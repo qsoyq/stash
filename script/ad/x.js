@@ -872,7 +872,8 @@ function startVideoTools(options) {
             const tweet = value.__typename === 'Tweet' || value.media_entities2 || value.extended_entities || value.mediaDetails || value.legacy
             const candidate = value.rest_id || value.id_str || value.legacy?.id_str
             const id = tweet && typeof candidate === 'string' && /^\d+$/.test(candidate) ? candidate : inherited
-            const owner = postId(value.expanded_url) || (typeof value.source_status_id_str === 'string' ? value.source_status_id_str : id)
+            // Embedded media keeps its original permalink; the enclosing tweet owns this display.
+            const owner = id || postId(value.expanded_url) || (typeof value.source_status_id_str === 'string' ? value.source_status_id_str : null)
             if (options.enable_image_tools && owner && value.type === 'photo') changed = rememberImage(owner, value, position, source) || changed
             if (owner && value.video_info?.variants && ['video', 'animated_gif'].includes(value.type)) {
                 const variants = value.video_info.variants.map(variant => ({
@@ -2062,7 +2063,7 @@ function removeAds(document, options, diagnosticSource = null) {
     if (options.enable_video_tools || options.enable_share_menu_download || options.enable_image_tools) {
         const video = document.createElement('script')
         video.setAttribute('data-stash-x-video', 'bootstrap')
-        video.textContent = `window.__stashXVideoStatus={version:"20261123.10",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download, video_save_method: options.video_save_method, enable_image_tools: options.enable_image_tools, image_save_method: options.image_save_method })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
+        video.textContent = `window.__stashXVideoStatus={version:"20261123.11",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download, video_save_method: options.video_save_method, enable_image_tools: options.enable_image_tools, image_save_method: options.image_save_method })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
         const head = document.head || document.documentElement
         const firstScript = head.querySelector('script')
         if (firstScript) firstScript.before(video)
