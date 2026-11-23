@@ -58,6 +58,7 @@ function getXOptions() {
         hide_show_posts_prompt: false,
         enable_video_tools: true,
         enable_share_menu_download: false,
+        video_save_method: 'browser',
     }
     if (typeof $argument === 'undefined' || !$argument) return options
     let supplied
@@ -72,6 +73,8 @@ function getXOptions() {
         if (typeof options[key] === 'boolean' && typeof supplied[key] === 'boolean') {
             options[key] = supplied[key]
         } else if (typeof options[key] === 'number' && Number.isInteger(supplied[key]) && supplied[key] >= 30 && supplied[key] <= 100) {
+            options[key] = supplied[key]
+        } else if (key === 'video_save_method' && ['browser', 'system_share'].includes(supplied[key])) {
             options[key] = supplied[key]
         }
     }
@@ -686,6 +689,7 @@ function startVideoTools(options) {
     const timers = new Set()
     const shareDownloads = new Map()
     let downloadNotice = null
+    let savePrompt = null
     const originalFetch = window.fetch
     const originalOpen = XMLHttpRequest.prototype.open
     const originalSend = XMLHttpRequest.prototype.send
@@ -731,6 +735,7 @@ function startVideoTools(options) {
         open: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
         close: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
         retry: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+        share: '<path d="M12 16V3"/><path d="m7 8 5-5 5 5"/><path d="M20 16v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4"/>',
     }
     const css = `
         :host { color-scheme:light dark; font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif; color:light-dark(#0f1419,#e7e9ea); letter-spacing:0; }
@@ -1115,7 +1120,7 @@ function startVideoTools(options) {
     function scan() {
         frame = null
         if (destroyed || !document.body) return
-        if (route !== location.pathname) { route = location.pathname; closePanel() }
+        if (route !== location.pathname) { route = location.pathname; closePanel(); clearSavePrompt() }
         observer.disconnect()
         try {
             if (panel && !panel.host.isConnected) {
@@ -1326,6 +1331,7 @@ function startVideoTools(options) {
     function closePanel() {
         if (!panel?.dialog.open) return
         panel.dialog.close()
+        if (savePrompt && panel.dialog.contains(savePrompt.host)) clearSavePrompt()
         activePost = null
         metadataController?.abort()
         panel.downloadController?.abort()
@@ -1418,6 +1424,74 @@ function startVideoTools(options) {
         timers.add(timer)
     }
 
+    function clearSavePrompt() {
+        savePrompt?.host.remove()
+        savePrompt = null
+    }
+
+    function offerSystemShare(files, mount = document.body) {
+        clearSavePrompt()
+        const { host, root } = shadowHost()
+        host.setAttribute('data-stash-x-video', 'save-prompt')
+        const inline = mount !== document.body
+        host.style.cssText = inline ? 'display:block;margin:0 16px 16px' : 'position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:440px;max-width:calc(100% - 24px);z-index:2147483647'
+        const surface = element('section')
+        surface.setAttribute('aria-label', '视频保存')
+        surface.style.cssText = 'padding:12px;background:light-dark(#fff,#15202b);border:1px solid light-dark(#cfd9de,#536471);border-radius:6px'
+        const status = element('p')
+        status.className = 'status'
+        status.setAttribute('role', 'status')
+        const actions = element('div')
+        actions.className = 'actions'
+        actions.style.marginTop = '8px'
+        const share = iconButton('share', '系统分享')
+        const download = iconButton('download', '浏览器下载')
+        const dismiss = iconButton('close', '关闭保存提示')
+        dismiss.className = 'icon'
+        dismiss.querySelector('span').hidden = true
+        let supported = false
+        try { supported = typeof navigator.share === 'function' && navigator.canShare?.({ files }) === true } catch (_) { /* Unsupported file sharing keeps the browser download available. */ }
+        share.hidden = !supported
+        status.textContent = supported ? '视频已准备好。' : '此浏览器不支持分享这些视频，可使用浏览器下载。'
+        actions.append(share, download, dismiss)
+        surface.append(status, actions)
+        root.appendChild(surface)
+        root.addEventListener('click', event => event.stopPropagation())
+        root.addEventListener('keydown', event => {
+            if (event.key === 'Escape') { event.stopPropagation(); event.preventDefault(); clearSavePrompt() }
+        })
+        mount.appendChild(host)
+        const current = { host }
+        savePrompt = current
+        const notify = message => {
+            if (inline && panel?.dialog === mount && panel.dialog.open) panel.status.textContent = message
+            else reportDownloadError(message)
+        }
+        dismiss.onclick = clearSavePrompt
+        download.onclick = () => {
+            for (const file of files) saveBlob(file, file.name, mount)
+            clearSavePrompt()
+            notify('已请求浏览器下载。')
+        }
+        share.onclick = async () => {
+            if (share.disabled || destroyed || savePrompt !== current) return
+            share.disabled = download.disabled = dismiss.disabled = true
+            try {
+                // Call before any await: iOS requires a fresh user activation.
+                await navigator.share({ files })
+                if (destroyed || savePrompt !== current) return
+                clearSavePrompt()
+                notify('已交给系统分享。')
+            } catch (error) {
+                if (destroyed || savePrompt !== current) return
+                status.textContent = error.name === 'AbortError' ? '已取消分享。' : '系统分享未能打开，可重试或使用浏览器下载。'
+            } finally {
+                share.disabled = download.disabled = dismiss.disabled = false
+            }
+        }
+        if (supported && navigator.userActivation?.isActive) share.onclick()
+    }
+
     async function downloadSharedPost(context) {
         const controller = new AbortController()
         const button = shareRow?.button
@@ -1425,6 +1499,8 @@ function startVideoTools(options) {
         shareDownloads.set(context.id, controller)
         button?.setAttribute('aria-busy', 'true')
         shareDiagnostics.download = 'preparing'
+        if (options.video_save_method === 'system_share') clearSavePrompt()
+        const startPath = location.pathname
         try {
             let media = Array.from(posts.get(context.id)?.values() || [])
             if (!media.length || media.some(record => !record.mp4.length)) {
@@ -1434,11 +1510,19 @@ function startVideoTools(options) {
             if (destroyed || controller.signal.aborted) return
             if (media.some(record => record.allowDownload === false)) throw new Error('作者已关闭视频下载。')
             if (!media.length || media.some(record => !record.mp4.length)) throw new Error('未找到可下载的 MP4。')
+            const files = []
+            let totalBytes = 0
             for (const record of media) {
                 const blob = await fetchVideoBlob(record.mp4[0].url, controller)
                 if (destroyed || controller.signal.aborted) return
-                saveBlob(blob, `x-${context.id}-${record.id}.mp4`)
+                const filename = `x-${context.id}-${record.id}.mp4`
+                if (options.video_save_method === 'system_share') {
+                    totalBytes += blob.size
+                    if (totalBytes > maxBytes) throw new Error('视频较大')
+                    files.push(new File([blob], filename, { type: 'video/mp4' }))
+                } else saveBlob(blob, filename)
             }
+            if (files.length && location.pathname === startPath) offerSystemShare(files)
             shareDiagnostics.download = 'requested'
         } catch (error) {
             if (destroyed) return
@@ -1459,12 +1543,18 @@ function startVideoTools(options) {
         const controller = new AbortController()
         current.downloadController = controller
         current.save.disabled = true
+        if (options.video_save_method === 'system_share') clearSavePrompt()
         current.status.textContent = '正在准备视频…'
         try {
             const blob = await fetchVideoBlob(url, controller)
             if (destroyed || activePost !== id || !current.dialog.open) return
-            saveBlob(blob, filename, current.dialog)
-            current.status.textContent = '已请求保存；若浏览器转为播放，可通过系统分享菜单保存。'
+            if (options.video_save_method === 'system_share') {
+                offerSystemShare([new File([blob], filename, { type: 'video/mp4' })], current.dialog)
+                current.status.textContent = ''
+            } else {
+                saveBlob(blob, filename, current.dialog)
+                current.status.textContent = '已请求保存；若浏览器转为播放，可通过系统分享菜单保存。'
+            }
         } catch (error) {
             if (activePost === id && current.dialog.open) current.status.textContent = error.message.startsWith('视频较大') ? error.message : '保存失败，请打开原文件后通过浏览器保存。'
         } finally {
@@ -1509,10 +1599,11 @@ function startVideoTools(options) {
         cleanups.push(() => { if (history[key] === wrapper) history[key] = original })
     }
     window.__stashXVideos = {
-        isOpen: () => !!panel?.dialog.open || !!shareContext?.activating,
+        isOpen: () => !!panel?.dialog.open || !!shareContext?.activating || !!savePrompt,
         diagnostics: () => ({
             toolbarEnabled: options.enable_video_tools,
             shareEnabled: options.enable_share_menu_download,
+            saveMethod: options.video_save_method,
             players: players(document).length,
             previews: document.querySelectorAll('[data-testid="previewInterstitial"]').length,
             identifiedPlayers: players(document).filter(player => {
@@ -1535,6 +1626,7 @@ function startVideoTools(options) {
             controllers.forEach(controller => controller.abort())
             shareDownloads.clear()
             downloadNotice?.remove()
+            clearSavePrompt()
             timers.forEach(timer => clearTimeout(timer))
             objectURLs.forEach(url => URL.revokeObjectURL(url))
             cleanups.forEach(cleanup => cleanup())
@@ -1582,7 +1674,7 @@ function removeAds(document, options, diagnosticSource = null) {
     if (options.enable_video_tools || options.enable_share_menu_download) {
         const video = document.createElement('script')
         video.setAttribute('data-stash-x-video', 'bootstrap')
-        video.textContent = `window.__stashXVideoStatus={version:"20261123.5",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
+        video.textContent = `window.__stashXVideoStatus={version:"20261123.6",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download, video_save_method: options.video_save_method })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
         const head = document.head || document.documentElement
         const firstScript = head.querySelector('script')
         if (firstScript) firstScript.before(video)
@@ -1620,6 +1712,7 @@ function removeAds(document, options, diagnosticSource = null) {
                 hide_show_posts_prompt: options.hide_show_posts_prompt,
                 enable_video_tools: options.enable_video_tools,
                 enable_share_menu_download: options.enable_share_menu_download,
+                video_save_method: options.video_save_method,
             },
         }))
         container.appendChild(diagnostic)

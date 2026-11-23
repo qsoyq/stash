@@ -17,6 +17,9 @@ const parser = source.slice(source.indexOf('function getXOptions()'), source.ind
 const scriptDefaults = new Function(`${parser}; return getXOptions();`)();
 assert.deepEqual(JSON.parse(expand(override.http.script[0].argument)), scriptDefaults, 'Override and script defaults differ');
 const parseOptions = new Function('$argument', `${parser}; return getXOptions();`);
+assert.equal(parseOptions('{}').video_save_method, 'browser', 'Older overrides must retain browser downloads');
+assert.equal(parseOptions('{"video_save_method":"system_share"}').video_save_method, 'system_share');
+for (const value of ['photos', true, 1, null, {}, []]) assert.equal(parseOptions(JSON.stringify({ video_save_method: value })).video_save_method, 'browser', 'Invalid save method must use its default');
 assert.equal(parseOptions('{}').enable_share_menu_download, false, 'Older overrides must keep the experiment disabled');
 for (const value of ['true', 1, null]) assert.equal(parseOptions(JSON.stringify({ enable_share_menu_download: value })).enable_share_menu_download, false, 'Invalid menu parameter must use its default');
 assert.equal(parseOptions('{"enable_share_menu_download":true,"enable_video_tools":false}').enable_share_menu_download, true);

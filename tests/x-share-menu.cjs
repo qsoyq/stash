@@ -67,8 +67,8 @@ module.exports = async function checkShareMenu(browser, engine, width) {
             if (id === '707') data.media_entities2[0].video_info.variants = [{ content_type: 'application/x-mpegURL', url: 'https://video.twimg.com/707/video.m3u8' }];
             return route.fulfill({ contentType: 'text/html; charset=utf-8', body: pathname.startsWith('/i/web/status/') ? `<script type="application/json">${JSON.stringify(data)}</script>` : rewritten });
         });
-        const boot = async (entry, menu, escape = true) => {
-            rewritten = await page.evaluate(async ({ source, html, entry, menu, escape }) => {
+        const boot = async (entry, menu, escape = true, saveMethod = 'browser') => {
+            rewritten = await page.evaluate(async ({ source, html, entry, menu, escape, saveMethod }) => {
                 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
                 const parser = source.slice(source.indexOf('function getXOptions()'), source.indexOf('function removeAdsCode('));
                 const defaults = new Function(`${parser}; return getXOptions();`)();
@@ -76,12 +76,13 @@ module.exports = async function checkShareMenu(browser, engine, width) {
                 options.enable_video_tools = entry;
                 options.enable_share_menu_download = menu;
                 options.enable_escape_back = escape;
+                options.video_save_method = saveMethod;
                 let result;
                 await new AsyncFunction('$request', '$response', '$script', '$argument', '$done', source)(
                     { url: 'https://x.com/u/status/101' }, { headers: { 'content-type': 'text/html' }, body: html },
                     { type: 'response' }, JSON.stringify(options), value => { result = value; });
                 return result.body || html;
-            }, { source, html, entry, menu, escape });
+            }, { source, html, entry, menu, escape, saveMethod });
             await page.goto('https://x.com/u/status/101');
         };
         const replacement = page.locator('[data-stash-x-video="share-download"]');
@@ -296,7 +297,109 @@ module.exports = async function checkShareMenu(browser, engine, width) {
         assert.equal(await page.locator('#native-download').getAttribute('style'), 'opacity: 0.7', 'Destroy failed to restore the original action');
         await page.locator('#native-download').click();
         assert.equal(await page.evaluate(() => window.upsells), 1, 'Destroy lost the original handler');
+
+        // The OS share sheet cannot be automated here. Exercise the file-sharing
+        // API boundary, including fresh activation and actual fallback downloads.
+        const installShareAPI = async (support = 'supported') => page.evaluate(support => {
+            const activation = window.originalShareActivation ||= navigator.userActivation;
+            window.sharedFiles = [];
+            window.shareFailure = null;
+            Object.defineProperty(navigator, 'userActivation', { configurable: true, value: { isActive: false } });
+            Object.defineProperty(navigator, 'canShare', { configurable: true, value: ({ files }) => {
+                if (support === 'throws') throw new TypeError('Unsupported');
+                return support !== 'rejected' && files.every(file => file instanceof File && file.type === 'video/mp4');
+            } });
+            Object.defineProperty(navigator, 'share', { configurable: true, value: support === 'missing' ? undefined : async ({ files }) => {
+                if (!activation.isActive) throw new Error('Missing fresh user activation');
+                if (window.shareFailure) throw new DOMException('Share failed', window.shareFailure);
+                window.sharedFiles.push(await Promise.all(files.map(async file => ({ name: file.name, type: file.type, bytes: Array.from(new Uint8Array(await file.arrayBuffer())) }))));
+            } });
+        }, support);
+        const savePrompt = page.locator('[data-stash-x-video="save-prompt"]');
+        const prepareShare = async (id = '101') => {
+            await open(id, 'sheet');
+            await replacement.click();
+            await savePrompt.waitFor();
+            await page.getByRole('menu').waitFor({ state: 'detached' });
+            assert.equal(await panel.count(), 0, 'System share opened the custom video panel');
+        };
+        let unexpectedDownloads = 0;
+        const countDownload = () => unexpectedDownloads++;
+        page.on('download', countDownload);
+        await boot(false, true, true, 'system_share');
+        await installShareAPI();
+        await prepareShare();
+        assert.equal(await page.evaluate(() => window.__stashXVideos.diagnostics().saveMethod), 'system_share');
+        await page.screenshot({ path: path.join(artifacts, `${engine.name()}-${width}-system-share.png`) });
+        assert(await savePrompt.evaluate(element => { const r = element.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight && element.scrollWidth <= element.clientWidth; }), 'Save prompt overflows the viewport');
+        assert.equal(await savePrompt.getByRole('button', { name: '关闭保存提示' }).locator('span:visible').count(), 0, 'Icon-only close button exposed a vertically wrapped label');
+        const requestCount = requests.length;
+        await page.evaluate(() => { window.shareFailure = 'AbortError'; });
+        if (width < 600) await savePrompt.getByRole('button', { name: '系统分享', exact: true }).tap();
+        else await savePrompt.getByRole('button', { name: '系统分享', exact: true }).click();
+        await savePrompt.getByText('已取消分享。', { exact: true }).waitFor();
+        assert.equal(unexpectedDownloads, 0, 'Cancelling system share silently downloaded the file');
+        await page.evaluate(() => { window.shareFailure = 'NotAllowedError'; });
+        await savePrompt.getByRole('button', { name: '系统分享', exact: true }).click();
+        await savePrompt.getByText('系统分享未能打开，可重试或使用浏览器下载。').waitFor();
+        await page.evaluate(() => { window.shareFailure = null; });
+        await savePrompt.getByRole('button', { name: '系统分享', exact: true }).click();
+        await savePrompt.waitFor({ state: 'detached' });
+        const shared = await page.evaluate(() => window.sharedFiles);
+        assert.deepEqual(shared, [[{ name: 'x-101-media101.mp4', type: 'video/mp4', bytes: Array.from(videoBytes) }]]);
+        assert.equal(requests.length, requestCount, 'Retry fetched the prepared video again');
+        assert.equal(unexpectedDownloads, 0, 'System share also triggered a browser download');
+        assert.equal(await page.evaluate(() => window.upsells), 0);
+
+        for (const support of ['missing', 'rejected', 'throws']) {
+            await installShareAPI(support);
+            await prepareShare();
+            assert(!(await savePrompt.getByRole('button', { name: '系统分享', exact: true }).isVisible()), 'Unsupported file share remained actionable');
+            await savePrompt.getByText('此浏览器不支持分享这些视频，可使用浏览器下载。').waitFor();
+            const count = requests.length;
+            const ready = page.waitForEvent('download');
+            await savePrompt.getByRole('button', { name: '浏览器下载', exact: true }).click();
+            const file = await ready;
+            assert.equal(file.suggestedFilename(), 'x-101-media101.mp4');
+            assert.deepEqual(await readFile(await file.path()), videoBytes);
+            assert.equal(requests.length, count, 'Fallback unnecessarily downloaded MP4 again');
+            await savePrompt.waitFor({ state: 'detached' });
+        }
+        page.off('download', countDownload);
+        await installShareAPI();
+        await page.evaluate(({ markup, data }) => {
+            document.body.insertAdjacentHTML('beforeend', markup);
+            const script = document.createElement('script');script.type = 'application/json';script.textContent = JSON.stringify(data);document.body.appendChild(script);
+        }, { markup: article('808'), data: multi });
+        await prepareShare('808');
+        await savePrompt.getByRole('button', { name: '系统分享', exact: true }).click();
+        await savePrompt.waitFor({ state: 'detached' });
+        assert.deepEqual((await page.evaluate(() => window.sharedFiles[0])).map(file => file.name).sort(), ['x-808-media808.mp4', 'x-808-media808b.mp4'], 'Multi-video share lost files or shared sequentially without activation');
+        await prepareShare();
+        await page.evaluate(() => history.pushState({}, '', '/home'));
+        await savePrompt.waitFor({ state: 'detached' });
+
+        await boot(true, false, true, 'system_share');
+        await installShareAPI();
+        await page.locator('#post-101').getByRole('button', { name: '视频文件', exact: true }).click();
+        await panel.getByRole('combobox', { name: '画质', exact: true }).selectOption(low);
+        await panel.getByRole('button', { name: '保存视频', exact: true }).click();
+        await savePrompt.waitFor();
+        assert.equal(requests.at(-1), low, 'System share ignored the panel quality choice');
+        await page.screenshot({ path: path.join(artifacts, `${engine.name()}-${width}-panel-system-share.png`) });
+        await savePrompt.getByRole('button', { name: '系统分享', exact: true }).click();
+        await panel.getByText('已交给系统分享。', { exact: true }).waitFor();
+        assert.equal((await page.evaluate(() => window.sharedFiles[0][0])).name, 'x-101-media101.mp4');
+        await panel.getByRole('button', { name: '保存视频', exact: true }).click();
+        await savePrompt.waitFor();
+        await panel.getByRole('button', { name: '关闭', exact: true }).click();
+        await savePrompt.waitFor({ state: 'detached' });
+        await page.locator('#post-101').getByRole('button', { name: '视频文件', exact: true }).click();
+        await panel.getByRole('button', { name: '保存视频', exact: true }).click();
+        await savePrompt.waitFor();
+        await page.evaluate(() => window.__stashXVideos.destroy());
+        assert.equal(await savePrompt.count(), 0, 'Destroy retained prepared files and save prompt');
         assert.deepEqual(errors, []);
-        console.log(`${engine.name()} ${width}px: PASS native menu appearance, direct highest-quality MP4 downloads, multiple videos, keyboard/touch, metadata fallback, author restrictions, errors and cleanup`);
+        console.log(`${engine.name()} ${width}px: PASS native menu downloads, system file sharing, cancellation/retry, browser fallback, multi-video share, selected quality, cleanup and native appearance`);
     } finally { await page.close(); }
 };
