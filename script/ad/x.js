@@ -59,6 +59,8 @@ function getXOptions() {
         enable_video_tools: true,
         enable_share_menu_download: false,
         video_save_method: 'browser',
+        enable_image_tools: false,
+        image_save_method: 'system_share',
     }
     if (typeof $argument === 'undefined' || !$argument) return options
     let supplied
@@ -74,7 +76,7 @@ function getXOptions() {
             options[key] = supplied[key]
         } else if (typeof options[key] === 'number' && Number.isInteger(supplied[key]) && supplied[key] >= 30 && supplied[key] <= 100) {
             options[key] = supplied[key]
-        } else if (key === 'video_save_method' && ['browser', 'system_share'].includes(supplied[key])) {
+        } else if (['video_save_method', 'image_save_method'].includes(key) && ['browser', 'system_share'].includes(supplied[key])) {
             options[key] = supplied[key]
         }
     }
@@ -682,6 +684,9 @@ function startVideoTools(options) {
     const playerSelector = 'video, [data-testid="videoPlayer"], [data-testid="previewInterstitial"]'
     const posts = new Map()
     const entries = new Map()
+    const imagePosts = new Map()
+    const imageEntries = new Map()
+    let imagePanel = null
     const scripts = new WeakMap()
     const cleanups = []
     const controllers = new Set()
@@ -736,6 +741,7 @@ function startVideoTools(options) {
         close: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
         retry: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
         share: '<path d="M12 16V3"/><path d="m7 8 5-5 5 5"/><path d="M20 16v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4"/>',
+        image: '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
     }
     const css = `
         :host { color-scheme:light dark; font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif; color:light-dark(#0f1419,#e7e9ea); letter-spacing:0; }
@@ -762,6 +768,18 @@ function startVideoTools(options) {
         .status { margin:0; min-height:21px; overflow-wrap:anywhere; color:light-dark(#536471,#8b98a5); }
         summary { cursor:pointer; min-height:44px; display:flex; align-items:center; }
         pre { white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.6 ui-monospace,monospace; max-height:240px; overflow:auto; }
+        .image-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+        .image-item { min-width:0; }
+        .image-pick { position:relative; cursor:pointer; }
+        .image-pick img { width:100%; height:auto; aspect-ratio:1; object-fit:contain; background:light-dark(#f7f9f9,#202c35); border:2px solid transparent; }
+        .image-pick:has(:checked) img { border-color:#1d9bf0; }
+        input[type=checkbox] { width:20px; height:20px; min-height:20px; margin:0; padding:0; accent-color:#1d9bf0; flex:none; }
+        .image-pick input { position:absolute; top:8px; left:8px; }
+        .image-meta { display:flex; align-items:center; justify-content:space-between; gap:4px; min-height:44px; }
+        .image-meta span { min-width:0; font-size:12px; overflow-wrap:anywhere; }
+        .image-select-all { display:flex; align-items:center; gap:8px; min-height:44px; }
+        .image-footer { position:sticky; bottom:0; display:grid; gap:8px; padding:12px 16px; border-top:1px solid light-dark(#eff3f4,#38444d); background:light-dark(#fff,#15202b); }
+        .image-footer > .status:empty { display:none; }
         [hidden] { display:none !important; }
         @media (max-width:600px) { dialog { margin:auto 0 0; width:100%; max-width:none; max-height:85dvh; padding-bottom:env(safe-area-inset-bottom); border-radius:8px 8px 0 0; } }
         @media (hover:hover) { button:hover,a:hover { background:light-dark(#eff3f4,#273340); } .primary:hover { background:#1a8cd8; } }
@@ -809,19 +827,48 @@ function startVideoTools(options) {
         } catch (_) { return null }
     }
 
+    function imageURL(url, size = 'orig') {
+        try {
+            const parsed = new URL(url)
+            const match = parsed.pathname.match(/^\/media\/([\w-]+)(?:\.(jpe?g|png|webp|gif))?$/i)
+            const format = (match?.[2] || parsed.searchParams.get('format') || '').toLowerCase().replace('jpeg', 'jpg')
+            if (parsed.protocol !== 'https:' || parsed.hostname !== 'pbs.twimg.com' || !match || !['jpg', 'png', 'webp', 'gif'].includes(format)) return null
+            return `https://pbs.twimg.com/media/${match[1]}?format=${format}&name=${size}`
+        } catch (_) { return null }
+    }
+
+    function rememberImage(owner, value, position, source) {
+        const url = imageURL(value.media_url_https)
+        if (!url) return false
+        const key = new URL(url).pathname
+        const previous = imagePosts.get(owner)?.get(key)
+        if (previous && source === '页面图片' && previous.source !== source) return false
+        const index = Number(value.expanded_url?.match(/\/photo\/(\d+)/)?.[1]) || position + 1
+        const record = { id: key, post: owner, url, preview: imageURL(url, 'small'), index, width: value.original_info?.width || 0, height: value.original_info?.height || 0, source }
+        if (JSON.stringify(previous) === JSON.stringify(record)) return false
+        if (!imagePosts.has(owner)) imagePosts.set(owner, new Map())
+        imagePosts.get(owner).set(key, record)
+        return true
+    }
+
     function ingest(data, source) {
         const stack = [[data, null]]
         const seen = new WeakSet()
         let changed = false
         let budget = 50000
         while (stack.length && budget-- > 0) {
-            const [value, inherited] = stack.pop()
+            const [value, inherited, position = 0] = stack.pop()
             if (!value || typeof value !== 'object' || seen.has(value)) continue
             seen.add(value)
+            if (Array.isArray(value)) {
+                for (let index = value.length - 1; index >= 0; index--) stack.push([value[index], inherited, index])
+                continue
+            }
             const tweet = value.__typename === 'Tweet' || value.media_entities2 || value.extended_entities || value.mediaDetails || value.legacy
             const candidate = value.rest_id || value.id_str || value.legacy?.id_str
             const id = tweet && typeof candidate === 'string' && /^\d+$/.test(candidate) ? candidate : inherited
             const owner = postId(value.expanded_url) || (typeof value.source_status_id_str === 'string' ? value.source_status_id_str : id)
+            if (options.enable_image_tools && owner && value.type === 'photo') changed = rememberImage(owner, value, position, source) || changed
             if (owner && value.video_info?.variants && ['video', 'animated_gif'].includes(value.type)) {
                 const variants = value.video_info.variants.map(variant => ({
                     url: mediaURL(variant.url), type: variant.content_type, bitrate: Number(variant.bitrate) || 0,
@@ -846,21 +893,27 @@ function startVideoTools(options) {
             if (oldest === activePost) { const saved = posts.get(oldest); posts.delete(oldest); posts.set(oldest, saved) }
             else posts.delete(oldest)
         }
+        while (imagePosts.size > 200) {
+            const oldest = imagePosts.keys().next().value
+            if (oldest === imagePanel?.post) { const saved = imagePosts.get(oldest); imagePosts.delete(oldest); imagePosts.set(oldest, saved) }
+            else imagePosts.delete(oldest)
+        }
         if (changed) {
             schedule()
             if (panel?.dialog.open && activePost && !panel.media.options.length) renderMedia()
+            if (imagePanel?.dialog.open) renderImages()
         }
     }
 
     function readScript(script) {
         const text = script.textContent || ''
-        if (!text.includes('video_info') || scripts.get(script) === text.length || text.length > 4 * 1024 * 1024) return
-        scripts.set(script, text.length)
+        if ((!text.includes('video_info') && !(options.enable_image_tools && text.includes('media_url_https'))) || scripts.get(script) === text || text.length > 4 * 1024 * 1024) return
+        scripts.set(script, text)
         try { ingest(JSON.parse(text), '页面数据'); return } catch (_) { /* Serialized hydration may wrap JSON in JavaScript. */ }
         const first = text.indexOf('{'), last = text.lastIndexOf('}')
         try { ingest(JSON.parse(text.slice(first, last + 1)), '页面数据'); return } catch (_) { /* Read string literals without executing page code. */ }
         for (const match of text.matchAll(/"(?:[^"\\]|\\.)*"/g)) {
-            if (!match[0].includes('video_info')) continue
+            if (!match[0].includes('video_info') && !(options.enable_image_tools && match[0].includes('media_url_https'))) continue
             try {
                 const decoded = JSON.parse(match[0])
                 if (typeof decoded === 'string' && decoded.trim().startsWith('{')) ingest(JSON.parse(decoded), '页面数据')
@@ -1117,16 +1170,69 @@ function startVideoTools(options) {
         listen(document, 'touchcancel', cancelShare, true)
     }
 
+    function scanImages() {
+        if (!options.enable_image_tools) return
+        const groups = new Map()
+        for (const node of document.querySelectorAll('[data-testid="tweetPhoto"], a[href*="/photo/"]')) {
+            if (node.closest(marker)) continue
+            const scope = node.closest('[data-testid="quoteTweet"], div[role="link"]') || node.closest('article')
+            if (!scope) continue
+            const id = identify(scope)
+            if (!id || (node.tagName === 'A' && postId(node.href) !== id)) continue
+            const container = node.querySelector('img') ? node : node.parentElement
+            const image = container?.querySelector('img')
+            const url = imageURL(image?.currentSrc || image?.src)
+            if (url) rememberImage(id, { media_url_https: url, expanded_url: node.closest('a')?.href || '', original_info: {} }, groups.get(scope)?.nodes.length || 0, '页面图片')
+            if (!imagePosts.get(id)?.size) continue
+            if (!groups.has(scope)) groups.set(scope, { id, nodes: [] })
+            groups.get(scope).nodes.push(node)
+        }
+        for (const [scope, entry] of imageEntries) {
+            if (!scope.isConnected || !entry.host.isConnected || identify(scope) !== entry.post || !groups.has(scope)) {
+                entry.host.remove()
+                imageEntries.delete(scope)
+            }
+        }
+        for (const [scope, { id, nodes }] of groups) {
+            const count = imagePosts.get(id).size
+            const label = `图片文件 · ${count}`
+            const previous = imageEntries.get(scope)
+            if (previous) { previous.button.querySelector('span').textContent = label; previous.button.setAttribute('aria-label', label); continue }
+            const { host, root } = shadowHost()
+            const button = iconButton('image', label)
+            button.className = 'entry'
+            button.onclick = event => { event.preventDefault(); event.stopPropagation(); if (identify(scope) === id) openImagePanel(id, button) }
+            root.appendChild(button)
+            host.addEventListener('click', event => event.stopPropagation())
+            let mount = nodes[0].tagName === 'A' ? nodes[0].parentElement : nodes[0]
+            while (mount !== scope && !nodes.every(node => mount.contains(node))) mount = mount.parentElement
+            while (mount.parentElement && mount.parentElement !== scope) {
+                const parent = mount.parentElement
+                const computed = getComputedStyle(parent)
+                if (parent.children.length !== 1 && computed.aspectRatio === 'auto' && !['hidden', 'clip'].includes(computed.overflow)) break
+                mount = parent
+            }
+            if (mount === scope) scope.appendChild(host)
+            else mount.insertAdjacentElement('afterend', host)
+            imageEntries.set(scope, { host, button, post: id })
+        }
+    }
+
     function scan() {
         frame = null
         if (destroyed || !document.body) return
-        if (route !== location.pathname) { route = location.pathname; closePanel(); clearSavePrompt() }
+        if (route !== location.pathname) { route = location.pathname; closePanel(); closeImagePanel(); clearSavePrompt() }
         observer.disconnect()
         try {
             if (panel && !panel.host.isConnected) {
                 const wasOpen = panel.dialog.open
                 document.body.appendChild(panel.host)
                 if (wasOpen) { panel.dialog.close(); panel.dialog.showModal() }
+            }
+            if (imagePanel && !imagePanel.host.isConnected) {
+                const wasOpen = imagePanel.dialog.open
+                document.body.appendChild(imagePanel.host)
+                if (wasOpen) { imagePanel.dialog.close(); imagePanel.dialog.showModal() }
             }
             for (const [scope, entry] of entries) {
                 if (!scope.isConnected || !entry.host.isConnected || identify(scope) !== entry.post || !players(scope).length) {
@@ -1164,12 +1270,265 @@ function startVideoTools(options) {
                 mount.insertAdjacentElement('afterend', host)
                 entries.set(scope, { host, post: id })
             })
+            scanImages()
             syncShareMenu()
         } finally { observe() }
     }
 
     function schedule() {
         if (!destroyed && frame === null && document.visibilityState !== 'hidden') frame = requestAnimationFrame(scan)
+    }
+
+    function imageRecords(id) {
+        return Array.from(imagePosts.get(id)?.values() || []).sort((a, b) => a.index - b.index)
+    }
+
+    function makeImagePanel() {
+        const { host, root } = shadowHost()
+        const dialog = element('dialog')
+        dialog.setAttribute('aria-label', '图片文件')
+        const header = element('header')
+        header.appendChild(element('h2', '图片文件'))
+        const close = iconButton('close', '关闭')
+        close.className = 'icon'
+        close.querySelector('span').hidden = true
+        close.onclick = closeImagePanel
+        header.appendChild(close)
+        const body = element('div')
+        body.className = 'body'
+        const allLabel = element('label')
+        allLabel.className = 'image-select-all'
+        const all = element('input')
+        all.type = 'checkbox'
+        all.setAttribute('aria-label', '全选图片')
+        allLabel.append(all, element('span', '全选'))
+        const grid = element('div')
+        grid.className = 'image-grid'
+        body.append(allLabel, grid)
+        const footer = element('div')
+        footer.className = 'image-footer'
+        const status = element('p')
+        status.className = 'status'
+        status.setAttribute('role', 'status')
+        const save = iconButton('download', '保存全部（0）')
+        save.className = 'primary'
+        save.onclick = saveImages
+        const retry = iconButton('retry', '重新读取图片')
+        retry.hidden = true
+        retry.onclick = readImages
+        footer.append(status, save, retry)
+        dialog.append(header, body, footer)
+        root.appendChild(dialog)
+        document.body.appendChild(host)
+        imagePanel = { host, root, dialog, all, grid, footer, status, save, retry, items: new Map(), selected: new Set(), files: new Map(), post: null, busy: false, signature: '' }
+        all.onchange = () => {
+            clearSavePrompt()
+            for (const [id, item] of imagePanel.items) {
+                item.check.checked = all.checked
+                if (all.checked) imagePanel.selected.add(id)
+                else imagePanel.selected.delete(id)
+            }
+            updateImageSelection()
+        }
+        dialog.addEventListener('cancel', event => { event.preventDefault(); closeImagePanel() })
+        dialog.addEventListener('click', event => {
+            if (event.target !== dialog) return
+            const rect = dialog.getBoundingClientRect()
+            if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) closeImagePanel()
+        })
+        root.addEventListener('click', event => event.stopPropagation())
+        root.addEventListener('keydown', event => { if (event.key === 'Escape') { event.stopPropagation(); event.preventDefault(); closeImagePanel() } })
+    }
+
+    function updateImageSelection() {
+        const current = imagePanel
+        const count = current.selected.size
+        const total = current.items.size
+        current.all.checked = total > 0 && count === total
+        current.all.indeterminate = count > 0 && count < total
+        current.all.disabled = current.busy || !total
+        for (const item of current.items.values()) item.check.disabled = current.busy
+        const label = `${count === total ? '保存全部' : '保存所选'}（${count}）`
+        current.save.querySelector('span').textContent = label
+        current.save.setAttribute('aria-label', label)
+        current.save.disabled = current.busy || !count
+    }
+
+    function renderImages() {
+        const current = imagePanel
+        if (!current?.dialog.open) return
+        const records = imageRecords(current.post)
+        const signature = JSON.stringify(records)
+        if (signature === current.signature) return
+        current.signature = signature
+        const previous = new Set(current.items.keys())
+        current.grid.replaceChildren()
+        current.items.clear()
+        const valid = new Set(records.map(record => record.id))
+        for (const id of current.selected) if (!valid.has(id)) current.selected.delete(id)
+        for (const [index, record] of records.entries()) {
+            if (!previous.has(record.id)) current.selected.add(record.id)
+            const item = element('div')
+            item.className = 'image-item'
+            const pick = element('label')
+            pick.className = 'image-pick'
+            const check = element('input')
+            check.type = 'checkbox'
+            check.checked = current.selected.has(record.id)
+            check.setAttribute('aria-label', `选择图片 ${index + 1}`)
+            check.onchange = () => {
+                clearSavePrompt()
+                if (check.checked) current.selected.add(record.id)
+                else current.selected.delete(record.id)
+                updateImageSelection()
+            }
+            const thumbnail = element('img')
+            thumbnail.alt = `图片 ${index + 1}`
+            thumbnail.src = record.preview
+            thumbnail.loading = 'lazy'
+            pick.append(thumbnail, check)
+            const meta = element('div')
+            meta.className = 'image-meta'
+            meta.appendChild(element('span', `${index + 1}${record.width && record.height ? ` · ${record.width}×${record.height}` : ''}`))
+            const copy = iconButton('copy', `复制图片 ${index + 1} 地址`)
+            copy.className = 'icon'
+            copy.querySelector('span').hidden = true
+            const address = element('input')
+            address.readOnly = true
+            address.value = record.url
+            address.hidden = true
+            address.setAttribute('aria-label', `图片 ${index + 1} 原图地址`)
+            copy.onclick = async () => {
+                try {
+                    if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable')
+                    await navigator.clipboard.writeText(record.url)
+                    if (current.dialog.open) current.status.textContent = '已复制原图地址。'
+                } catch (_) {
+                    if (!current.dialog.open) return
+                    address.hidden = false
+                    address.focus()
+                    address.select()
+                    current.status.textContent = '请长按地址复制。'
+                }
+            }
+            meta.appendChild(copy)
+            const error = element('p')
+            error.className = 'status'
+            error.hidden = true
+            item.append(pick, meta, address, error)
+            current.grid.appendChild(item)
+            current.items.set(record.id, { check, error })
+        }
+        updateImageSelection()
+    }
+
+    async function readImages() {
+        const current = imagePanel
+        current.metadataController?.abort()
+        const controller = new AbortController()
+        current.metadataController = controller
+        current.status.textContent = '正在读取图片…'
+        current.retry.hidden = true
+        try {
+            await readPost(current.post, controller)
+            if (destroyed || controller.signal.aborted || !current.dialog.open) return
+            renderImages()
+            const unresolved = imageRecords(current.post).some(record => record.source === '页面图片')
+            current.status.textContent = unresolved || !current.items.size ? '未取得完整图片数据，可重新读取。' : ''
+            current.retry.hidden = !unresolved && current.items.size > 0
+        } catch (_) {
+            if (!controller.signal.aborted && current.dialog.open) { current.status.textContent = '图片数据读取失败，可重试。'; current.retry.hidden = false }
+        } finally {
+            if (current.metadataController === controller) current.metadataController = null
+        }
+    }
+
+    function openImagePanel(id, button) {
+        closePanel()
+        closeImagePanel()
+        if (!imagePanel) makeImagePanel()
+        const current = imagePanel
+        current.post = id
+        current.focusBefore = button
+        current.signature = ''
+        current.items.clear()
+        current.selected.clear()
+        current.status.textContent = ''
+        current.retry.hidden = true
+        current.dialog.showModal()
+        renderImages()
+        if (!current.items.size || imageRecords(id).some(record => record.source === '页面图片')) readImages()
+    }
+
+    function closeImagePanel() {
+        const current = imagePanel
+        if (!current?.dialog.open) return
+        current.dialog.close()
+        current.metadataController?.abort()
+        current.saveController?.abort()
+        current.metadataController = current.saveController = null
+        current.files.clear()
+        current.busy = false
+        current.post = null
+        if (savePrompt && current.dialog.contains(savePrompt.host)) clearSavePrompt()
+        if (current.focusBefore?.isConnected) {
+            if (keyboardFocus) current.focusBefore.focus({ preventScroll: true })
+            else current.focusBefore.blur()
+        }
+    }
+
+    async function saveImages() {
+        const current = imagePanel
+        if (current.busy || !current.selected.size) return
+        const chosen = imageRecords(current.post).filter(record => current.selected.has(record.id))
+        const controller = new AbortController()
+        current.saveController = controller
+        current.busy = true
+        updateImageSelection()
+        clearSavePrompt()
+        for (const url of current.files.keys()) if (!chosen.some(record => record.url === url)) current.files.delete(url)
+        const files = []
+        let failed = 0
+        let total = Array.from(current.files.values()).reduce((sum, file) => sum + file.size, 0)
+        try {
+            for (const [index, record] of chosen.entries()) {
+                if (controller.signal.aborted || destroyed) return
+                current.status.textContent = `正在准备图片 ${index + 1}/${chosen.length}…`
+                const item = current.items.get(record.id)
+                if (item) item.error.hidden = true
+                try {
+                    let file = current.files.get(record.url)
+                    if (!file) {
+                        if (record.source === '页面图片') throw new Error('未取得原图数据，请重新读取。')
+                        const blob = await fetchMediaBlob(record.url, controller, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], maxBytes - total, '图片')
+                        if (controller.signal.aborted || destroyed) return
+                        const extension = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' }[blob.type]
+                        file = new File([blob], `x-${current.post}-image-${record.index}.${extension}`, { type: blob.type })
+                        total += file.size
+                        current.files.set(record.url, file)
+                    }
+                    files.push(file)
+                } catch (error) {
+                    if (destroyed || !current.dialog.open || current.saveController !== controller) return
+                    if (controller.signal.aborted) { current.status.textContent = '图片读取已中止，请重试。'; return }
+                    failed++
+                    if (item) { item.error.textContent = error.message.startsWith('图片较大') || error.message.startsWith('未取得') ? error.message : '原图读取失败，可重试。'; item.error.hidden = false }
+                }
+            }
+            if (failed) { current.status.textContent = `${failed} 张图片准备失败，请重试或调整选择。`; return }
+            current.status.textContent = ''
+            if (options.image_save_method === 'system_share') offerSystemShare(files, current.dialog, '图片')
+            else {
+                for (const file of files) saveBlob(file, file.name, current.dialog)
+                current.status.textContent = `已请求下载 ${files.length} 张图片。`
+            }
+        } finally {
+            if (current.saveController === controller) {
+                current.saveController = null
+                current.busy = false
+                updateImageSelection()
+            }
+        }
     }
 
     function makePanel() {
@@ -1319,6 +1678,7 @@ function startVideoTools(options) {
     }
 
     function openPanel(id, button) {
+        closeImagePanel()
         if (!panel) makePanel()
         activePost = id
         focusBefore = button
@@ -1371,13 +1731,14 @@ function startVideoTools(options) {
         }
     }
 
-    async function fetchVideoBlob(url, controller) {
+    async function fetchMediaBlob(url, controller, types, limit = maxBytes, kind = '视频') {
         controllers.add(controller)
         const timeout = setTimeout(() => controller.abort(), 60000)
         try {
             const response = await originalFetch.call(window, url, { credentials: 'omit', signal: controller.signal })
-            if (!response.ok || !response.headers.get('content-type')?.includes('video/mp4')) throw new Error('Invalid video response')
-            if (Number(response.headers.get('content-length')) > maxBytes) { controller.abort(); throw new Error('视频较大，请打开原文件保存。') }
+            const type = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase()
+            if (!response.ok || !types.includes(type)) throw new Error('Invalid media response')
+            if (Number(response.headers.get('content-length')) > limit) { await response.body?.cancel(); throw new Error(`${kind}较大，准备文件总量不能超过 64 MB。`) }
             const chunks = []
             let size = 0
             const reader = response.body.getReader()
@@ -1385,15 +1746,17 @@ function startVideoTools(options) {
                 const { done, value } = await reader.read()
                 if (done) break
                 size += value.byteLength
-                if (size > maxBytes) { controller.abort(); throw new Error('视频较大，请打开原文件保存。') }
+                if (size > limit) { await reader.cancel(); throw new Error(`${kind}较大，准备文件总量不能超过 64 MB。`) }
                 chunks.push(value)
             }
-            return new Blob(chunks, { type: 'video/mp4' })
+            return new Blob(chunks, { type })
         } finally {
             clearTimeout(timeout)
             controllers.delete(controller)
         }
     }
+
+    function fetchVideoBlob(url, controller) { return fetchMediaBlob(url, controller, ['video/mp4']) }
 
     function saveBlob(blob, filename, mount = document.body) {
         const blobURL = URL.createObjectURL(blob)
@@ -1425,18 +1788,19 @@ function startVideoTools(options) {
     }
 
     function clearSavePrompt() {
+        if (savePrompt && imagePanel?.dialog.contains(savePrompt.host)) imagePanel.save.hidden = false
         savePrompt?.host.remove()
         savePrompt = null
     }
 
-    function offerSystemShare(files, mount = document.body) {
+    function offerSystemShare(files, mount = document.body, kind = '视频') {
         clearSavePrompt()
         const { host, root } = shadowHost()
         host.setAttribute('data-stash-x-video', 'save-prompt')
         const inline = mount !== document.body
         host.style.cssText = inline ? 'display:block;margin:0 16px 16px' : 'position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:440px;max-width:calc(100% - 24px);z-index:2147483647'
         const surface = element('section')
-        surface.setAttribute('aria-label', '视频保存')
+        surface.setAttribute('aria-label', `${kind}保存`)
         surface.style.cssText = 'padding:12px;background:light-dark(#fff,#15202b);border:1px solid light-dark(#cfd9de,#536471);border-radius:6px'
         const status = element('p')
         status.className = 'status'
@@ -1452,7 +1816,7 @@ function startVideoTools(options) {
         let supported = false
         try { supported = typeof navigator.share === 'function' && navigator.canShare?.({ files }) === true } catch (_) { /* Unsupported file sharing keeps the browser download available. */ }
         share.hidden = !supported
-        status.textContent = supported ? '视频已准备好。' : '此浏览器不支持分享这些视频，可使用浏览器下载。'
+        status.textContent = supported ? `${kind}已准备好。` : `此浏览器不支持分享这些${kind}，可使用浏览器下载。`
         actions.append(share, download, dismiss)
         surface.append(status, actions)
         root.appendChild(surface)
@@ -1460,11 +1824,16 @@ function startVideoTools(options) {
         root.addEventListener('keydown', event => {
             if (event.key === 'Escape') { event.stopPropagation(); event.preventDefault(); clearSavePrompt() }
         })
-        mount.appendChild(host)
+        if (imagePanel?.dialog === mount) {
+            host.style.cssText = 'display:block'
+            imagePanel.save.hidden = true
+            imagePanel.footer.appendChild(host)
+        } else mount.appendChild(host)
         const current = { host }
         savePrompt = current
         const notify = message => {
             if (inline && panel?.dialog === mount && panel.dialog.open) panel.status.textContent = message
+            else if (inline && imagePanel?.dialog === mount && imagePanel.dialog.open) imagePanel.status.textContent = message
             else reportDownloadError(message)
         }
         dismiss.onclick = clearSavePrompt
@@ -1599,11 +1968,15 @@ function startVideoTools(options) {
         cleanups.push(() => { if (history[key] === wrapper) history[key] = original })
     }
     window.__stashXVideos = {
-        isOpen: () => !!panel?.dialog.open || !!shareContext?.activating || !!savePrompt,
+        isOpen: () => !!panel?.dialog.open || !!imagePanel?.dialog.open || !!shareContext?.activating || !!savePrompt,
         diagnostics: () => ({
             toolbarEnabled: options.enable_video_tools,
             shareEnabled: options.enable_share_menu_download,
             saveMethod: options.video_save_method,
+            imageToolsEnabled: options.enable_image_tools,
+            imageSaveMethod: options.image_save_method,
+            imageEntries: imageEntries.size,
+            postsWithImages: imagePosts.size,
             players: players(document).length,
             previews: document.querySelectorAll('[data-testid="previewInterstitial"]').length,
             identifiedPlayers: players(document).filter(player => {
@@ -1619,6 +1992,7 @@ function startVideoTools(options) {
             if (destroyed) return
             destroyed = true
             closePanel()
+            closeImagePanel()
             clearShareRow()
             shareContext = null
             observer.disconnect()
@@ -1631,8 +2005,11 @@ function startVideoTools(options) {
             objectURLs.forEach(url => URL.revokeObjectURL(url))
             cleanups.forEach(cleanup => cleanup())
             entries.forEach(entry => entry.host.remove())
+            imageEntries.forEach(entry => entry.host.remove())
             panel?.host.remove()
+            imagePanel?.host.remove()
             posts.clear()
+            imagePosts.clear()
             if (window.fetch === wrappedFetch) window.fetch = originalFetch
             if (XMLHttpRequest.prototype.open === wrappedOpen) XMLHttpRequest.prototype.open = originalOpen
             if (XMLHttpRequest.prototype.send === wrappedSend) XMLHttpRequest.prototype.send = originalSend
@@ -1671,10 +2048,10 @@ function removeAds(document, options, diagnosticSource = null) {
     const container = document.body || document.documentElement
     const settings = JSON.stringify(options).replace(/</g, '\\u003c')
     script.textContent = `(${removeAdsCode.toString()})(${settings});`
-    if (options.enable_video_tools || options.enable_share_menu_download) {
+    if (options.enable_video_tools || options.enable_share_menu_download || options.enable_image_tools) {
         const video = document.createElement('script')
         video.setAttribute('data-stash-x-video', 'bootstrap')
-        video.textContent = `window.__stashXVideoStatus={version:"20261123.6",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download, video_save_method: options.video_save_method })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
+        video.textContent = `window.__stashXVideoStatus={version:"20261123.7",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download, video_save_method: options.video_save_method, enable_image_tools: options.enable_image_tools, image_save_method: options.image_save_method })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
         const head = document.head || document.documentElement
         const firstScript = head.querySelector('script')
         if (firstScript) firstScript.before(video)
@@ -1713,6 +2090,8 @@ function removeAds(document, options, diagnosticSource = null) {
                 enable_video_tools: options.enable_video_tools,
                 enable_share_menu_download: options.enable_share_menu_download,
                 video_save_method: options.video_save_method,
+                enable_image_tools: options.enable_image_tools,
+                image_save_method: options.image_save_method,
             },
         }))
         container.appendChild(diagnostic)
