@@ -57,6 +57,7 @@ function getXOptions() {
         hide_notification_badge: false,
         hide_show_posts_prompt: false,
         enable_video_tools: true,
+        enable_share_menu_download: false,
     }
     if (typeof $argument === 'undefined' || !$argument) return options
     let supplied
@@ -85,7 +86,7 @@ function removeAdsCode(options) {
     const sidebarClass = 'x-ad-empty-sidebar'
     const autoHideBottomBar = options.hide_bottom_bar_on_scroll && !options.hide_bottom_bar
     const needsUpdates = Object.entries(options).some(([key, value]) =>
-        !['enable_escape_back', 'enable_double_tap_back', 'enable_layout_diagnostics'].includes(key) && value === true)
+        !['enable_escape_back', 'enable_double_tap_back', 'enable_layout_diagnostics', 'enable_share_menu_download'].includes(key) && value === true)
     const simpleRules = [
         ['hide_chat_drawer', "[data-testid='chat-drawer-main']"],
         ['hide_nav_grok', "header a[aria-label='Grok'], header a[href='/i/grok']"],
@@ -672,7 +673,7 @@ function removeAdsCode(options) {
 }
 
 // Injected in <head> before X starts requests; no Stash globals or page internals.
-function startVideoTools() {
+function startVideoTools(options) {
     window.__stashXVideos?.destroy()
     const marker = '[data-stash-x-video]'
     const posts = new Map()
@@ -695,6 +696,10 @@ function startVideoTools() {
     let activePost = null
     let loading = false
     let metadataController = null
+    const menuSelector = '[role="menu"], [data-testid="Dropdown"], [data-testid="sheetDialog"], [role="dialog"]'
+    let shareContext = null
+    let shareRow = null
+    const shareDiagnostics = { enabled: options.enable_share_menu_download, trigger: false, menu: false, action: null }
 
     /* Lucide v0.468.0 (ISC), Copyright (c) Lucide Contributors.
      * Permission to use, copy, modify, and/or distribute this software for any
@@ -904,6 +909,101 @@ function startVideoTools() {
         return candidates.size === 1 ? candidates.values().next().value : null
     }
 
+    function clearShareRow() {
+        if (!shareRow) return
+        shareRow.button.remove()
+        if (shareRow.original) {
+            if (shareRow.style === null) shareRow.original.removeAttribute('style')
+            else shareRow.original.setAttribute('style', shareRow.style)
+        }
+        shareRow = null
+    }
+
+    function validShareContext() {
+        return shareContext && shareContext.path === location.pathname && shareContext.scope.isConnected && identify(shareContext.scope) === shareContext.id
+    }
+
+    function visibleMenu(menu) {
+        return !menu.closest(marker) && menu.getClientRects().length > 0 && getComputedStyle(menu).visibility !== 'hidden'
+    }
+
+    function nativeDownload(item) {
+        if (item.matches(marker)) return false
+        if (/^(?:downloadVideo|download-video|videoDownload)$/i.test(item.getAttribute('data-testid') || '')) return true
+        return [item.getAttribute('aria-label'), item.textContent, ...Array.from(item.querySelectorAll('span')).map(node => node.textContent)]
+            .some(text => /^(?:下载视频|下載影片|下載視頻|download video)(?:\s|$)/i.test((text || '').trim()))
+    }
+
+    function shareMenu(menu) {
+        return Array.from(menu.querySelectorAll('[role="menuitem"], button, [role="button"], a[href]')).some(item => nativeDownload(item) ||
+            /^(?:copyLink|copy-link)$/i.test(item.getAttribute('data-testid') || '') ||
+            /^(?:copy link(?: to (?:post|tweet))?|复制链接|複製連結|复制帖子链接|複製貼文連結)$/i.test((item.getAttribute('aria-label') || item.textContent || '').trim()))
+    }
+
+    function syncShareMenu() {
+        if (!options.enable_share_menu_download) return
+        if (!validShareContext()) { clearShareRow(); shareContext = null; return }
+        if (shareContext.menu && (!shareContext.menu.isConnected || !visibleMenu(shareContext.menu))) { clearShareRow(); shareContext = null; return }
+        if (!shareContext.menu) {
+            shareContext.menu = Array.from(document.querySelectorAll(menuSelector)).find(menu =>
+                !shareContext.before.has(menu) && visibleMenu(menu) && shareMenu(menu))
+        }
+        const menu = shareContext.menu
+        if (!menu) return
+        shareDiagnostics.menu = true
+        // Do not replace an author's explicit no-download setting with this experiment.
+        if (Array.from(posts.get(shareContext.id)?.values() || []).some(record => record.allowDownload === false)) { clearShareRow(); shareDiagnostics.action = 'author-disabled'; return }
+        const original = Array.from(menu.querySelectorAll('[role="menuitem"], button, [role="button"], a[href]')).find(nativeDownload)
+        if (shareRow?.button.isConnected && shareRow.original === (original || null)) return
+        clearShareRow()
+        shareDiagnostics.action = original ? 'replaced' : 'added'
+        const button = iconButton('download', '下载视频')
+        button.setAttribute('role', 'menuitem')
+        button.setAttribute('data-stash-x-video', 'share-download')
+        if (original) button.className = original.className
+        button.style.cssText = 'display:flex;align-items:center;gap:12px;width:100%;min-height:44px;padding:12px 16px;border:0;border-radius:0;background:transparent;color:inherit;font:inherit;text-align:start;cursor:pointer;box-sizing:border-box'
+        button.querySelector('svg').style.cssText = 'width:20px;height:20px;flex:none'
+        const context = shareContext
+        button.addEventListener('click', event => {
+            event.preventDefault()
+            event.stopPropagation()
+            if (shareContext !== context || !validShareContext()) return
+            const { id, trigger } = context
+            // Open first so our global Escape-to-back handler cannot navigate.
+            openPanel(id, trigger)
+            menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, cancelable: true }))
+            clearShareRow()
+            shareContext = null
+        })
+        shareRow = { button, original: original || null, style: original?.getAttribute('style') ?? null }
+        if (original) {
+            original.style.setProperty('display', 'none', 'important')
+            original.after(button)
+        } else {
+            const container = menu.querySelector('[role="menuitem"]')?.parentElement || menu
+            container.appendChild(button)
+        }
+    }
+
+    if (options.enable_share_menu_download) listen(document, 'click', event => {
+        const target = event.target instanceof Element ? event.target : event.target?.parentElement
+        if (!target || target.closest(marker)) return
+        const trigger = target.closest('button, [role="button"]')
+        const label = trigger?.getAttribute('aria-label') || ''
+        const share = trigger && (/^(?:share|shareButton|share-button|tweetShare)$/i.test(trigger.getAttribute('data-testid') || '') || /^(?:share(?: post| tweet)?|分享(?:帖子|推文)?|共享(?:帖子|推文)?|分享貼文|分享推文)$/i.test(label.trim()))
+        const scope = share ? trigger.closest('article') : null
+        const id = scope && identify(scope)
+        if (id && (posts.has(id) || Array.from(scope.querySelectorAll('video, [data-testid="videoPlayer"]')).some(player => player.closest('article') === scope && !player.closest('[data-testid="quoteTweet"], [role="link"]')))) {
+            clearShareRow()
+            Object.assign(shareDiagnostics, { trigger: true, menu: false, action: null })
+            shareContext = { id, scope, trigger, path: location.pathname, before: new Set(Array.from(document.querySelectorAll(menuSelector)).filter(visibleMenu)), menu: null }
+            schedule()
+        } else if (!shareContext?.menu?.contains(target)) {
+            clearShareRow()
+            shareContext = null
+        }
+    }, true)
+
     function scan() {
         frame = null
         if (destroyed || !document.body) return
@@ -921,7 +1021,7 @@ function startVideoTools() {
                     entries.delete(scope)
                 }
             }
-            document.querySelectorAll('video, [data-testid="videoPlayer"]').forEach(player => {
+            if (options.enable_video_tools) document.querySelectorAll('video, [data-testid="videoPlayer"]').forEach(player => {
                 if (player.closest(marker)) return
                 const quote = player.closest('[data-testid="quoteTweet"], [role="link"]')
                 const scope = quote && identify(quote) ? quote : player.closest('article')
@@ -951,6 +1051,7 @@ function startVideoTools() {
                 mount.insertAdjacentElement('afterend', host)
                 entries.set(scope, { host, post: id })
             })
+            syncShareMenu()
         } finally { observe() }
     }
 
@@ -1064,7 +1165,7 @@ function startVideoTools() {
         panel.quality.hidden = !url
         if (url) panel.open.href = url
         else panel.open.removeAttribute('href')
-        panel.debug.textContent = JSON.stringify({ version: 1, postId: activePost, mediaId: record?.id || null, source: record?.source || null, allowDownload: record?.allowDownload ?? null, variants: record?.mp4 || [], hls: record?.hls || null }, null, 2)
+        panel.debug.textContent = JSON.stringify({ version: 1, postId: activePost, mediaId: record?.id || null, source: record?.source || null, allowDownload: record?.allowDownload ?? null, variants: record?.mp4 || [], hls: record?.hls || null, shareMenu: shareDiagnostics }, null, 2)
         panel.status.textContent = url ? '' : loading ? '正在读取视频地址…' : record?.hls ? '仅返回了 HLS 地址，可在调试信息中复制。' : '尚未收到视频地址，可播放视频后重新读取。'
     }
 
@@ -1230,6 +1331,8 @@ function startVideoTools() {
             if (destroyed) return
             destroyed = true
             closePanel()
+            clearShareRow()
+            shareContext = null
             observer.disconnect()
             if (frame !== null) cancelAnimationFrame(frame)
             controllers.forEach(controller => controller.abort())
@@ -1277,10 +1380,10 @@ function removeAds(document, options, diagnosticSource = null) {
     const container = document.body || document.documentElement
     const settings = JSON.stringify(options).replace(/</g, '\\u003c')
     script.textContent = `(${removeAdsCode.toString()})(${settings});`
-    if (options.enable_video_tools) {
+    if (options.enable_video_tools || options.enable_share_menu_download) {
         const video = document.createElement('script')
         video.setAttribute('data-stash-x-video', 'bootstrap')
-        video.textContent = `(${startVideoTools.toString()})();`
+        video.textContent = `(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download })});`
         const head = document.head || document.documentElement
         const firstScript = head.querySelector('script')
         if (firstScript) firstScript.before(video)

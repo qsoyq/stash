@@ -16,6 +16,11 @@ assert.equal(diagnosticUrl, override['script-providers'].x.url.replace('/script/
 const parser = source.slice(source.indexOf('function getXOptions()'), source.indexOf('function removeAdsCode('));
 const scriptDefaults = new Function(`${parser}; return getXOptions();`)();
 assert.deepEqual(JSON.parse(expand(override.http.script[0].argument)), scriptDefaults, 'Override and script defaults differ');
+const parseOptions = new Function('$argument', `${parser}; return getXOptions();`);
+assert.equal(parseOptions('{}').enable_share_menu_download, false, 'Older overrides must keep the experiment disabled');
+for (const value of ['true', 1, null]) assert.equal(parseOptions(JSON.stringify({ enable_share_menu_download: value })).enable_share_menu_download, false, 'Invalid menu parameter must use its default');
+assert.equal(parseOptions('{"enable_share_menu_download":true,"enable_video_tools":false}').enable_share_menu_download, true);
+assert.equal(parseOptions('{"enable_share_menu_download":true,"enable_video_tools":false}').enable_video_tools, false, 'Menu setting must preserve an explicit false toolbar setting');
 for (const [key, declaration] of Object.entries(override.arguments)) {
     if (declaration.type === 'switch') assert.equal(typeof declaration.default, 'boolean');
     if (declaration.type === 'select') assert(declaration.options.some(option => option.value === declaration.default));
@@ -66,7 +71,7 @@ for (const [operation, input] of [['TweetDetail', detail], ['UserTweets', profil
 const header = override.http['header-rewrite'][0];
 assert(new RegExp(expand(header).split(' ')[0]).test('https://x.com/home'));
 assert(!new RegExp(expand(header, { ...defaults, csp_policy: '^$' }).split(' ')[0]).test('https://x.com/home'));
-console.log(`PASS: ${passed + 10} rewrite, parameter-binding and CSP checks`);
+console.log(`PASS: ${passed + 16} rewrite, parameter-binding and CSP checks`);
 
 // Exercise the pure direction decision used by the injected runtime.
 const decisionSource = source.slice(source.indexOf('    function nextScrollState('), source.indexOf('    function notificationBadges('));

@@ -37,6 +37,7 @@ desc: |-
     32. 页面布局诊断（默认关）：显示「复制诊断信息」按钮
     33. CSP 策略（默认移除 CSP）：保留 CSP 可能导致页面功能失效
     34. 视频文件（默认开）：在网页视频下方提供画质选择、打开原文件、复制地址、保存视频及调试信息；不改变账号订阅状态
+    35. 分享菜单下载（实验）（默认关）：将网页分享菜单的下载动作接到视频文件面板，尝试避开订阅提示；不改变账号订阅状态，作者明确禁止下载时保留原行为
 icon: https://raw.githubusercontent.com/qsoyq/icons/main/assets/icon/x.png
 arguments-version: 1
 arguments:
@@ -196,7 +197,7 @@ arguments:
     csp_policy:
         type: select
         title: 高级设置 · CSP 策略
-        description: 保留 CSP 可能阻止页面组件隐藏、布局、Esc、双击返回和视频文件功能的注入代码；不影响接口广告与推荐过滤
+        description: 保留 CSP 可能阻止页面组件隐藏、布局、Esc、双击返回、视频文件和分享菜单下载功能的注入代码；不影响接口广告与推荐过滤
         default: ^https://x\.com/
         options:
             -   value: ^https://x\.com/
@@ -206,8 +207,13 @@ arguments:
     enable_video_tools:
         type: switch
         title: 阅读与操作 · 视频文件
-        description: 在 X 网页视频下方显示「视频文件」入口，支持选择 MP4 画质、打开、复制和保存，以及复制调试信息；iOS 保存方式取决于浏览器，不改变原下载菜单或账号订阅状态
+        description: 在 X 网页视频下方显示「视频文件」入口，支持选择 MP4 画质、打开、复制和保存，以及复制调试信息；iOS 保存方式取决于浏览器；分享菜单由独立实验开关控制，不改变账号订阅状态
         default: true
+    enable_share_menu_download:
+        type: switch
+        title: 阅读与操作 · 分享菜单下载（实验）
+        description: 识别网页帖子分享菜单，将「下载视频」替换为视频文件面板入口；没有下载项时补充入口，尝试避开 Plus/Premium 提示；与视频下方入口独立，作者明确禁止下载时保留原行为，需真机验证
+        default: false
 http:
     mitm:
         - x.com
@@ -228,7 +234,7 @@ http:
             max-size: 2097152
             require-body: true
             timeout: 10
-            argument: '{"block_ads_and_recommendations":${args.block_ads_and_recommendations|json},"hide_top_nav":${args.hide_top_nav|json},"hide_home_composer":${args.hide_home_composer|json},"hide_chat_drawer":${args.hide_chat_drawer|json},"hide_sidebar_trends":${args.hide_sidebar_trends|json},"hide_nav_grok":${args.hide_nav_grok|json},"hide_bottom_grok":${args.hide_bottom_grok|json},"hide_nav_premium":${args.hide_nav_premium|json},"hide_nav_verified_orgs":${args.hide_nav_verified_orgs|json},"hide_nav_jobs":${args.hide_nav_jobs|json},"hide_account_menu":${args.hide_account_menu|json},"hide_grok_drawer":${args.hide_grok_drawer|json},"hide_floating_post_button":${args.hide_floating_post_button|json},"hide_reply_permissions":${args.hide_reply_permissions|json},"hide_grok_actions":${args.hide_grok_actions|json},"hide_translate_button":${args.hide_translate_button|json},"hide_automated_content":${args.hide_automated_content|json},"hide_probable_spam_prompt":${args.hide_probable_spam_prompt|json},"enable_custom_layout":${args.enable_custom_layout|json},"home_width_vw":${args.home_width_vw|json},"page_width_vw":${args.page_width_vw|json},"center_primary_column":${args.center_primary_column|json},"enable_escape_back":${args.enable_escape_back|json},"enable_double_tap_back":${args.enable_double_tap_back|json},"enable_layout_diagnostics":${args.enable_layout_diagnostics|json},"hide_bottom_bar":${args.hide_bottom_bar|json},"hide_bottom_bar_on_scroll":${args.hide_bottom_bar_on_scroll|json},"hide_nav_notifications":${args.hide_nav_notifications|json},"hide_nav_messages":${args.hide_nav_messages|json},"hide_notification_badge":${args.hide_notification_badge|json},"hide_show_posts_prompt":${args.hide_show_posts_prompt|json},"enable_video_tools":${args.enable_video_tools|json}}'
+            argument: '{"block_ads_and_recommendations":${args.block_ads_and_recommendations|json},"hide_top_nav":${args.hide_top_nav|json},"hide_home_composer":${args.hide_home_composer|json},"hide_chat_drawer":${args.hide_chat_drawer|json},"hide_sidebar_trends":${args.hide_sidebar_trends|json},"hide_nav_grok":${args.hide_nav_grok|json},"hide_bottom_grok":${args.hide_bottom_grok|json},"hide_nav_premium":${args.hide_nav_premium|json},"hide_nav_verified_orgs":${args.hide_nav_verified_orgs|json},"hide_nav_jobs":${args.hide_nav_jobs|json},"hide_account_menu":${args.hide_account_menu|json},"hide_grok_drawer":${args.hide_grok_drawer|json},"hide_floating_post_button":${args.hide_floating_post_button|json},"hide_reply_permissions":${args.hide_reply_permissions|json},"hide_grok_actions":${args.hide_grok_actions|json},"hide_translate_button":${args.hide_translate_button|json},"hide_automated_content":${args.hide_automated_content|json},"hide_probable_spam_prompt":${args.hide_probable_spam_prompt|json},"enable_custom_layout":${args.enable_custom_layout|json},"home_width_vw":${args.home_width_vw|json},"page_width_vw":${args.page_width_vw|json},"center_primary_column":${args.center_primary_column|json},"enable_escape_back":${args.enable_escape_back|json},"enable_double_tap_back":${args.enable_double_tap_back|json},"enable_layout_diagnostics":${args.enable_layout_diagnostics|json},"hide_bottom_bar":${args.hide_bottom_bar|json},"hide_bottom_bar_on_scroll":${args.hide_bottom_bar_on_scroll|json},"hide_nav_notifications":${args.hide_nav_notifications|json},"hide_nav_messages":${args.hide_nav_messages|json},"hide_notification_badge":${args.hide_notification_badge|json},"hide_show_posts_prompt":${args.hide_show_posts_prompt|json},"enable_video_tools":${args.enable_video_tools|json},"enable_share_menu_download":${args.enable_share_menu_download|json}}'
             type: response
             debug: false
 script-providers:
