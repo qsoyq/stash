@@ -122,7 +122,7 @@ module.exports = async function checkImages(browser, engine, width) {
         assert.equal(await entry('303').count(), 0, 'Avatar or link preview acquired an image entry');
         assert.equal(await entry('606').count(), 0, 'Foreign image acquired an entry');
         assert.equal(await entry('404').getAttribute('aria-label'), '图片文件 · 2', 'Video poster counted as a photo');
-        assert.equal(await page.getByRole('button', { name: '视频文件', exact: true }).count(), 0, 'Image switch enabled video tools');
+        assert.equal(await page.getByRole('button', { name: /^视频文件 · / }).count(), 0, 'Image switch enabled video tools');
         await entry('101').first().click();
         await dialog.waitFor();
         assert.equal(await page.evaluate(() => window.delegatedClicks || 0), 0, 'Entry triggered the tweet click handler');
@@ -241,7 +241,7 @@ module.exports = async function checkImages(browser, engine, width) {
             await boot(images, 'system_share', videos);
             const scope = page.locator('#post-910');
             if (images) await scope.getByRole('button', { name: /^图片文件/ }).waitFor();
-            if (videos) await scope.getByRole('button', { name: '视频文件', exact: true }).waitFor();
+            if (videos) await scope.getByRole('button', { name: /^视频文件 · / }).waitFor();
             const inspect = () => scope.evaluate(scope => {
                 const list = scope.querySelector('[data-testid="ScrollSnap-List"]');
                 const text = scope.querySelector('[data-testid="tweetText"]').getBoundingClientRect();
@@ -262,7 +262,7 @@ module.exports = async function checkImages(browser, engine, width) {
             assert(state.controls.every(control => control.below && control.aligned && control.unwrapped), 'Mixed media entry is beside the carousel or wrapped vertically');
             if (videos) {
                 await scope.locator('[data-testid="previewInterstitial"]').evaluate(preview => preview.replaceWith(document.createElement('video')));
-                await scope.getByRole('button', { name: '视频文件', exact: true }).waitFor();
+                await scope.getByRole('button', { name: /^视频文件 · / }).waitFor();
                 assert.deepEqual(await inspect(), state, 'Video hydration shifted or duplicated media controls');
             }
             if (images && videos) await scope.screenshot({ path: path.join(layoutArtifacts, `${engine.name()}-${width}-mixed-entry-layout.png`) });

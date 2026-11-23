@@ -906,7 +906,7 @@ function startVideoTools(options) {
         }
         if (changed) {
             schedule()
-            if (panel?.dialog.open && activePost && !panel.media.options.length) renderMedia()
+            if (panel?.dialog.open && activePost && panel.media.options.length !== posts.get(activePost)?.size) renderMedia()
             if (imagePanel?.dialog.open) renderImages()
         }
     }
@@ -1258,6 +1258,11 @@ function startVideoTools(options) {
                 if (!scope.isConnected || !entry.host.isConnected || identify(scope) !== entry.post || !players(scope).length) {
                     entry.host.remove()
                     entries.delete(scope)
+                } else {
+                    const label = `视频文件 · ${posts.get(entry.post)?.size || 1}`
+                    entry.button.querySelector('span').textContent = label
+                    entry.button.setAttribute('aria-label', label)
+                    entry.button.title = label
                 }
             }
             if (options.enable_video_tools) players(document).forEach(player => {
@@ -1268,7 +1273,7 @@ function startVideoTools(options) {
                 const id = identify(scope)
                 if (!id || entries.has(scope)) return
                 const { host, root } = shadowHost()
-                const button = iconButton('download', '视频文件')
+                const button = iconButton('download', `视频文件 · ${posts.get(id)?.size || 1}`)
                 button.className = 'entry'
                 button.addEventListener('click', event => {
                     event.preventDefault()
@@ -1280,7 +1285,7 @@ function startVideoTools(options) {
                 host.addEventListener('click', event => event.stopPropagation())
                 root.appendChild(button)
                 mountMediaEntry(host, [player.closest('[data-testid="videoPlayer"]') || player], scope)
-                entries.set(scope, { host, post: id })
+                entries.set(scope, { host, button, post: id })
             })
             scanImages()
             syncShareMenu()
@@ -1576,6 +1581,7 @@ function startVideoTools(options) {
         open.className = 'primary'
         const copy = iconButton('copy', '复制地址')
         const save = iconButton('download', '保存视频')
+        const saveAll = iconButton('download', '保存全部')
         actions.append(open, copy, save)
         const addressLabel = element('label', 'MP4 地址')
         const address = element('input')
@@ -1592,11 +1598,11 @@ function startVideoTools(options) {
         const debug = element('pre')
         const copyDebug = iconButton('copy', '复制调试信息')
         details.append(debug, copyDebug)
-        body.append(mediaRow, actions, addressLabel, status, retry, details)
+        body.append(mediaRow, actions, saveAll, addressLabel, status, retry, details)
         dialog.append(header, body)
         root.appendChild(dialog)
         document.body.appendChild(host)
-        panel = { host, root, dialog, media, quality, poster, actions, addressLabel, address, status, retry, debug, copy, save, open }
+        panel = { host, root, dialog, media, quality, poster, actions, addressLabel, address, status, retry, debug, copy, save, saveAll, open }
         dialog.addEventListener('cancel', event => { event.preventDefault(); closePanel() })
         dialog.addEventListener('click', event => {
             if (event.target !== dialog) return
@@ -1610,7 +1616,8 @@ function startVideoTools(options) {
         retry.onclick = () => loadPost(activePost)
         copy.onclick = () => copyText(address.value)
         copyDebug.onclick = () => copyText(debug.textContent)
-        save.onclick = saveVideo
+        save.onclick = () => saveVideo()
+        saveAll.onclick = () => saveVideo(true)
     }
 
     function records() { return Array.from(posts.get(activePost)?.values() || []) }
@@ -1623,6 +1630,11 @@ function startVideoTools(options) {
         records().forEach((record, index) => panel.media.add(new Option(`视频 ${index + 1}${record.duration ? ` · ${(record.duration / 1000).toFixed(1)} 秒` : ''}`, record.id)))
         if (records().some(record => record.id === previous)) panel.media.value = previous
         panel.media.hidden = panel.media.options.length < 2
+        panel.saveAll.hidden = panel.media.options.length < 2
+        const label = `保存全部（${panel.media.options.length}）`
+        panel.saveAll.querySelector('span').textContent = label
+        panel.saveAll.setAttribute('aria-label', label)
+        panel.saveAll.title = label
         updateQuality()
     }
 
@@ -1915,32 +1927,39 @@ function startVideoTools(options) {
         }
     }
 
-    async function saveVideo() {
+    async function saveVideo(all = false) {
         const current = panel
         const id = activePost
         const url = current.address.value
-        const filename = `x-${id}-${selected()?.id || 'video'}.mp4`
-        if (!url || current.save.disabled) return
+        const media = all ? records() : [{ id: selected()?.id || 'video', mp4: [{ url }] }]
+        if ((!all && !url) || current.save.disabled || !media.length) return
+        if (media.some(record => !record.mp4.length)) { current.status.textContent = '部分视频尚无 MP4 地址，请重新读取后再保存全部。'; return }
         const controller = new AbortController()
         current.downloadController = controller
-        current.save.disabled = true
-        if (options.video_save_method === 'system_share') clearSavePrompt()
+        current.save.disabled = current.saveAll.disabled = true
+        clearSavePrompt()
         current.status.textContent = '正在准备视频…'
         try {
-            const blob = await fetchVideoBlob(url, controller)
-            if (destroyed || activePost !== id || !current.dialog.open) return
+            const files = []
+            let totalBytes = 0
+            for (const record of media) {
+                const blob = await fetchMediaBlob(record.mp4[0].url, controller, ['video/mp4'], maxBytes - totalBytes)
+                if (destroyed || controller.signal.aborted || activePost !== id || !current.dialog.open) return
+                totalBytes += blob.size
+                files.push(new File([blob], `x-${id}-${record.id}.mp4`, { type: 'video/mp4' }))
+            }
             if (options.video_save_method === 'system_share') {
-                offerSystemShare([new File([blob], filename, { type: 'video/mp4' })], current.dialog)
+                offerSystemShare(files, current.dialog)
                 current.status.textContent = ''
             } else {
-                saveBlob(blob, filename, current.dialog)
+                for (const file of files) saveBlob(file, file.name, current.dialog)
                 current.status.textContent = '已请求保存；若浏览器转为播放，可通过系统分享菜单保存。'
             }
         } catch (error) {
             if (activePost === id && current.dialog.open) current.status.textContent = error.message.startsWith('视频较大') ? error.message : '保存失败，请打开原文件后通过浏览器保存。'
         } finally {
             if (current.downloadController === controller) current.downloadController = null
-            current.save.disabled = false
+            current.save.disabled = current.saveAll.disabled = false
         }
     }
 
@@ -2063,7 +2082,7 @@ function removeAds(document, options, diagnosticSource = null) {
     if (options.enable_video_tools || options.enable_share_menu_download || options.enable_image_tools) {
         const video = document.createElement('script')
         video.setAttribute('data-stash-x-video', 'bootstrap')
-        video.textContent = `window.__stashXVideoStatus={version:"20261123.11",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download, video_save_method: options.video_save_method, enable_image_tools: options.enable_image_tools, image_save_method: options.image_save_method })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
+        video.textContent = `window.__stashXVideoStatus={version:"20261123.12",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download, video_save_method: options.video_save_method, enable_image_tools: options.enable_image_tools, image_save_method: options.image_save_method })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
         const head = document.head || document.documentElement
         const firstScript = head.querySelector('script')
         if (firstScript) firstScript.before(video)

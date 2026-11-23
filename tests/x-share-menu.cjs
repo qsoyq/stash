@@ -114,10 +114,10 @@ module.exports = async function checkShareMenu(browser, engine, width) {
         assert.equal(await replacement.count(), 0, 'Disabled experiment changed the share menu');
         await page.locator('#native-download').click();
         assert.equal(await page.evaluate(() => window.upsells), 1, 'Original handler changed while disabled');
-        assert(await page.locator('article').getByRole('button', { name: '视频文件', exact: true }).count() > 0);
+        assert(await page.locator('article').getByRole('button', { name: /^视频文件 · / }).count() > 0);
 
         await boot(false, true, false);
-        assert.equal(await page.locator('article').getByRole('button', { name: '视频文件', exact: true }).count(), 0, 'Menu option enabled the independent toolbar entry');
+        assert.equal(await page.locator('article').getByRole('button', { name: /^视频文件 · / }).count(), 0, 'Menu option enabled the independent toolbar entry');
         await page.evaluate(() => window.openShare());
         await settle();
         assert.equal(await replacement.count(), 0, 'Unrelated menu was modified without a share trigger');
@@ -381,7 +381,7 @@ module.exports = async function checkShareMenu(browser, engine, width) {
 
         await boot(true, false, true, 'system_share');
         await installShareAPI();
-        await page.locator('#post-101').getByRole('button', { name: '视频文件', exact: true }).click();
+        await page.locator('#post-101').getByRole('button', { name: /^视频文件 · / }).click();
         await panel.getByRole('combobox', { name: '画质', exact: true }).selectOption(low);
         await panel.getByRole('button', { name: '保存视频', exact: true }).click();
         await savePrompt.waitFor();
@@ -394,8 +394,24 @@ module.exports = async function checkShareMenu(browser, engine, width) {
         await savePrompt.waitFor();
         await panel.getByRole('button', { name: '关闭', exact: true }).click();
         await savePrompt.waitFor({ state: 'detached' });
-        await page.locator('#post-101').getByRole('button', { name: '视频文件', exact: true }).click();
+        await page.locator('#post-101').getByRole('button', { name: /^视频文件 · / }).click();
         await panel.getByRole('button', { name: '保存视频', exact: true }).click();
+        await savePrompt.waitFor();
+        await panel.getByRole('button', { name: '关闭', exact: true }).click();
+        await page.evaluate(({ markup, data }) => {
+            document.body.insertAdjacentHTML('beforeend', markup);
+            const script = document.createElement('script');script.type = 'application/json';script.textContent = JSON.stringify(data);document.body.appendChild(script);
+        }, { markup: article('808'), data: multi });
+        await page.locator('#post-808').getByRole('button', { name: '视频文件 · 2', exact: true }).click();
+        await panel.getByRole('combobox', { name: '画质', exact: true }).selectOption(low);
+        const beforeBatch = requests.length;
+        await panel.getByRole('button', { name: '保存全部（2）', exact: true }).click();
+        await savePrompt.waitFor();
+        assert.deepEqual(requests.slice(beforeBatch), [high, high], 'Save all must choose the highest quality for every video');
+        await savePrompt.getByRole('button', { name: '系统分享', exact: true }).click();
+        await savePrompt.waitFor({ state: 'detached' });
+        assert.deepEqual((await page.evaluate(() => window.sharedFiles.at(-1))).map(file => file.name).sort(), ['x-808-media808.mp4', 'x-808-media808b.mp4'], 'Panel batch share lost videos');
+        await panel.getByRole('button', { name: '保存全部（2）', exact: true }).click();
         await savePrompt.waitFor();
         await page.evaluate(() => window.__stashXVideos.destroy());
         assert.equal(await savePrompt.count(), 0, 'Destroy retained prepared files and save prompt');

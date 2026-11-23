@@ -64,8 +64,10 @@ module.exports = async function checkVideoTools(browser, engine, width) {
             document.addEventListener('click', () => { window.originalClicks = (window.originalClicks || 0) + 1; });
         });
         await page.goto('https://x.com/u/status/101');
-        const entry = id => page.locator(`#post-${id}`).getByRole('button', { name: '视频文件', exact: true });
+        const entry = id => page.locator(`#post-${id}`).getByRole('button', { name: /^视频文件 · / });
         await entry('101').first().waitFor();
+        assert.equal(await entry('101').first().textContent(), '视频文件 · 2', 'Video entry does not display its media count');
+        assert.equal(await entry('303').textContent(), '视频文件 · 1', 'Single video entry must display its count');
         await entry('808').waitFor();
         assert(await entry('808').isVisible(), 'Unplayed iPhone preview must have an entry before a video element exists');
         await page.evaluate(() => document.querySelector('#post-808 [data-testid="playButton"]').remove());
@@ -120,6 +122,15 @@ module.exports = async function checkVideoTools(browser, engine, width) {
         await dialog.getByRole('button', { name: '保存视频', exact: true }).click();
         const download = await downloadPromise;
         assert.equal(download.suggestedFilename(), 'x-101-v101b.mp4');
+        const batch = [];
+        const collect = file => batch.push(file);
+        page.on('download', collect);
+        const batchDone = page.waitForEvent('download', { predicate: () => batch.length === 2 });
+        await dialog.getByRole('button', { name: '保存全部（2）', exact: true }).click();
+        await dialog.getByText('已请求保存；若浏览器转为播放，可通过系统分享菜单保存。', { exact: true }).waitFor();
+        await batchDone;
+        page.off('download', collect);
+        assert.deepEqual(batch.map(file => file.suggestedFilename()).sort(), ['x-101-v101a.mp4', 'x-101-v101b.mp4'], 'Save all did not download each video');
         await dialog.locator('summary').click();
         await dialog.getByRole('button', { name: '复制调试信息' }).click();
         const debug = JSON.parse(await page.evaluate(() => window.copied.at(-1)));
@@ -171,15 +182,23 @@ module.exports = async function checkVideoTools(browser, engine, width) {
         await entry('606').click();
         await address.waitFor();
         assert.equal(await address.inputValue(), high, 'Embedded video in serialized SSR JSON was not associated with its displaying post');
+        await page.evaluate(payload => {
+            const script = document.createElement('script');
+            script.type = 'application/json';script.textContent = JSON.stringify(payload);document.head.appendChild(script);
+        }, tweet('606', [video('606', 'v606b')]));
+        await entry('606').filter({ hasText: '视频文件 · 2' }).waitFor();
+        await dialog.getByRole('button', { name: '保存全部（2）', exact: true }).waitFor();
         await close();
         // No MP4 must not become a misleading download; unsafe URLs never surface.
         await page.evaluate(payload => {
             const script = document.createElement('script');
             script.type = 'application/json'; script.textContent = JSON.stringify(payload); document.head.appendChild(script);
-        }, { data: { result: tweet('707', [video('707', 'v707', [{ content_type: 'video/mp4', url: 'https://example.com/not-a-video.mp4' }, { content_type: 'application/x-mpegURL', url: hls }])]) } });
+        }, { data: { result: tweet('707', [video('707', 'v707', [{ content_type: 'video/mp4', url: 'https://example.com/not-a-video.mp4' }, { content_type: 'application/x-mpegURL', url: hls }]), video('707', 'v707b')]) } });
         await entry('707').click();
         await dialog.getByText('仅返回了 HLS 地址，可在调试信息中复制。').waitFor();
         assert.equal(await dialog.getByRole('link', { name: '打开原文件' }).count(), 0, 'Unsafe URL exposed as a video');
+        await dialog.getByRole('button', { name: '保存全部（2）', exact: true }).click();
+        await dialog.getByText('部分视频尚无 MP4 地址，请重新读取后再保存全部。', { exact: true }).waitFor();
         await close();
         // Hydration can replace a tweet or remove foreign UI without changing routes.
         await page.evaluate(() => {
@@ -219,6 +238,7 @@ module.exports = async function checkVideoTools(browser, engine, width) {
     } finally { await page.close(); }
 };
 
+
 async function checkOpenContexts(browser, engine, html, high, low) {
     const profiles = [
         { name: 'iPhone Home Screen', userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X)', platform: 'iPhone', touch: 5, standalone: true, safari: true },
@@ -254,7 +274,7 @@ async function checkOpenContexts(browser, engine, html, high, low) {
             await page.route('https://x.com/**', route => route.fulfill(new URL(route.request().url()).pathname === '/u/status/101' ? { contentType: 'text/html; charset=utf-8', body: html } : { json: {} }));
             await page.route('https://video.twimg.com/**', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Original video</title>' }));
             await page.goto('https://x.com/u/status/101');
-            await page.locator('#post-101').getByRole('button', { name: '视频文件', exact: true }).first().tap();
+            await page.locator('#post-101').getByRole('button', { name: /^视频文件 · / }).first().tap();
             const dialog = page.getByRole('dialog', { name: '视频文件' });
             const open = dialog.getByRole('link', { name: profile.safari ? '在 Safari 打开' : '打开原文件', exact: true });
             await open.waitFor();
