@@ -2059,7 +2059,7 @@ function startVideoTools(options) {
     if (document.readyState !== 'loading') readInitial()
 }
 
-const LAYOUT_DIAGNOSTICS_URL = 'https://raw.githubusercontent.com/qsoyq/stash/feat/x-video-tools/script/browser/layout-diagnostics.js'
+const LAYOUT_DIAGNOSTICS_URL = 'https://raw.githubusercontent.com/qsoyq/stash/main/script/browser/layout-diagnostics.js'
 
 async function loadLayoutDiagnosticsSource() {
     try {
