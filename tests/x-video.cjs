@@ -17,11 +17,16 @@ module.exports = async function checkVideoTools(browser, engine, width) {
         allow_download_status: { allow_download: true }, video_info: { duration_millis: 54900, variants },
     });
     const tweet = (id, media) => ({ __typename: 'Tweet', rest_id: id, media_entities2: media });
+    const cardTweet = (id, media, array = false) => {
+        const value = { string_value: JSON.stringify({ type: 'video_website', media_entities: Object.fromEntries(media.map(item => [item.id_str, item])), destination_objects: { browser: { data: { url_data: { url: 'https://example.com/card-destination' } } } } }) };
+        const binding_values = array ? [{ key: 'unified_card', value }] : { unified_card: value };
+        return { __typename: 'Tweet', ...(array ? { rest_id: id } : { id_str: id }), card: array ? { legacy: { binding_values } } : { binding_values } };
+    };
     const article = (id, extra = '') => `<article id="post-${id}"><a href="/u/status/${id}"><time>2026-11-22</time></a><p>Video ${id}</p><div data-testid="videoPlayer"><video controls playsinline></video></div>${extra}</article>`;
     const quote = '<div data-testid="quoteTweet" role="link"><a href="/u/status/202"><time>Quoted video</time></a><div data-testid="videoPlayer"><video controls></video></div></div>';
     const newPlayer = '<div style="overflow:hidden;aspect-ratio:1"><div style="position:relative;aspect-ratio:1;overflow:hidden"><video controls playsinline></video><button style="position:absolute;inset:0">Play</button></div></div>';
     const newArticle = article('303').replace('<time>2026-11-22</time>', '<span>2026-11-22</span>').replace('href="/u/status/303"', 'href="https://m.x.com/u/status/303?launch_app_store=true"').replace('<div data-testid="videoPlayer"><video controls playsinline></video></div>', newPlayer);
-    const initial = { data: { result: { ...tweet('101', [video('101', 'v101a'), video('101', 'v101b')]), quoted_status_result: { result: tweet('202', [video('202', 'v202')]) } } } };
+    const initial = { data: { result: { ...tweet('101', [video('101', 'v101a'), video('101', 'v101b')]), card: { binding_values: { unified_card: { string_value: '{invalid' } } }, quoted_status_result: { result: cardTweet('202', [video('202', 'v202')], true) } } } };
     // The first API requests run in <head>, before the injected body script.
     const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
         <style>body{margin:0;font:16px -apple-system,sans-serif;background:white;color:#0f1419}main{max-width:580px;margin:auto;padding:16px}article{padding:16px 0;border-bottom:1px solid #ddd}video{display:block;width:100%;height:120px;background:#eee}a{color:#536471}[data-testid=quoteTweet]{margin:12px;padding:12px;border:1px solid #ddd}</style>
@@ -54,7 +59,7 @@ module.exports = async function checkVideoTools(browser, engine, width) {
             if (url.pathname.startsWith('/i/web/status/')) { shellRequests++; return route.fulfill({ contentType: 'text/html', body: '<!doctype html><html><body>No media</body></html>' }); }
             if (url.pathname.includes('/early/')) return route.fulfill({ json: { data: { result: tweet('303', [video('303', '2124490488032137216')]) } } });
             if (url.pathname.includes('/xhr/')) return route.fulfill({ json: { data: { result: { rest_id: '404', legacy: { extended_entities: { media: [video('404', 'v404')] } } } } } });
-            if (url.pathname.includes('/late/')) return route.fulfill({ json: { data: { result: tweet('505', [{ ...video('202', 'v505'), source_status_id_str: '202' }]) } } });
+            if (url.pathname.includes('/late/')) return route.fulfill({ json: { data: { result: cardTweet('505', [{ ...video('202', 'v505'), source_status_id_str: '202' }]) } } });
             return route.fulfill({ json: {} });
         });
         await page.route('https://video.twimg.com/**', route => route.fulfill({ contentType: 'video/mp4', headers: { 'access-control-allow-origin': '*' }, body: Buffer.from('000000186674797069736f6d0000000169736f6d69736f34', 'hex') }));
@@ -178,7 +183,7 @@ module.exports = async function checkVideoTools(browser, engine, width) {
             script.type = 'application/x-hydration-fixture';
             script.textContent = `window.notExecuted=${JSON.stringify(JSON.stringify(payload))};`;
             document.head.appendChild(script);
-        }, { data: { result: { __typename: 'Tweet', id_str: '606', mediaDetails: [{ ...video('202', 'v606'), source_status_id_str: '202' }] } } });
+        }, { data: { result: cardTweet('606', [{ ...video('202', 'v606'), source_status_id_str: '202' }], true) } });
         await entry('606').click();
         await address.waitFor();
         assert.equal(await address.inputValue(), high, 'Embedded video in serialized SSR JSON was not associated with its displaying post');
@@ -193,8 +198,9 @@ module.exports = async function checkVideoTools(browser, engine, width) {
         await page.evaluate(payload => {
             const script = document.createElement('script');
             script.type = 'application/json'; script.textContent = JSON.stringify(payload); document.head.appendChild(script);
-        }, { data: { result: tweet('707', [video('707', 'v707', [{ content_type: 'video/mp4', url: 'https://example.com/not-a-video.mp4' }, { content_type: 'application/x-mpegURL', url: hls }]), video('707', 'v707b')]) } });
+        }, { data: { result: cardTweet('707', [video('707', 'v707', [{ content_type: 'video/mp4', url: 'https://example.com/not-a-video.mp4' }, { content_type: 'application/x-mpegURL', url: hls }]), video('707', 'v707b')]) } });
         await entry('707').click();
+        await dialog.getByRole('combobox', { name: '视频', exact: true }).selectOption('v707');
         await dialog.getByText('仅返回了 HLS 地址，可在调试信息中复制。').waitFor();
         assert.equal(await dialog.getByRole('link', { name: '打开原文件' }).count(), 0, 'Unsafe URL exposed as a video');
         await dialog.getByRole('button', { name: '保存全部（2）', exact: true }).click();

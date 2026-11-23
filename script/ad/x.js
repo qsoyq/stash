@@ -872,6 +872,15 @@ function startVideoTools(options) {
             const tweet = value.__typename === 'Tweet' || value.media_entities2 || value.extended_entities || value.mediaDetails || value.legacy
             const candidate = value.rest_id || value.id_str || value.legacy?.id_str
             const id = tweet && typeof candidate === 'string' && /^\d+$/.test(candidate) ? candidate : inherited
+            const bindings = value.binding_values
+            const card = Array.isArray(bindings) ? bindings.find(binding => binding?.key === 'unified_card')?.value : bindings?.unified_card
+            if (id && typeof card?.string_value === 'string' && card.string_value.length <= 1024 * 1024) {
+                try {
+                    const decoded = JSON.parse(card.string_value)
+                    // Only ingest media; card destinations are external website links.
+                    if (decoded?.media_entities && typeof decoded.media_entities === 'object') stack.push([decoded.media_entities, id])
+                } catch (_) { /* Malformed cards must not prevent other tweet media from loading. */ }
+            }
             // Embedded media keeps its original permalink; the enclosing tweet owns this display.
             const owner = id || postId(value.expanded_url) || (typeof value.source_status_id_str === 'string' ? value.source_status_id_str : null)
             if (options.enable_image_tools && owner && value.type === 'photo') changed = rememberImage(owner, value, position, source) || changed
@@ -2082,7 +2091,7 @@ function removeAds(document, options, diagnosticSource = null) {
     if (options.enable_video_tools || options.enable_share_menu_download || options.enable_image_tools) {
         const video = document.createElement('script')
         video.setAttribute('data-stash-x-video', 'bootstrap')
-        video.textContent = `window.__stashXVideoStatus={version:"20261123.12",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download, video_save_method: options.video_save_method, enable_image_tools: options.enable_image_tools, image_save_method: options.image_save_method })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
+        video.textContent = `window.__stashXVideoStatus={version:"20261124.1",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download, video_save_method: options.video_save_method, enable_image_tools: options.enable_image_tools, image_save_method: options.image_save_method })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
         const head = document.head || document.documentElement
         const firstScript = head.querySelector('script')
         if (firstScript) firstScript.before(video)
