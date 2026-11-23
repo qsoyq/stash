@@ -23,9 +23,10 @@ module.exports = async function checkImages(browser, engine, width) {
     const quote = `<div role="link" data-testid="quoteTweet"><a href="/u/status/202"><time>Quote</time></a>${tiles('202', [1])}</div>`;
     const article = (id, indices, extra = '') => `<article id="post-${id}"><a href="/u/status/${id}"><time>Post ${id}</time></a>${tiles(id, indices)}${extra}</article>`;
     const timeline = `<article id="post-909"><div class="timeline"><div class="avatar"></div><div class="post-content"><a href="/u/status/909"><time>Post 909</time></a><div data-testid="tweetText">Timeline post with two images</div><div class="media-row">${tiles('909', [1, 2])}<span hidden></span></div><div role="group">Reply · Like · Share</div></div></div></article>`;
+    const mixed = `<article id="post-910"><div class="timeline"><div class="avatar"></div><div class="post-content"><a href="/u/status/910"><time>Post 910</time></a><div data-testid="tweetText">Timeline post with a photo and a video</div><nav aria-label="Media"><div class="carousel-shell"><div data-testid="ScrollSnap-SwipeableList"><div data-testid="ScrollSnap-List" role="tablist"><div role="presentation">${tiles('910', [1])}</div><div role="presentation"><div data-testid="videoPlayer"><div data-testid="previewInterstitial"><button data-testid="playButton">Play</button></div></div></div></div></div><button class="next" aria-label="Next media">Next</button><span hidden></span></div></nav><div role="group">Reply · Like · Share</div></div></div></article>`;
     const data = [tweet('101', [1, 2, 3, 4].map(index => photo('101', index))), tweet('202', [photo('202', 1)]), tweet('404', [{ type: 'video', media_url_https: 'https://pbs.twimg.com/amplify_video_thumb/404/img/poster.jpg' }, photo('404', 2), photo('404', 3)]), tweet('909', [photo('909', 1), photo('909', 2)])];
     const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font:15px -apple-system,sans-serif;margin:0;color:#0f1419;background:white}main{max-width:580px;margin:auto;padding:16px}article{padding:16px 0;border-bottom:1px solid #ddd}.photos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px}.tile{position:relative;aspect-ratio:4/3;overflow:hidden}.tile img{width:100%;height:100%;object-fit:cover}.tile a{position:absolute;inset:0}[data-testid=quoteTweet]{margin:12px;border:1px solid #ccc;padding:8px}</style><script>window.__INITIAL_STATE__=${JSON.stringify({ data })}</script></head><body><main>${article('101', [1, 2, 3, 4], quote)}${article('303', [], '<img src="https://pbs.twimg.com/profile_images/avatar.jpg"><div data-testid="card.wrapper"><img src="https://pbs.twimg.com/media/card?format=jpg&name=small"></div>')}${article('404', [2, 3], '<div data-testid="videoPlayer"><img src="https://pbs.twimg.com/amplify_video_thumb/404/img/poster.jpg"></div>')}${article('505', [1])}${article('707', [1])}${article('606', []).replace('<div class="photos"></div>', '<a href="/u/status/606/photo/1"><img src="https://example.com/foreign.jpg"></a>')}</main></body></html>`;
-    const layoutHTML = html.replace('</style>', '.timeline{display:flex;gap:12px}.avatar{width:40px;height:40px;border-radius:50%;background:#ddd;flex:none}.post-content{flex:1;min-width:0}.media-row{display:flex;flex-direction:row;align-items:center;justify-content:center}.media-row>.photos{flex:none;width:100%}[data-testid=tweetText]{margin:8px 0}</style>').replace('</main>', `${timeline}</main>`);
+    const layoutHTML = html.replace('</style>', '.timeline{display:flex;gap:12px}.avatar{width:40px;height:40px;border-radius:50%;background:#ddd;flex:none}.post-content{flex:1;min-width:0}.media-row{display:flex;flex-direction:row;align-items:center;justify-content:center}.media-row>.photos{flex:none;width:100%}[data-testid=tweetText]{margin:8px 0}.carousel-shell{position:relative;display:flex;flex-direction:row}.carousel-shell>[data-testid=ScrollSnap-SwipeableList]{width:100%;min-width:0;flex:none}[data-testid=ScrollSnap-List]{display:flex;overflow:auto hidden;scroll-snap-type:x mandatory;gap:4px}[data-testid=ScrollSnap-List]>[role=presentation]{flex:0 0 calc(50% - 2px);scroll-snap-align:start}[data-testid=ScrollSnap-List] .photos{display:block}[data-testid=ScrollSnap-List] [data-testid=videoPlayer]{height:160px;background:#eee}.next{position:absolute;right:0;top:0}</style>').replace('</main>', `${timeline}${mixed}</main>`);
     let rewritten;
     let failThird = false;
     const originals = [];
@@ -65,17 +66,18 @@ module.exports = async function checkImages(browser, engine, width) {
             Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => { if (window.denyClipboard) throw new Error('Denied');window.copied.push(text); } } });
             document.addEventListener('click', () => { window.delegatedClicks = (window.delegatedClicks || 0) + 1; });
         });
-        const boot = async (enabled, method = 'system_share') => {
-            rewritten = await page.evaluate(async ({ source, html, enabled, method }) => {
+        const boot = async (enabled, method = 'system_share', videos = false) => {
+            rewritten = await page.evaluate(async ({ source, html, enabled, method, videos }) => {
                 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
                 const parser = source.slice(source.indexOf('function getXOptions()'), source.indexOf('function removeAdsCode('));
                 const defaults = new Function(`${parser};return getXOptions();`)();
                 const settings = Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, typeof value === 'boolean' ? false : value]));
                 settings.enable_image_tools = enabled;settings.image_save_method = method;
+                settings.enable_video_tools = videos;
                 let result;
                 await new AsyncFunction('$request', '$response', '$script', '$argument', '$done', source)({ url: 'https://x.com/u/status/101' }, { headers: { 'content-type': 'text/html' }, body: html }, { type: 'response' }, JSON.stringify(settings), value => { result = value; });
                 return result.body || html;
-            }, { source, html: layoutHTML, enabled, method });
+            }, { source, html: layoutHTML, enabled, method, videos });
             await page.goto('https://x.com/u/status/101');
         };
         const entry = id => page.locator(`#post-${id}`).getByRole('button', { name: /^图片文件/ });
@@ -230,6 +232,38 @@ module.exports = async function checkImages(browser, engine, width) {
         await page.evaluate(() => window.__stashXVideos.destroy());
         assert.equal(await page.getByRole('button', { name: /^图片文件/ }).count(), 0);
         assert.equal(await page.getByRole('dialog', { name: '图片文件' }).count(), 0);
+        // Both tools must stay outside the native swipeable list, independently
+        // and together, including the poster-to-video hydration transition.
+        for (const [images, videos] of [[false, false], [true, false], [false, true], [true, true]]) {
+            await boot(images, 'system_share', videos);
+            const scope = page.locator('#post-910');
+            if (images) await scope.getByRole('button', { name: /^图片文件/ }).waitFor();
+            if (videos) await scope.getByRole('button', { name: '视频文件', exact: true }).waitFor();
+            const inspect = () => scope.evaluate(scope => {
+                const list = scope.querySelector('[data-testid="ScrollSnap-List"]');
+                const text = scope.querySelector('[data-testid="tweetText"]').getBoundingClientRect();
+                const carousel = scope.querySelector('nav').getBoundingClientRect();
+                const first = list.querySelector('[role="presentation"]').getBoundingClientRect();
+                const controls = Array.from(scope.querySelectorAll('[data-stash-x-video]')).map(host => {
+                    const button = host.shadowRoot.querySelector('button');
+                    const rect = button.getBoundingClientRect();
+                    return { label: button.getAttribute('aria-label'), below: rect.top >= carousel.bottom, aligned: Math.abs(rect.left - text.left) < 1, unwrapped: button.querySelector('span').getBoundingClientRect().height < 30 };
+                });
+                return { inside: list.querySelectorAll('[data-stash-x-video]').length, textLeft: text.left, photoLeft: first.left, width: list.getBoundingClientRect().width, controls };
+            });
+            const state = await inspect();
+            console.log(`${engine.name()} ${width}px mixed layout (${images}/${videos}): ${JSON.stringify(state)}`);
+            assert.equal(state.inside, 0, 'A media entry became a carousel slide');
+            assert(Math.abs(state.photoLeft - state.textLeft) < 1, 'Mixed media lost text alignment');
+            assert.equal(state.controls.length, Number(images) + Number(videos));
+            assert(state.controls.every(control => control.below && control.aligned && control.unwrapped), 'Mixed media entry is beside the carousel or wrapped vertically');
+            if (videos) {
+                await scope.locator('[data-testid="previewInterstitial"]').evaluate(preview => preview.replaceWith(document.createElement('video')));
+                await scope.getByRole('button', { name: '视频文件', exact: true }).waitFor();
+                assert.deepEqual(await inspect(), state, 'Video hydration shifted or duplicated media controls');
+            }
+            if (images && videos) await scope.screenshot({ path: path.join(layoutArtifacts, `${engine.name()}-${width}-mixed-entry-layout.png`) });
+        }
         assert.deepEqual(errors, []);
         console.log(`${engine.name()} ${width}px: PASS image-only mode, original formats/order, quote isolation, selection/copy, metadata fallback, batch share/download, retry and cleanup`);
     } finally { await page.close(); }

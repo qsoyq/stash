@@ -1175,6 +1175,29 @@ function startVideoTools(options) {
         listen(document, 'touchcancel', cancelShare, true)
     }
 
+    function mountMediaEntry(host, nodes, scope) {
+        let mount = nodes[0].tagName === 'A' ? nodes[0].parentElement : nodes[0]
+        while (mount !== scope && !nodes.every(node => mount.contains(node))) mount = mount.parentElement
+        // A tool is not a carousel slide. Escape the native swipeable list
+        // before walking its outer layout, including mixed photo/video posts.
+        const carousel = mount.closest('[data-testid="ScrollSnap-SwipeableList"], [data-testid="ScrollSnap-List"]')
+        if (carousel && scope.contains(carousel)) mount = carousel
+        while (mount !== scope && mount.parentElement && mount.parentElement !== scope) {
+            const parent = mount.parentElement
+            const computed = getComputedStyle(parent)
+            const mediaRow = ['flex', 'inline-flex'].includes(computed.display) && computed.flexDirection.startsWith('row') &&
+                !parent.querySelector('[data-testid="tweetText"], time, [data-testid="reply"], [data-testid="like"], [data-testid="quoteTweet"], [data-testid="card.wrapper"]')
+            const children = Array.from(parent.children).filter(child => !child.matches(marker))
+            if (!mediaRow && children.length !== 1 && computed.aspectRatio === 'auto' && !['hidden', 'clip'].includes(computed.overflow)) break
+            mount = parent
+        }
+        if (mount === scope) scope.appendChild(host)
+        else {
+            while (mount.nextElementSibling?.matches(marker)) mount = mount.nextElementSibling
+            mount.insertAdjacentElement('afterend', host)
+        }
+    }
+
     function scanImages() {
         if (!options.enable_image_tools) return
         const groups = new Map()
@@ -1209,20 +1232,7 @@ function startVideoTools(options) {
             button.onclick = event => { event.preventDefault(); event.stopPropagation(); if (identify(scope) === id) openImagePanel(id, button) }
             root.appendChild(button)
             host.addEventListener('click', event => event.stopPropagation())
-            let mount = nodes[0].tagName === 'A' ? nodes[0].parentElement : nodes[0]
-            while (mount !== scope && !nodes.every(node => mount.contains(node))) mount = mount.parentElement
-            while (mount.parentElement && mount.parentElement !== scope) {
-                const parent = mount.parentElement
-                const computed = getComputedStyle(parent)
-                // Media rows can also contain placeholders or overlay controls.
-                // Follow the whole row so the entry cannot shift or shrink its images.
-                const mediaRow = ['flex', 'inline-flex'].includes(computed.display) && computed.flexDirection.startsWith('row') &&
-                    !parent.querySelector('[data-testid="tweetText"], time, [role="group"], [data-testid="quoteTweet"], [data-testid="card.wrapper"]')
-                if (!mediaRow && parent.children.length !== 1 && computed.aspectRatio === 'auto' && !['hidden', 'clip'].includes(computed.overflow)) break
-                mount = parent
-            }
-            if (mount === scope) scope.appendChild(host)
-            else mount.insertAdjacentElement('afterend', host)
+            mountMediaEntry(host, nodes, scope)
             imageEntries.set(scope, { host, button, post: id })
         }
     }
@@ -1268,15 +1278,7 @@ function startVideoTools(options) {
                 // X's delegated click handlers must not treat this as a tweet tap.
                 host.addEventListener('click', event => event.stopPropagation())
                 root.appendChild(button)
-                let mount = player.closest('[data-testid="videoPlayer"]') || player
-                // Keep the entry outside fixed-aspect media frames and overlays.
-                // Both old videoPlayer wrappers and new SSR players clip children.
-                for (let parent = mount.parentElement; parent && parent !== scope; parent = mount.parentElement) {
-                    const computed = getComputedStyle(parent)
-                    if (parent.children.length !== 1 && computed.aspectRatio === 'auto' && !['hidden', 'clip'].includes(computed.overflow)) break
-                    mount = parent
-                }
-                mount.insertAdjacentElement('afterend', host)
+                mountMediaEntry(host, [player.closest('[data-testid="videoPlayer"]') || player], scope)
                 entries.set(scope, { host, post: id })
             })
             scanImages()
@@ -2060,7 +2062,7 @@ function removeAds(document, options, diagnosticSource = null) {
     if (options.enable_video_tools || options.enable_share_menu_download || options.enable_image_tools) {
         const video = document.createElement('script')
         video.setAttribute('data-stash-x-video', 'bootstrap')
-        video.textContent = `window.__stashXVideoStatus={version:"20261123.9",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download, video_save_method: options.video_save_method, enable_image_tools: options.enable_image_tools, image_save_method: options.image_save_method })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
+        video.textContent = `window.__stashXVideoStatus={version:"20261123.10",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download, video_save_method: options.video_save_method, enable_image_tools: options.enable_image_tools, image_save_method: options.image_save_method })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
         const head = document.head || document.documentElement
         const firstScript = head.querySelector('script')
         if (firstScript) firstScript.before(video)
