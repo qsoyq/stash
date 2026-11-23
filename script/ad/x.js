@@ -684,6 +684,8 @@ function startVideoTools(options) {
     const controllers = new Set()
     const objectURLs = new Set()
     const timers = new Set()
+    const shareDownloads = new Map()
+    let downloadNotice = null
     const originalFetch = window.fetch
     const originalOpen = XMLHttpRequest.prototype.open
     const originalSend = XMLHttpRequest.prototype.send
@@ -954,8 +956,9 @@ function startVideoTools(options) {
     }
 
     function activateShare(context) {
-        if (shareContext !== context || context.activating || !validShareContext()) return
+        if (shareContext !== context || context.activating || shareDownloads.has(context.id) || !validShareContext()) return
         context.activating = true
+        downloadSharedPost(context)
         const menu = context.menu
         const cancel = Array.from(menu.querySelectorAll('button, [role="button"], [role="menuitem"]')).find(item =>
             !item.closest(marker) && item.getClientRects().length &&
@@ -963,7 +966,7 @@ function startVideoTools(options) {
         const mask = menu.querySelector('[data-testid="mask"]')
         shareDiagnostics.dismissal = cancel ? 'cancel' : mask ? 'mask' : 'escape'
         // Mobile sheets manage their own focus and may ignore synthetic Escape.
-        // Use their dismissal action before opening a second modal.
+        // Use their dismissal action while the MP4 downloads independently.
         if (cancel) cancel.click()
         else if (mask) mask.click()
         else menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, cancelable: true }))
@@ -978,10 +981,9 @@ function startVideoTools(options) {
             }
             context.activating = false
             shareDiagnostics.dismissed = closed
-            if (closed) { clearShareRow(); shareContext = null }
             // If dismissal was refused, retain the replacement rather than
             // exposing the original subscription action on the next tap.
-            openPanel(context.id, context.trigger)
+            if (closed) { clearShareRow(); shareContext = null }
         }
         const timer = setTimeout(() => { timers.delete(timer); finish() }, 0)
         timers.add(timer)
@@ -1005,11 +1007,30 @@ function startVideoTools(options) {
         if (shareRow?.button.isConnected && shareRow.original === (original || null)) return
         clearShareRow()
         shareDiagnostics.action = original ? 'replaced' : 'added'
-        const button = iconButton('download', '下载视频')
+        const peers = Array.from(menu.querySelectorAll('[role="menuitem"], button, [role="button"], a[href]')).filter(item =>
+            item !== original && !item.closest(marker) && !nativeDownload(item) && !item.disabled && item.getAttribute('aria-disabled') !== 'true' && item.getClientRects().length)
+        const peer = peers[0]
+        const label = peer && Array.from(peer.querySelectorAll('span')).find(span => !span.children.length && span.textContent.trim())
+        const color = getComputedStyle(label || peer || menu).color
+        const button = original ? original.cloneNode(true) : iconButton('download', '下载视频')
+        // Preserve the native row's icon, spacing and typography. Its label can
+        // have its own disabled color, independent of the menu container.
+        for (const node of [button, ...button.querySelectorAll('*')]) {
+            for (const attribute of Array.from(node.attributes)) {
+                if (/^on/i.test(attribute.name) || ['id', 'href', 'disabled', 'aria-disabled'].includes(attribute.name)) node.removeAttribute(attribute.name)
+            }
+            node.style.setProperty('color', color, 'important')
+            node.style.setProperty('opacity', '1', 'important')
+        }
+        button.style.setProperty('pointer-events', 'auto', 'important')
         button.setAttribute('role', 'menuitem')
+        button.setAttribute('aria-label', '下载视频')
+        button.tabIndex = 0
         button.setAttribute('data-stash-x-video', 'share-download')
-        button.style.cssText = 'display:flex;align-items:center;gap:12px;width:100%;min-height:44px;padding:12px 16px;border:0;border-radius:0;background:transparent;color:inherit;font:inherit;text-align:start;cursor:pointer;box-sizing:border-box'
-        button.querySelector('svg').style.cssText = 'width:20px;height:20px;flex:none'
+        if (!original) {
+            button.style.cssText += ';display:flex;align-items:center;gap:12px;width:100%;min-height:44px;padding:12px 16px;border:0;border-radius:0;background:transparent;font:inherit;text-align:start;cursor:pointer;box-sizing:border-box'
+            button.querySelector('svg').style.cssText = 'width:20px;height:20px;flex:none'
+        }
         const context = shareContext
         // Keep the sheet's press responders from selecting a native item for
         // this injected control. Defaults remain available for touch scrolling.
@@ -1017,6 +1038,12 @@ function startVideoTools(options) {
             button.addEventListener(type, event => event.stopPropagation())
         }
         button.addEventListener('click', event => {
+            event.preventDefault()
+            event.stopPropagation()
+            activateShare(context)
+        })
+        if (button.tagName !== 'BUTTON') button.addEventListener('keydown', event => {
+            if (!['Enter', ' '].includes(event.key)) return
             event.preventDefault()
             event.stopPropagation()
             activateShare(context)
@@ -1062,7 +1089,7 @@ function startVideoTools(options) {
                 return
             }
             clearShareRow()
-            Object.assign(shareDiagnostics, { trigger: true, menu: false, action: null, dismissal: null, dismissed: null, lastAttempt: 'recognized' })
+            Object.assign(shareDiagnostics, { trigger: true, menu: false, action: null, dismissal: null, dismissed: null, download: null, lastAttempt: 'recognized' })
             shareContext = { id, scope, trigger, path: location.pathname, before: new Set(Array.from(document.querySelectorAll(menuSelector)).filter(visibleMenu)), menu: null }
             schedule()
         } else if (!shareContext?.menu?.contains(target)) {
@@ -1250,6 +1277,22 @@ function startVideoTools(options) {
         panel.status.textContent = url ? '' : loading ? '正在读取视频地址…' : record?.hls ? '仅返回了 HLS 地址，可在调试信息中复制。' : '尚未收到视频地址，可播放视频后重新读取。'
     }
 
+    async function readPost(id, controller) {
+        controllers.add(controller)
+        const timeout = setTimeout(() => controller.abort(), 12000)
+        try {
+            const response = await originalFetch.call(window, `/i/web/status/${id}`, { credentials: 'same-origin', signal: controller.signal })
+            if (!response.ok) throw new Error(`HTTP ${response.status}`)
+            const html = await response.text()
+            if (destroyed || controller.signal.aborted) return
+            const doc = new DOMParser().parseFromString(html, 'text/html')
+            doc.querySelectorAll('script').forEach(readScript)
+        } finally {
+            clearTimeout(timeout)
+            controllers.delete(controller)
+        }
+    }
+
     async function loadPost(id) {
         if (!id || loading || destroyed) return
         loading = true
@@ -1257,20 +1300,11 @@ function startVideoTools(options) {
         if (!records().length) updateAddress()
         const controller = new AbortController()
         metadataController = controller
-        controllers.add(controller)
-        const timeout = setTimeout(() => controller.abort(), 12000)
         try {
-            const response = await originalFetch.call(window, `/i/web/status/${id}`, { credentials: 'same-origin', signal: controller.signal })
-            if (!response.ok) throw new Error(`HTTP ${response.status}`)
-            const html = await response.text()
-            if (destroyed || controller.signal.aborted || activePost !== id || !panel.dialog.open) return
-            const doc = new DOMParser().parseFromString(html, 'text/html')
-            doc.querySelectorAll('script').forEach(readScript)
+            await readPost(id, controller)
         } catch (_) {
             if (!destroyed && !controller.signal.aborted && activePost === id && panel?.dialog.open && !records().length) panel.status.textContent = '读取失败，可播放视频后重试。'
         } finally {
-            clearTimeout(timeout)
-            controllers.delete(controller)
             if (metadataController === controller) {
                 metadataController = null
                 loading = false
@@ -1293,7 +1327,8 @@ function startVideoTools(options) {
         if (!panel?.dialog.open) return
         panel.dialog.close()
         activePost = null
-        controllers.forEach(controller => controller.abort())
+        metadataController?.abort()
+        panel.downloadController?.abort()
         metadataController = null
         loading = false
         panel.retry.disabled = false
@@ -1330,16 +1365,8 @@ function startVideoTools(options) {
         }
     }
 
-    async function saveVideo() {
-        const current = panel
-        const id = activePost
-        const url = current.address.value
-        const filename = `x-${id}-${selected()?.id || 'video'}.mp4`
-        if (!url || current.save.disabled) return
-        const controller = new AbortController()
+    async function fetchVideoBlob(url, controller) {
         controllers.add(controller)
-        current.save.disabled = true
-        current.status.textContent = '正在准备视频…'
         const timeout = setTimeout(() => controller.abort(), 60000)
         try {
             const response = await originalFetch.call(window, url, { credentials: 'omit', signal: controller.signal })
@@ -1355,23 +1382,93 @@ function startVideoTools(options) {
                 if (size > maxBytes) { controller.abort(); throw new Error('视频较大，请打开原文件保存。') }
                 chunks.push(value)
             }
+            return new Blob(chunks, { type: 'video/mp4' })
+        } finally {
+            clearTimeout(timeout)
+            controllers.delete(controller)
+        }
+    }
+
+    function saveBlob(blob, filename, mount = document.body) {
+        const blobURL = URL.createObjectURL(blob)
+        objectURLs.add(blobURL)
+        const link = element('a')
+        link.setAttribute('data-stash-x-video', 'download')
+        link.href = blobURL
+        link.download = filename
+        link.addEventListener('click', event => event.stopPropagation())
+        mount.appendChild(link)
+        link.click()
+        link.remove()
+        const timer = setTimeout(() => { URL.revokeObjectURL(blobURL); objectURLs.delete(blobURL); timers.delete(timer) }, 60000)
+        timers.add(timer)
+    }
+
+    function reportDownloadError(message) {
+        downloadNotice?.remove()
+        const { host, root } = shadowHost()
+        const status = element('p', message)
+        status.setAttribute('role', 'status')
+        status.style.cssText = 'margin:0;padding:10px 14px;border-radius:4px;background:light-dark(#0f1419,#eff3f4);color:light-dark(#fff,#0f1419)'
+        host.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);z-index:2147483647;pointer-events:none'
+        root.appendChild(status)
+        document.body.appendChild(host)
+        downloadNotice = host
+        const timer = setTimeout(() => { host.remove(); timers.delete(timer) }, 6000)
+        timers.add(timer)
+    }
+
+    async function downloadSharedPost(context) {
+        const controller = new AbortController()
+        const button = shareRow?.button
+        downloadNotice?.remove()
+        shareDownloads.set(context.id, controller)
+        button?.setAttribute('aria-busy', 'true')
+        shareDiagnostics.download = 'preparing'
+        try {
+            let media = Array.from(posts.get(context.id)?.values() || [])
+            if (!media.length || media.some(record => !record.mp4.length)) {
+                await readPost(context.id, controller)
+                media = Array.from(posts.get(context.id)?.values() || [])
+            }
+            if (destroyed || controller.signal.aborted) return
+            if (media.some(record => record.allowDownload === false)) throw new Error('作者已关闭视频下载。')
+            if (!media.length || media.some(record => !record.mp4.length)) throw new Error('未找到可下载的 MP4。')
+            for (const record of media) {
+                const blob = await fetchVideoBlob(record.mp4[0].url, controller)
+                if (destroyed || controller.signal.aborted) return
+                saveBlob(blob, `x-${context.id}-${record.id}.mp4`)
+            }
+            shareDiagnostics.download = 'requested'
+        } catch (error) {
+            if (destroyed) return
+            shareDiagnostics.download = 'failed'
+            reportDownloadError(error.message.startsWith('作者') || error.message.startsWith('未找到') ? error.message : error.message.startsWith('视频较大') ? '视频超过 64 MB 下载上限。' : '视频下载失败，请稍后重试。')
+        } finally {
+            shareDownloads.delete(context.id)
+            button?.removeAttribute('aria-busy')
+        }
+    }
+
+    async function saveVideo() {
+        const current = panel
+        const id = activePost
+        const url = current.address.value
+        const filename = `x-${id}-${selected()?.id || 'video'}.mp4`
+        if (!url || current.save.disabled) return
+        const controller = new AbortController()
+        current.downloadController = controller
+        current.save.disabled = true
+        current.status.textContent = '正在准备视频…'
+        try {
+            const blob = await fetchVideoBlob(url, controller)
             if (destroyed || activePost !== id || !current.dialog.open) return
-            const blobURL = URL.createObjectURL(new Blob(chunks, { type: 'video/mp4' }))
-            objectURLs.add(blobURL)
-            const link = element('a')
-            link.href = blobURL
-            link.download = filename
-            current.dialog.appendChild(link)
-            link.click()
-            link.remove()
-            const timer = setTimeout(() => { URL.revokeObjectURL(blobURL); objectURLs.delete(blobURL); timers.delete(timer) }, 60000)
-            timers.add(timer)
+            saveBlob(blob, filename, current.dialog)
             current.status.textContent = '已请求保存；若浏览器转为播放，可通过系统分享菜单保存。'
         } catch (error) {
             if (activePost === id && current.dialog.open) current.status.textContent = error.message.startsWith('视频较大') ? error.message : '保存失败，请打开原文件后通过浏览器保存。'
         } finally {
-            clearTimeout(timeout)
-            controllers.delete(controller)
+            if (current.downloadController === controller) current.downloadController = null
             current.save.disabled = false
         }
     }
@@ -1436,6 +1533,8 @@ function startVideoTools(options) {
             observer.disconnect()
             if (frame !== null) cancelAnimationFrame(frame)
             controllers.forEach(controller => controller.abort())
+            shareDownloads.clear()
+            downloadNotice?.remove()
             timers.forEach(timer => clearTimeout(timer))
             objectURLs.forEach(url => URL.revokeObjectURL(url))
             cleanups.forEach(cleanup => cleanup())
@@ -1483,7 +1582,7 @@ function removeAds(document, options, diagnosticSource = null) {
     if (options.enable_video_tools || options.enable_share_menu_download) {
         const video = document.createElement('script')
         video.setAttribute('data-stash-x-video', 'bootstrap')
-        video.textContent = `window.__stashXVideoStatus={version:"20261123.4",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
+        video.textContent = `window.__stashXVideoStatus={version:"20261123.5",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
         const head = document.head || document.documentElement
         const firstScript = head.querySelector('script')
         if (firstScript) firstScript.before(video)

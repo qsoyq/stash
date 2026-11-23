@@ -10,9 +10,12 @@ module.exports = async function checkShareMenu(browser, engine, width) {
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     const high = 'https://video.twimg.com/amplify_video/123/vid/avc1/720x752/video.mp4';
+    const low = 'https://video.twimg.com/amplify_video/123/vid/avc1/320x334/video.mp4';
+    const videoBytes = Buffer.from('000000186674797069736f6d0000020069736f6d', 'hex');
+    const requests = [];
     const tweet = (id, allowed) => ({ __typename: 'Tweet', rest_id: id, media_entities2: [{
         id_str: `media${id}`, type: 'video', allow_download_status: { allow_download: allowed },
-        video_info: { variants: [{ content_type: 'video/mp4', bitrate: 1000, url: high }] },
+        video_info: { variants: [{ content_type: 'video/mp4', bitrate: 200, url: low }, { content_type: 'video/mp4', bitrate: 1000, url: high }] },
     }] });
     const article = (id, video = true) => `<article id="post-${id}"><a href="/u/status/${id}"><time>2026-11-23</time></a><p>Post ${id}</p>${video ? '<video controls></video>' : ''}<button aria-label="分享帖子" onclick="window.openShare()">分享</button></article>`;
     const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -25,14 +28,15 @@ module.exports = async function checkShareMenu(browser, engine, width) {
             document.querySelector('[role=menu]')?.remove();
             const menu=document.createElement('div');menu.setAttribute('role','menu');menu.setAttribute('aria-label','Share');
             if(window.kind==='login'){menu.setAttribute('role','dialog');menu.setAttribute('aria-label','Sign in');menu.innerHTML='<button>Sign in to download video</button>';document.body.appendChild(menu);return}
-            menu.innerHTML='<button role="menuitem" id="copy-link">Copy link</button>'+(window.kind==='missing'?'':'<button role="menuitem" id="native-download" style="opacity: 0.7" '+(window.kind==='disabled'?'disabled':'')+'><span>'+(window.kind==='english'?'Download video':'下载视频')+'</span><span> Plus</span></button>');
+            menu.innerHTML='<button role="menuitem" id="copy-link"><span class="menu-label">Copy link</span></button>'+(window.kind==='missing'?'':'<button role="menuitem" id="native-download" style="opacity: 0.7" '+(window.kind==='disabled'?'disabled':'')+'><svg data-native-icon="download" width="20" height="20" viewBox="0 0 24 24"><path d="M12 3v12m-4-4 4 4 4-4"/></svg><span>'+(window.kind==='english'?'Download video':'下载视频')+'</span><span> Plus</span></button>');
             if(['sheet','mask-sheet','stuck-sheet'].includes(window.kind)){
                 const sheet=document.createElement('div');sheet.dataset.testid='sheetDialog';
-                sheet.innerHTML='<button role="menuitem" id="send-chat">通过聊天发送</button>';
+                sheet.innerHTML='<button role="menuitem" id="send-chat"><span class="menu-label">通过聊天发送</span></button>';
                 while(menu.firstChild)sheet.appendChild(menu.firstChild);
                 if(window.kind==='sheet')sheet.insertAdjacentHTML('beforeend','<button id="cancel-share">取消</button>');
                 menu.appendChild(sheet);
-                const style=document.createElement('style');style.textContent='.premium-disabled{opacity:.45;color:rgb(83,100,113)}[data-testid="sheetDialog"]>button{display:block;width:100%;min-height:44px;border:0;background:none;text-align:left;padding:12px 16px}';menu.appendChild(style);
+                sheet.style.color='rgb(83,100,113)';
+                const style=document.createElement('style');style.textContent='.premium-disabled{opacity:.45;color:rgb(83,100,113)}.menu-label{color:rgb(15,20,25)}.premium-disabled span{color:rgb(83,100,113)}[data-testid="sheetDialog"]>button{display:block;width:100%;min-height:44px;border:0;background:none;text-align:left;padding:12px 16px}';menu.appendChild(style);
                 sheet.querySelector('#native-download').className='premium-disabled';
                 const dismiss=()=>requestAnimationFrame(()=>{menu.remove();document.querySelector('#post-101 button[aria-label="分享帖子"]').focus()});
                 if(window.kind==='sheet')sheet.querySelector('#cancel-share').onclick=dismiss;
@@ -52,7 +56,17 @@ module.exports = async function checkShareMenu(browser, engine, width) {
         </script></body></html>`;
     let rewritten;
     try {
-        await page.route('https://x.com/**', route => route.fulfill({ contentType: 'text/html; charset=utf-8', body: rewritten }));
+        await page.route('https://video.twimg.com/**', route => {
+            requests.push(route.request().url());
+            return route.fulfill({ contentType: 'video/mp4', headers: { 'access-control-allow-origin': '*' }, body: videoBytes });
+        });
+        await page.route('https://x.com/**', route => {
+            const pathname = new URL(route.request().url()).pathname;
+            const id = pathname.split('/').at(-1);
+            const data = tweet(id, id !== '606');
+            if (id === '707') data.media_entities2[0].video_info.variants = [{ content_type: 'application/x-mpegURL', url: 'https://video.twimg.com/707/video.m3u8' }];
+            return route.fulfill({ contentType: 'text/html; charset=utf-8', body: pathname.startsWith('/i/web/status/') ? `<script type="application/json">${JSON.stringify(data)}</script>` : rewritten });
+        });
         const boot = async (entry, menu, escape = true) => {
             rewritten = await page.evaluate(async ({ source, html, entry, menu, escape }) => {
                 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
@@ -77,8 +91,19 @@ module.exports = async function checkShareMenu(browser, engine, width) {
             await page.locator(`#post-${id} button[aria-label="分享帖子"]`).click();
             await page.getByRole('menu', { name: 'Share' }).waitFor();
         };
-        const close = async () => { await panel.getByRole('button', { name: '关闭', exact: true }).click(); await panel.waitFor({ state: 'hidden' }); };
         const settle = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        const download = async (id = '101', touch = false, keyboard = false) => {
+            const ready = page.waitForEvent('download');
+            if (keyboard) await replacement.press('Enter');
+            else if (touch) await replacement.tap();
+            else await replacement.click();
+            const file = await ready;
+            assert.equal(file.suggestedFilename(), `x-${id}-media${id}.mp4`, 'Download used the wrong post or media');
+            assert.deepEqual(await readFile(await file.path()), videoBytes, 'Downloaded bytes differ from the MP4 response');
+            assert.equal(requests.at(-1), high, 'Share download did not select the highest bitrate');
+            await page.waitForFunction(() => window.__stashXVideos.diagnostics().share.download === 'requested');
+            assert.equal(await panel.count(), 0, 'Share download opened the custom video panel');
+        };
 
         await boot(false, false, false);
         assert.equal(await page.evaluate(() => !!window.__stashXVideos), false, 'All-disabled settings still installed the video runtime');
@@ -109,49 +134,36 @@ module.exports = async function checkShareMenu(browser, engine, width) {
             if (kind !== 'missing') assert(!(await page.locator('#native-download').isVisible()), 'Premium action remains visible');
             await page.locator('#copy-link').click();
             assert.equal(await page.evaluate(() => window.copies), kinds.indexOf(kind) + 1, 'Other share actions were intercepted');
-            await replacement.click();
-            await panel.waitFor();
-            assert.equal(await panel.getByRole('textbox', { name: 'MP4 地址', exact: true }).inputValue(), high);
+            await download('101', false, kind === 'role-button');
             assert.equal(await page.evaluate(() => window.upsells), 0, 'Subscription handler was invoked');
-            await panel.locator('summary').click();
-            assert.equal(JSON.parse(await panel.locator('pre').textContent()).shareMenu.action, kind === 'missing' ? 'added' : 'replaced');
-            await panel.locator('summary').click();
-            assert.equal(await page.getByRole('menu').count(), 0, 'Native share menu was not dismissed');
+            assert.equal(await page.evaluate(() => window.__stashXVideos.diagnostics().share.action), kind === 'missing' ? 'added' : 'replaced');
+            await page.getByRole('menu').waitFor({ state: 'detached' });
             assert.equal(new URL(page.url()).pathname, '/u/status/101', 'Dismissing share menu navigated back');
-            await close();
         }
         await open('202');
-        await replacement.click();
-        await panel.locator('summary').click();
-        assert.equal(JSON.parse(await panel.locator('pre').textContent()).postId, '202', 'Share used the URL post instead of the clicked post');
-        await close();
+        await download('202');
         // The iPhone sheet has its own cancel action and focus manager. A
         // synthetic Escape is not a reliable dismissal API for that sheet.
         for (const kind of ['sheet', 'mask-sheet']) {
             await open('101', kind);
             await replacement.waitFor();
-            const appearance = await replacement.evaluate(button => ({ opacity: getComputedStyle(button).opacity, color: getComputedStyle(button).color }));
+            const appearance = await replacement.evaluate(button => ({ opacity: getComputedStyle(button).opacity, color: getComputedStyle(button).color, textColor: getComputedStyle(button.querySelector('span')).color }));
             assert.equal(appearance.opacity, '1', 'Replacement inherited the Premium-disabled opacity class');
             assert.equal(appearance.color, 'rgb(15, 20, 25)', 'Replacement retained the disabled text color instead of the sheet theme');
-            if (width < 600) await replacement.tap();
-            else await replacement.click();
-            await panel.waitFor();
-            assert.equal(await page.getByRole('menu').count(), 0, 'iPhone share sheet remained open after activation');
+            assert.equal(appearance.textColor, 'rgb(15, 20, 25)', 'Native text spans retained disabled colors');
+            assert.equal(await replacement.locator('[data-native-icon="download"]').count(), 1, 'Original download icon was replaced');
+            await download('101', width < 600);
+            await page.getByRole('menu').waitFor({ state: 'detached' });
             assert.equal(await page.evaluate(() => window.syntheticEscapes), 0, 'iPhone sheet received the synthetic Escape that focuses Send via chat');
             assert.equal(await page.evaluate(() => window.chatFocuses + window.nativePresses), 0, 'Replacement press leaked to the native focus manager');
             assert.equal(await page.evaluate(() => window.upsells), 0, 'iPhone share sheet restored the subscription action');
-            assert.equal(await panel.getByRole('textbox', { name: 'MP4 地址', exact: true }).inputValue(), high);
-            await close();
         }
         await open('101', 'stuck-sheet');
-        await replacement.click();
-        await panel.waitFor();
-        await close();
+        await download();
+        await page.waitForFunction(() => !window.__stashXVideos.isOpen());
         assert(!(await page.locator('#native-download').isVisible()), 'Failed dismissal exposed the Plus action');
-        await replacement.click();
-        await panel.waitFor();
+        await download();
         assert.equal(await page.evaluate(() => window.upsells), 0, 'Second activation invoked Plus after a failed dismissal');
-        await close();
         await open('303');
         await settle();
         assert.equal(await replacement.count(), 0, 'Author no-download preference was overridden');
@@ -169,11 +181,40 @@ module.exports = async function checkShareMenu(browser, engine, width) {
         });
         await open('909');
         await replacement.waitFor();
+        await download('909');
+        for (const [id, message] of [['606', '作者已关闭视频下载。'], ['707', '未找到可下载的 MP4。']]) {
+            await page.evaluate(markup => document.body.insertAdjacentHTML('beforeend', markup), article(id));
+            await open(id);
+            await replacement.waitFor();
+            const count = requests.length;
+            await replacement.click();
+            await page.waitForFunction(() => window.__stashXVideos.diagnostics().share.download === 'failed');
+            assert.equal(requests.length, count, 'Unavailable or author-disabled media was downloaded');
+            assert.equal(await panel.count(), 0, 'Download error opened the custom video panel');
+            assert.equal(await page.getByRole('status').textContent(), message, 'Download failure was silent or misleading');
+        }
+        const multi = tweet('808', true);
+        multi.media_entities2.push({ ...multi.media_entities2[0], id_str: 'media808b' });
+        await page.evaluate(({ markup, data }) => {
+            document.body.insertAdjacentHTML('beforeend', markup);
+            const script = document.createElement('script');script.type = 'application/json';script.textContent = JSON.stringify(data);document.body.appendChild(script);
+        }, { markup: article('808'), data: multi });
+        await open('808');
+        await replacement.waitFor();
+        const files = [];
+        const allDownloads = new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => { page.off('download', collect); reject(new Error('Multiple videos were not all downloaded')); }, 10000);
+            function collect(file) {
+                files.push(file);
+                if (files.length === 2) { clearTimeout(timeout); page.off('download', collect); resolve(files); }
+            }
+            page.on('download', collect);
+        });
         await replacement.click();
-        await panel.waitFor();
-        await panel.locator('summary').click();
-        assert.equal(JSON.parse(await panel.locator('pre').textContent()).postId, '909', 'Unplayed preview did not acquire its own download action');
-        await close();
+        await allDownloads;
+        assert.deepEqual(files.map(file => file.suggestedFilename()).sort(), ['x-808-media808.mp4', 'x-808-media808b.mp4']);
+        for (const file of files) assert.deepEqual(await readFile(await file.path()), videoBytes);
+        assert.equal(await panel.count(), 0, 'Multiple-video download opened a selection panel');
         await open();
         await replacement.waitFor();
         await page.evaluate(() => { document.querySelector('#post-101 a').href = '/u/status/999'; });
@@ -224,11 +265,8 @@ module.exports = async function checkShareMenu(browser, engine, width) {
                 await page.locator('#device-diagnostic').click();
                 await settle();
                 assert.equal(await replacement.count(), 1, 'Copying a diagnostic cleared the active share integration');
-                await replacement.click();
-                await panel.waitFor();
-                assert.equal(await panel.getByRole('textbox', { name: 'MP4 地址', exact: true }).inputValue(), high);
+                await download('101', true);
                 assert.equal(await page.evaluate(() => window.upsells), 0, 'Touch share invoked the Premium handler');
-                await close();
             }
         }
 
@@ -246,10 +284,8 @@ module.exports = async function checkShareMenu(browser, engine, width) {
         await boot(true, true);
         await open();
         await replacement.waitFor();
-        await replacement.click();
-        await panel.waitFor();
+        await download();
         assert.equal(new URL(page.url()).pathname, '/u/status/101', 'Share dismissal triggered global Escape navigation');
-        await close();
         await open();
         await replacement.waitFor();
         const artifacts = path.join(os.tmpdir(), 'stash-x-video-verification');
@@ -261,6 +297,6 @@ module.exports = async function checkShareMenu(browser, engine, width) {
         await page.locator('#native-download').click();
         assert.equal(await page.evaluate(() => window.upsells), 1, 'Destroy lost the original handler');
         assert.deepEqual(errors, []);
-        console.log(`${engine.name()} ${width}px: PASS share-menu Plus replacement, disabled/English/missing items, independent switches, post ownership, author restriction and cleanup`);
+        console.log(`${engine.name()} ${width}px: PASS native menu appearance, direct highest-quality MP4 downloads, multiple videos, keyboard/touch, metadata fallback, author restrictions, errors and cleanup`);
     } finally { await page.close(); }
 };
