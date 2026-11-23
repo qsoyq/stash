@@ -137,6 +137,68 @@ module.exports = async function checkShareMenu(browser, engine, width) {
         assert.equal(await replacement.count(), 0, 'Recycled tweet retained its download action');
         assert.equal(await page.locator('#native-download').getAttribute('style'), 'opacity: 0.7', 'Original action was not restored exactly');
 
+        if (width < 600) {
+            for (const [iconOnly, suppressClick] of [[false, true], [true, true], [true, false]]) {
+                await boot(true, true);
+                await page.evaluate(({ iconOnly, suppressClick }) => {
+                    window.shareEvents = [];
+                    const button = document.querySelector('#post-101 button[aria-label="分享帖子"]');
+                    button.id = 'device-share';
+                    button.removeAttribute('onclick');
+                    if (iconOnly) {
+                        button.removeAttribute('aria-label');
+                        button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 2.59l5.7 5.7-1.41 1.42L13 6.41V16h-2V6.41l-3.3 3.3-1.41-1.42L12 2.59z" /></svg>';
+                        const group = document.createElement('div');
+                        group.setAttribute('role', 'group');
+                        group.innerHTML = '<button data-testid="reply">Reply</button><button data-testid="like">Like</button>';
+                        button.before(group);
+                        group.appendChild(button);
+                    }
+                    for (const type of ['pointerdown', 'touchstart', 'touchend', 'click']) document.addEventListener(type, event => {
+                        if (button.contains(event.target)) window.shareEvents.push(type);
+                    }, true);
+                    button.addEventListener('touchend', event => {
+                        if (suppressClick) event.preventDefault();
+                        window.openShare();
+                    }, { passive: false });
+                }, { iconOnly, suppressClick });
+                await page.locator('#device-share').tap();
+                await page.getByRole('menu', { name: 'Share' }).waitFor();
+                await settle();
+                const trace = await page.evaluate(() => ({ events: window.shareEvents, share: window.__stashXVideos.diagnostics().share }));
+                console.log(`${engine.name()} touch share trace: ${JSON.stringify(trace)}`);
+                assert(trace.events.includes('touchend') && trace.events.includes('click') === !suppressClick, 'Touch fixture generated an unexpected compatibility click');
+                assert.equal(trace.share.trigger, true, 'Touch-only share never reached the download integration');
+                await page.evaluate(() => {
+                    const diagnostic = document.createElement('button');
+                    diagnostic.id = 'device-diagnostic';
+                    diagnostic.setAttribute('data-stash-layout-diagnostic', '');
+                    diagnostic.textContent = 'Diagnostic';
+                    diagnostic.style.cssText = 'position:fixed;top:0;right:0;z-index:20';
+                    document.body.appendChild(diagnostic);
+                });
+                await page.locator('#device-diagnostic').click();
+                await settle();
+                assert.equal(await replacement.count(), 1, 'Copying a diagnostic cleared the active share integration');
+                await replacement.click();
+                await panel.waitFor();
+                assert.equal(await panel.getByRole('textbox', { name: 'MP4 地址', exact: true }).inputValue(), high);
+                assert.equal(await page.evaluate(() => window.upsells), 0, 'Touch share invoked the Premium handler');
+                await close();
+            }
+        }
+
+        await boot(false, true);
+        await page.evaluate(() => {
+            const button = document.querySelector('#post-101 button[aria-label="分享帖子"]');
+            button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+            button.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true }));
+            window.openShare();
+        });
+        await settle();
+        assert.equal(await replacement.count(), 0, 'A cancelled share touch retained an active integration');
+        assert.equal(await page.evaluate(() => window.__stashXVideos.diagnostics().share.lastAttempt), 'cancelled');
+
         await boot(true, true);
         await open();
         await replacement.waitFor();

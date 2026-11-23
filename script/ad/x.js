@@ -993,16 +993,36 @@ function startVideoTools(options) {
         }
     }
 
-    if (options.enable_share_menu_download) listen(document, 'click', event => {
+    function shareTrigger(trigger) {
+        if (!trigger) return false
+        const label = trigger.getAttribute('aria-label') || ''
+        if (/^(?:share|shareButton|share-button|tweetShare)$/i.test(trigger.getAttribute('data-testid') || '') || /^(?:share(?: post| tweet)?|分享(?:帖子|推文)?|共享(?:帖子|推文)?|分享貼文|分享推文)$/i.test(label.trim())) return true
+        // The mobile action row may expose only X's upload/share icon.
+        // Limit the icon fallback to a tweet's own reply/like action group.
+        const scope = trigger.closest('article')
+        const group = trigger.closest('[role="group"]')
+        return !!scope && group?.closest('article') === scope &&
+            group.querySelector('[data-testid="reply"]')?.closest('article') === scope &&
+            group.querySelector('[data-testid="like"]')?.closest('article') === scope &&
+            Array.from(trigger.querySelectorAll('svg path')).some(path => (path.getAttribute('d') || '').startsWith('M12 2.59l5.7 5.7-1.41 1.42L13 6.41V16h-2V6.41'))
+    }
+
+    function trackShare(event) {
         const target = event.target instanceof Element ? event.target : event.target?.parentElement
-        if (!target || target.closest(marker)) return
+        if (!target || target.closest(`${marker}, [data-stash-layout-diagnostic]`)) return
         const trigger = target.closest('button, [role="button"]')
-        const label = trigger?.getAttribute('aria-label') || ''
-        const share = trigger && (/^(?:share|shareButton|share-button|tweetShare)$/i.test(trigger.getAttribute('data-testid') || '') || /^(?:share(?: post| tweet)?|分享(?:帖子|推文)?|共享(?:帖子|推文)?|分享貼文|分享推文)$/i.test(label.trim()))
+        const share = shareTrigger(trigger)
         const scope = share ? trigger.closest('article') : null
         const id = scope && identify(scope)
-        if (trigger?.closest('article')) shareDiagnostics.lastAttempt = !share ? 'unrecognized-trigger' : !id ? 'unidentified-post' : 'no-own-video'
+        if (trigger?.closest('article')) Object.assign(shareDiagnostics, { lastEvent: event.type, lastAttempt: !share ? 'unrecognized-trigger' : !id ? 'unidentified-post' : 'no-own-video' })
         if (id && (posts.has(id) || players(scope).some(player => player.closest('article') === scope && !player.closest('[data-testid="quoteTweet"], [role="link"]')))) {
+            // A touch may open the menu before its compatibility click. Keep
+            // the original pre-menu snapshot through that same activation.
+            if (validShareContext() && shareContext.trigger === trigger && (!shareContext.menu || (shareContext.menu.isConnected && visibleMenu(shareContext.menu)))) {
+                shareDiagnostics.lastAttempt = 'recognized'
+                schedule()
+                return
+            }
             clearShareRow()
             Object.assign(shareDiagnostics, { trigger: true, menu: false, action: null, lastAttempt: 'recognized' })
             shareContext = { id, scope, trigger, path: location.pathname, before: new Set(Array.from(document.querySelectorAll(menuSelector)).filter(visibleMenu)), menu: null }
@@ -1011,7 +1031,21 @@ function startVideoTools(options) {
             clearShareRow()
             shareContext = null
         }
-    }, true)
+    }
+
+    if (options.enable_share_menu_download) {
+        listen(document, 'pointerdown', trackShare, true)
+        listen(document, 'touchstart', trackShare, { capture: true, passive: true })
+        listen(document, 'click', trackShare, true)
+        const cancelShare = event => {
+            if (!shareContext?.menu && shareContext?.trigger.contains(event.target)) {
+                shareContext = null
+                shareDiagnostics.lastAttempt = 'cancelled'
+            }
+        }
+        listen(document, 'pointercancel', cancelShare, true)
+        listen(document, 'touchcancel', cancelShare, true)
+    }
 
     function scan() {
         frame = null
@@ -1406,7 +1440,7 @@ function removeAds(document, options, diagnosticSource = null) {
     if (options.enable_video_tools || options.enable_share_menu_download) {
         const video = document.createElement('script')
         video.setAttribute('data-stash-x-video', 'bootstrap')
-        video.textContent = `window.__stashXVideoStatus={version:"20261123.1",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
+        video.textContent = `window.__stashXVideoStatus={version:"20261123.2",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
         const head = document.head || document.documentElement
         const firstScript = head.querySelector('script')
         if (firstScript) firstScript.before(video)
