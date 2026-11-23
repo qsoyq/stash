@@ -26,10 +26,27 @@ module.exports = async function checkShareMenu(browser, engine, width) {
             const menu=document.createElement('div');menu.setAttribute('role','menu');menu.setAttribute('aria-label','Share');
             if(window.kind==='login'){menu.setAttribute('role','dialog');menu.setAttribute('aria-label','Sign in');menu.innerHTML='<button>Sign in to download video</button>';document.body.appendChild(menu);return}
             menu.innerHTML='<button role="menuitem" id="copy-link">Copy link</button>'+(window.kind==='missing'?'':'<button role="menuitem" id="native-download" style="opacity: 0.7" '+(window.kind==='disabled'?'disabled':'')+'><span>'+(window.kind==='english'?'Download video':'下载视频')+'</span><span> Plus</span></button>');
+            if(['sheet','mask-sheet','stuck-sheet'].includes(window.kind)){
+                const sheet=document.createElement('div');sheet.dataset.testid='sheetDialog';
+                sheet.innerHTML='<button role="menuitem" id="send-chat">通过聊天发送</button>';
+                while(menu.firstChild)sheet.appendChild(menu.firstChild);
+                if(window.kind==='sheet')sheet.insertAdjacentHTML('beforeend','<button id="cancel-share">取消</button>');
+                menu.appendChild(sheet);
+                const style=document.createElement('style');style.textContent='.premium-disabled{opacity:.45;color:rgb(83,100,113)}[data-testid="sheetDialog"]>button{display:block;width:100%;min-height:44px;border:0;background:none;text-align:left;padding:12px 16px}';menu.appendChild(style);
+                sheet.querySelector('#native-download').className='premium-disabled';
+                const dismiss=()=>requestAnimationFrame(()=>{menu.remove();document.querySelector('#post-101 button[aria-label="分享帖子"]').focus()});
+                if(window.kind==='sheet')sheet.querySelector('#cancel-share').onclick=dismiss;
+                if(window.kind==='mask-sheet'){
+                    const mask=document.createElement('div');mask.dataset.testid='mask';mask.onclick=dismiss;menu.prepend(mask);
+                }
+                window.nativePresses=0;window.chatFocuses=0;window.syntheticEscapes=0;
+                sheet.addEventListener('touchstart',()=>window.nativePresses++);
+                sheet.querySelector('#send-chat').onfocus=()=>window.chatFocuses++;
+            }
             if(window.kind==='role-button'){const old=menu.querySelector('#native-download');const div=document.createElement('div');div.id=old.id;div.setAttribute('role','button');div.style.cssText=old.style.cssText;div.innerHTML=old.innerHTML;old.replaceWith(div)}
             menu.querySelector('#copy-link').onclick=()=>window.copies++;
             const download=menu.querySelector('#native-download');if(download)download.onclick=()=>window.upsells++;
-            menu.onkeydown=event=>{if(event.key==='Escape')menu.remove()};
+            menu.onkeydown=event=>{if(event.key==='Escape'){if(['sheet','mask-sheet','stuck-sheet'].includes(window.kind)){window.syntheticEscapes=(window.syntheticEscapes||0)+1;menu.querySelector('#send-chat').focus()}else menu.remove()}};
             document.body.appendChild(menu);
         };
         </script></body></html>`;
@@ -107,6 +124,33 @@ module.exports = async function checkShareMenu(browser, engine, width) {
         await replacement.click();
         await panel.locator('summary').click();
         assert.equal(JSON.parse(await panel.locator('pre').textContent()).postId, '202', 'Share used the URL post instead of the clicked post');
+        await close();
+        // The iPhone sheet has its own cancel action and focus manager. A
+        // synthetic Escape is not a reliable dismissal API for that sheet.
+        for (const kind of ['sheet', 'mask-sheet']) {
+            await open('101', kind);
+            await replacement.waitFor();
+            const appearance = await replacement.evaluate(button => ({ opacity: getComputedStyle(button).opacity, color: getComputedStyle(button).color }));
+            assert.equal(appearance.opacity, '1', 'Replacement inherited the Premium-disabled opacity class');
+            assert.equal(appearance.color, 'rgb(15, 20, 25)', 'Replacement retained the disabled text color instead of the sheet theme');
+            if (width < 600) await replacement.tap();
+            else await replacement.click();
+            await panel.waitFor();
+            assert.equal(await page.getByRole('menu').count(), 0, 'iPhone share sheet remained open after activation');
+            assert.equal(await page.evaluate(() => window.syntheticEscapes), 0, 'iPhone sheet received the synthetic Escape that focuses Send via chat');
+            assert.equal(await page.evaluate(() => window.chatFocuses + window.nativePresses), 0, 'Replacement press leaked to the native focus manager');
+            assert.equal(await page.evaluate(() => window.upsells), 0, 'iPhone share sheet restored the subscription action');
+            assert.equal(await panel.getByRole('textbox', { name: 'MP4 地址', exact: true }).inputValue(), high);
+            await close();
+        }
+        await open('101', 'stuck-sheet');
+        await replacement.click();
+        await panel.waitFor();
+        await close();
+        assert(!(await page.locator('#native-download').isVisible()), 'Failed dismissal exposed the Plus action');
+        await replacement.click();
+        await panel.waitFor();
+        assert.equal(await page.evaluate(() => window.upsells), 0, 'Second activation invoked Plus after a failed dismissal');
         await close();
         await open('303');
         await settle();

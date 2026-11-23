@@ -953,9 +953,44 @@ function startVideoTools(options) {
             /^(?:copy link(?: to (?:post|tweet))?|复制链接|複製連結|复制帖子链接|複製貼文連結)$/i.test((item.getAttribute('aria-label') || item.textContent || '').trim()))
     }
 
+    function activateShare(context) {
+        if (shareContext !== context || context.activating || !validShareContext()) return
+        context.activating = true
+        const menu = context.menu
+        const cancel = Array.from(menu.querySelectorAll('button, [role="button"], [role="menuitem"]')).find(item =>
+            !item.closest(marker) && item.getClientRects().length &&
+            /^(?:取消|cancel)$/i.test((item.getAttribute('aria-label') || item.textContent || '').trim()))
+        const mask = menu.querySelector('[data-testid="mask"]')
+        shareDiagnostics.dismissal = cancel ? 'cancel' : mask ? 'mask' : 'escape'
+        // Mobile sheets manage their own focus and may ignore synthetic Escape.
+        // Use their dismissal action before opening a second modal.
+        if (cancel) cancel.click()
+        else if (mask) mask.click()
+        else menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, cancelable: true }))
+        const deadline = performance.now() + 1000
+        const finish = () => {
+            if (destroyed || shareContext !== context || !validShareContext()) return
+            const closed = !menu.isConnected || !visibleMenu(menu)
+            if (!closed && performance.now() < deadline) {
+                const timer = setTimeout(() => { timers.delete(timer); finish() }, 32)
+                timers.add(timer)
+                return
+            }
+            context.activating = false
+            shareDiagnostics.dismissed = closed
+            if (closed) { clearShareRow(); shareContext = null }
+            // If dismissal was refused, retain the replacement rather than
+            // exposing the original subscription action on the next tap.
+            openPanel(context.id, context.trigger)
+        }
+        const timer = setTimeout(() => { timers.delete(timer); finish() }, 0)
+        timers.add(timer)
+    }
+
     function syncShareMenu() {
         if (!options.enable_share_menu_download) return
         if (!validShareContext()) { clearShareRow(); shareContext = null; return }
+        if (shareContext.activating) return
         if (shareContext.menu && (!shareContext.menu.isConnected || !visibleMenu(shareContext.menu))) { clearShareRow(); shareContext = null; return }
         if (!shareContext.menu) {
             shareContext.menu = Array.from(document.querySelectorAll(menuSelector)).find(menu =>
@@ -973,20 +1008,18 @@ function startVideoTools(options) {
         const button = iconButton('download', '下载视频')
         button.setAttribute('role', 'menuitem')
         button.setAttribute('data-stash-x-video', 'share-download')
-        if (original) button.className = original.className
         button.style.cssText = 'display:flex;align-items:center;gap:12px;width:100%;min-height:44px;padding:12px 16px;border:0;border-radius:0;background:transparent;color:inherit;font:inherit;text-align:start;cursor:pointer;box-sizing:border-box'
         button.querySelector('svg').style.cssText = 'width:20px;height:20px;flex:none'
         const context = shareContext
+        // Keep the sheet's press responders from selecting a native item for
+        // this injected control. Defaults remain available for touch scrolling.
+        for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend']) {
+            button.addEventListener(type, event => event.stopPropagation())
+        }
         button.addEventListener('click', event => {
             event.preventDefault()
             event.stopPropagation()
-            if (shareContext !== context || !validShareContext()) return
-            const { id, trigger } = context
-            // Open first so our global Escape-to-back handler cannot navigate.
-            openPanel(id, trigger)
-            menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, cancelable: true }))
-            clearShareRow()
-            shareContext = null
+            activateShare(context)
         })
         shareRow = { button, original: original || null, style: original?.getAttribute('style') ?? null }
         if (original) {
@@ -1029,7 +1062,7 @@ function startVideoTools(options) {
                 return
             }
             clearShareRow()
-            Object.assign(shareDiagnostics, { trigger: true, menu: false, action: null, lastAttempt: 'recognized' })
+            Object.assign(shareDiagnostics, { trigger: true, menu: false, action: null, dismissal: null, dismissed: null, lastAttempt: 'recognized' })
             shareContext = { id, scope, trigger, path: location.pathname, before: new Set(Array.from(document.querySelectorAll(menuSelector)).filter(visibleMenu)), menu: null }
             schedule()
         } else if (!shareContext?.menu?.contains(target)) {
@@ -1379,7 +1412,7 @@ function startVideoTools(options) {
         cleanups.push(() => { if (history[key] === wrapper) history[key] = original })
     }
     window.__stashXVideos = {
-        isOpen: () => !!panel?.dialog.open,
+        isOpen: () => !!panel?.dialog.open || !!shareContext?.activating,
         diagnostics: () => ({
             toolbarEnabled: options.enable_video_tools,
             shareEnabled: options.enable_share_menu_download,
@@ -1450,7 +1483,7 @@ function removeAds(document, options, diagnosticSource = null) {
     if (options.enable_video_tools || options.enable_share_menu_download) {
         const video = document.createElement('script')
         video.setAttribute('data-stash-x-video', 'bootstrap')
-        video.textContent = `window.__stashXVideoStatus={version:"20261123.3",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
+        video.textContent = `window.__stashXVideoStatus={version:"20261123.4",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
         const head = document.head || document.documentElement
         const firstScript = head.querySelector('script')
         if (firstScript) firstScript.before(video)
