@@ -700,6 +700,11 @@ function startVideoTools(options) {
     const originalSend = XMLHttpRequest.prototype.send
     const xhrURLs = new WeakMap()
     const maxBytes = 64 * 1024 * 1024
+    const standalone = navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches
+    // iPadOS can use a desktop Mac identity. Restrict Safari handoff to iOS
+    // web apps so desktop browsers keep their normal external-link handling.
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
+    const openInSafari = standalone && ios
     let destroyed = false
     let frame = null
     let panel = null
@@ -1558,8 +1563,8 @@ function startVideoTools(options) {
         mediaRow.append(poster, fields)
         const actions = element('div')
         actions.className = 'actions'
-        const open = iconButton('open', '打开原文件', 'a')
-        open.target = '_blank'
+        const open = iconButton('open', openInSafari ? '在 Safari 打开' : '打开原文件', 'a')
+        open.target = openInSafari ? '_self' : '_blank'
         open.rel = 'noopener noreferrer'
         open.className = 'primary'
         const copy = iconButton('copy', '复制地址')
@@ -1635,7 +1640,7 @@ function startVideoTools(options) {
         panel.address.value = url
         panel.actions.hidden = panel.addressLabel.hidden = !url
         panel.quality.hidden = !url
-        if (url) panel.open.href = url
+        if (url) panel.open.href = openInSafari ? url.replace(/^https:/, 'x-safari-https:') : url
         else panel.open.removeAttribute('href')
         panel.debug.textContent = JSON.stringify({ version: 1, postId: activePost, mediaId: record?.id || null, source: record?.source || null, allowDownload: record?.allowDownload ?? null, variants: record?.mp4 || [], hls: record?.hls || null, shareMenu: shareDiagnostics }, null, 2)
         panel.status.textContent = url ? '' : loading ? '正在读取视频地址…' : record?.hls ? '仅返回了 HLS 地址，可在调试信息中复制。' : '尚未收到视频地址，可播放视频后重新读取。'
@@ -2051,7 +2056,7 @@ function removeAds(document, options, diagnosticSource = null) {
     if (options.enable_video_tools || options.enable_share_menu_download || options.enable_image_tools) {
         const video = document.createElement('script')
         video.setAttribute('data-stash-x-video', 'bootstrap')
-        video.textContent = `window.__stashXVideoStatus={version:"20261123.7",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download, video_save_method: options.video_save_method, enable_image_tools: options.enable_image_tools, image_save_method: options.image_save_method })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
+        video.textContent = `window.__stashXVideoStatus={version:"20261123.8",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download, video_save_method: options.video_save_method, enable_image_tools: options.enable_image_tools, image_save_method: options.image_save_method })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
         const head = document.head || document.documentElement
         const firstScript = head.querySelector('script')
         if (firstScript) firstScript.before(video)

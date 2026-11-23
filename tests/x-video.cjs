@@ -211,9 +211,82 @@ module.exports = async function checkVideoTools(browser, engine, width) {
         assert.equal(await page.locator('[data-stash-x-video]:not(script)').count(), 0, 'Cleanup left video controls or panel behind');
         assert.equal(await page.evaluate(() => !!window.__stashXVideos), false);
         assert.deepEqual(errors, []);
+        if (width < 600) await checkOpenContexts(browser, engine, rewritten, high, low);
         console.log(`${engine.name()} ${width}px: PASS video injection, SSR/fetch/XHR, quotes, qualities, clipboard, download, late data, HLS, recycled rows, Escape and cleanup; screenshot ${screenshot}`);
     } catch (error) {
         console.error('Video fixture diagnostics:', JSON.stringify({ errors, state: await page.evaluate(() => ({ url: location.href, videos: !!window.__stashXVideos, blocker: !!window.__stashXBlocker, hosts: document.querySelectorAll('[data-stash-x-video]').length, articles: document.querySelectorAll('article').length, buttons: Array.from(document.querySelectorAll('[data-stash-x-video]')).map(host => { const b = host.shadowRoot?.querySelector('button'); return b ? [b.outerHTML, b.getBoundingClientRect().toJSON(), getComputedStyle(b).display, getComputedStyle(host).display] : null; }) })) }));
         throw error;
     } finally { await page.close(); }
 };
+
+async function checkOpenContexts(browser, engine, html, high, low) {
+    const profiles = [
+        { name: 'iPhone Home Screen', userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X)', platform: 'iPhone', touch: 5, standalone: true, safari: true },
+        { name: 'iOS display mode', userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X)', platform: 'iPhone', touch: 5, displayMode: true, safari: true },
+        { name: 'iPad desktop identity', userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 Version/18.5 Safari/605.1.15', platform: 'MacIntel', touch: 5, standalone: true, safari: true },
+        { name: 'iPhone browser tab', userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X)', platform: 'iPhone', touch: 5 },
+        { name: 'Mac Safari web app', userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.5 Safari/605.1.15', platform: 'MacIntel', touch: 0, standalone: true, displayMode: true },
+        { name: 'Mac Chrome/Arc web app', userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/143.0.0.0 Safari/537.36', platform: 'MacIntel', touch: 0, displayMode: true },
+        { name: 'Mac Chrome/Arc tab', userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/143.0.0.0 Safari/537.36', platform: 'MacIntel', touch: 0 },
+        { name: 'Android web app', userAgent: 'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/143.0.0.0 Mobile Safari/537.36', platform: 'Linux armv8l', touch: 5, displayMode: true },
+    ];
+    for (const profile of profiles) {
+        const page = await browser.newPage({ viewport: { width: 375, height: 900 }, hasTouch: true, isMobile: true });
+        const errors = [];
+        page.on('pageerror', error => errors.push(error.message));
+        try {
+            await page.addInitScript(profile => {
+                for (const [key, value] of Object.entries({ userAgent: profile.userAgent, platform: profile.platform, maxTouchPoints: profile.touch, standalone: profile.standalone })) {
+                    Object.defineProperty(navigator, key, { configurable: true, value });
+                }
+                const matchMedia = window.matchMedia.bind(window);
+                window.matchMedia = query => query === '(display-mode: standalone)' ? { matches: !!profile.displayMode } : matchMedia(query);
+                window.copied = [];
+                Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => window.copied.push(text) } });
+                document.addEventListener('click', event => {
+                    const link = event.composedPath().find(node => node instanceof HTMLAnchorElement && node.closest('.actions'));
+                    if (!link) return;
+                    window.openRequest = { href: link.href, target: link.target, trusted: event.isTrusted };
+                    // Desktop test runners cannot launch iOS applications.
+                    if (link.protocol === 'x-safari-https:') event.preventDefault();
+                }, true);
+            }, profile);
+            await page.route('https://x.com/**', route => route.fulfill(new URL(route.request().url()).pathname === '/u/status/101' ? { contentType: 'text/html; charset=utf-8', body: html } : { json: {} }));
+            await page.route('https://video.twimg.com/**', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Original video</title>' }));
+            await page.goto('https://x.com/u/status/101');
+            await page.locator('#post-101').getByRole('button', { name: '视频文件', exact: true }).first().tap();
+            const dialog = page.getByRole('dialog', { name: '视频文件' });
+            const open = dialog.getByRole('link', { name: profile.safari ? '在 Safari 打开' : '打开原文件', exact: true });
+            await open.waitFor();
+            const expectedURL = url => profile.safari ? url.replace(/^https:/, 'x-safari-https:') : url;
+            assert.equal(await open.getAttribute('href'), expectedURL(high), `${profile.name}: wrong best-quality destination`);
+            await dialog.getByRole('combobox', { name: '画质', exact: true }).selectOption(low);
+            assert.equal(await open.getAttribute('href'), expectedURL(low), `${profile.name}: quality selection lost`);
+            assert.equal(await dialog.getByRole('textbox', { name: 'MP4 地址', exact: true }).inputValue(), low);
+            await dialog.getByRole('button', { name: '复制地址', exact: true }).tap();
+            assert.equal(await page.evaluate(() => window.copied.at(-1)), low, `${profile.name}: copy must retain HTTPS`);
+            assert.equal(await open.getAttribute('rel'), 'noopener noreferrer');
+            if (profile.safari) await open.tap();
+            else {
+                const popupPromise = page.waitForEvent('popup');
+                await open.tap();
+                const popup = await popupPromise;
+                await popup.waitForLoadState();
+                assert.equal(popup.url(), low, `${profile.name}: new tab did not open the selected video`);
+                assert.equal(await popup.evaluate(() => window.opener), null);
+                await popup.close();
+            }
+            assert.deepEqual(await page.evaluate(() => window.openRequest), { href: expectedURL(low), target: profile.safari ? '_self' : '_blank', trusted: true }, `${profile.name}: activation destination changed`);
+            assert.equal(page.url(), 'https://x.com/u/status/101', `${profile.name}: opening replaced the X page`);
+            assert(await dialog.isVisible(), `${profile.name}: opening closed the video panel`);
+            if (profile.name === 'iPhone Home Screen') {
+                const artifacts = path.join(os.tmpdir(), 'stash-x-video-verification');
+                await mkdir(artifacts, { recursive: true });
+                await page.screenshot({ path: path.join(artifacts, `${engine.name()}-ios-standalone.png`) });
+                assert(await open.evaluate(link => link.scrollWidth <= link.clientWidth), 'Safari button label overflows');
+            }
+            assert.deepEqual(errors, []);
+        } finally { await page.close(); }
+    }
+    console.log(`${engine.name()}: PASS iOS/iPadOS standalone Safari handoff and standard links/popups for Mac, browser tabs and Android`);
+}
