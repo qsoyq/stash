@@ -694,6 +694,7 @@ function startVideoTools(options) {
     let panel = null
     let route = location.pathname
     let focusBefore = null
+    let keyboardFocus = true
     let activePost = null
     let loading = false
     let metadataController = null
@@ -901,6 +902,10 @@ function startVideoTools(options) {
         target.addEventListener(type, handler, options)
         cleanups.push(() => target.removeEventListener(type, handler, options))
     }
+
+    listen(document, 'keydown', () => { keyboardFocus = true }, true)
+    listen(document, 'pointerdown', () => { keyboardFocus = false }, true)
+    listen(document, 'touchstart', () => { keyboardFocus = false }, { capture: true, passive: true })
 
     function identify(scope) {
         const direct = postId(scope.getAttribute('href'))
@@ -1259,7 +1264,12 @@ function startVideoTools(options) {
         metadataController = null
         loading = false
         panel.retry.disabled = false
-        if (focusBefore?.isConnected) focusBefore.focus()
+        if (focusBefore?.isConnected) {
+            // dialog.close() can restore focus automatically as well. Clear
+            // pointer focus so Safari does not retain an entry focus ring.
+            if (keyboardFocus) focusBefore.focus({ preventScroll: true })
+            else focusBefore.blur()
+        }
     }
 
     async function copyText(text) {
@@ -1440,7 +1450,7 @@ function removeAds(document, options, diagnosticSource = null) {
     if (options.enable_video_tools || options.enable_share_menu_download) {
         const video = document.createElement('script')
         video.setAttribute('data-stash-x-video', 'bootstrap')
-        video.textContent = `window.__stashXVideoStatus={version:"20261123.2",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
+        video.textContent = `window.__stashXVideoStatus={version:"20261123.3",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
         const head = document.head || document.documentElement
         const firstScript = head.querySelector('script')
         if (firstScript) firstScript.before(video)

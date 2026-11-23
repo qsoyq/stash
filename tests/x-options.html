@@ -388,7 +388,7 @@ ${diagnosticFunction}; return { removeAdsCode, removeAds, startLayoutDiagnostics
             const report = frame.contentWindow.__stashLayoutDiagnostics.collect();
             assert(report.options.enable_video_tools && report.options.enable_share_menu_download, 'Diagnostic report lost the video switches');
             assert(report.videoTools.bootstrapPresent && report.videoTools.runtimePresent && report.videoTools.startup.phase === 'ready', 'Diagnostic report cannot distinguish video startup from the layout runtime');
-            assert(report.videoTools.startup.version === '20261123.2' && report.videoTools.state.entries === 0, 'Diagnostic report lost video version or scan state');
+            assert(report.videoTools.startup.version === '20261123.3' && report.videoTools.state.entries === 0, 'Diagnostic report lost video version or scan state');
             assert(report.videoTools.state.toolbarEnabled && report.videoTools.state.shareEnabled, 'Diagnostic report lost actual runtime options');
             assert(doc.querySelector('[data-stash-layout-diagnostic-button]'), 'Actual inline script did not render its button');
             assert(!doc.querySelector('script[src]'), 'Response still depends on browser external loading');

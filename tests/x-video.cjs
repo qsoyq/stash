@@ -86,6 +86,26 @@ module.exports = async function checkVideoTools(browser, engine, width) {
         const close = async () => { await dialog.getByRole('button', { name: '关闭', exact: true }).click(); await dialog.waitFor({ state: 'hidden' }); };
         await entry('101').first().click();
         await dialog.waitFor();
+        if (width < 600) {
+            await address.tap();
+            await dialog.getByRole('button', { name: '关闭', exact: true }).tap();
+            await dialog.waitFor({ state: 'hidden' });
+            const focus = await entry('101').first().evaluate(button => ({ focused: button.matches(':focus'), outline: getComputedStyle(button).outlineStyle }));
+            console.log(`${engine.name()} touch-close focus: ${JSON.stringify(focus)}`);
+            assert.equal(focus.focused, false, 'Touch dismissal left the entry focused with a lingering outline');
+            assert.equal(focus.outline, 'none', 'Touch dismissal left a visible entry outline');
+            const focusArtifacts = path.join(os.tmpdir(), 'stash-x-video-verification');
+            await mkdir(focusArtifacts, { recursive: true });
+            await page.locator('#post-101').screenshot({ path: path.join(focusArtifacts, `${engine.name()}-${width}-closed.png`) });
+            await entry('101').first().focus();
+            await page.keyboard.press('Enter');
+            await dialog.waitFor();
+            await page.keyboard.press('Escape');
+            await dialog.waitFor({ state: 'hidden' });
+            assert(await entry('101').first().evaluate(button => button.matches(':focus') && button.matches(':focus-visible')), 'Keyboard dismissal lost the visible return focus');
+            await entry('101').first().click();
+            await dialog.waitFor();
+        }
         assert.equal(await address.inputValue(), high, 'Highest bitrate was not selected');
         assert.equal(await page.evaluate(() => window.originalClicks || 0), 0, 'Video entry triggered a delegated tweet click');
         assert.equal(await dialog.getByRole('combobox', { name: '视频', exact: true }).locator('option').count(), 2, 'Multiple videos lost or quote mixed into main tweet');
