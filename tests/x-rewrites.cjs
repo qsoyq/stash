@@ -15,8 +15,12 @@ const diagnosticUrl = source.match(/const LAYOUT_DIAGNOSTICS_URL = '([^']+)'/)?.
 assert.equal(diagnosticUrl, override['script-providers'].x.url.replace('/script/ad/x.js', '/script/browser/layout-diagnostics.js'), 'Indirect diagnostic resource uses a different branch');
 const parser = source.slice(source.indexOf('function getXOptions()'), source.indexOf('function removeAdsCode('));
 const scriptDefaults = new Function(`${parser}; return getXOptions();`)();
-assert.deepEqual(JSON.parse(expand(override.http.script[0].argument)), scriptDefaults, 'Override and script defaults differ');
+// New override installations use system sharing; scripts without the parameter
+// retain browser downloads for compatibility with older overrides.
+assert.deepEqual(JSON.parse(expand(override.http.script[0].argument)), { ...scriptDefaults, video_save_method: 'system_share' }, 'Override defaults must enable system sharing without changing legacy script fallbacks');
 const parseOptions = new Function('$argument', `${parser}; return getXOptions();`);
+assert.equal(parseOptions(expand(override.http.script[0].argument)).video_save_method, 'system_share', 'Override default must reach the script');
+assert.equal(parseOptions(expand(override.http.script[0].argument, { ...defaults, video_save_method: 'browser' })).video_save_method, 'browser', 'Explicit browser download selection must be preserved');
 assert.equal(parseOptions('{}').video_save_method, 'browser', 'Older overrides must retain browser downloads');
 assert.equal(parseOptions('{}').enable_image_tools, false, 'Older overrides must not enable the new image entry');
 assert.equal(parseOptions('{}').image_save_method, 'system_share');
@@ -78,7 +82,7 @@ for (const [operation, input] of [['TweetDetail', detail], ['UserTweets', profil
 const header = override.http['header-rewrite'][0];
 assert(new RegExp(expand(header).split(' ')[0]).test('https://x.com/home'));
 assert(!new RegExp(expand(header, { ...defaults, csp_policy: '^$' }).split(' ')[0]).test('https://x.com/home'));
-console.log(`PASS: ${passed + 16} rewrite, parameter-binding and CSP checks`);
+console.log(`PASS: ${passed + 18} rewrite, parameter-binding and CSP checks`);
 
 // Exercise the pure direction decision used by the injected runtime.
 const decisionSource = source.slice(source.indexOf('    function nextScrollState('), source.indexOf('    function notificationBadges('));
