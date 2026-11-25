@@ -187,6 +187,7 @@ async function checkHomeNavigation(browser, engine, address, touch) {
                     await checkHomeNavigation(browser, engine, address, touch);
                 }
                 for (const width of [375, 1440]) await require('./x-video.cjs')(browser, engine, width);
+                for (const width of [375, 1440]) await require('./x-video-context.cjs')(browser, engine, width);
                 for (const width of [375, 1440]) await require('./x-share-menu.cjs')(browser, engine, width);
                 for (const width of [375, 1440]) await require('./x-images.cjs')(browser, engine, width);
             } finally { await browser.close(); }

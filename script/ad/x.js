@@ -682,6 +682,7 @@ function startVideoTools(options) {
     window.__stashXVideos?.destroy()
     const marker = '[data-stash-x-video]'
     const playerSelector = 'video, [data-testid="videoPlayer"], [data-testid="previewInterstitial"]'
+    const quoteSelector = '[data-testid="quoteTweet"], [data-slot="embedded-tweet-frame"]'
     const posts = new Map()
     const entries = new Map()
     const imagePosts = new Map()
@@ -712,6 +713,7 @@ function startVideoTools(options) {
     let focusBefore = null
     let keyboardFocus = true
     let activePost = null
+    let activeResolution = null
     let loading = false
     let metadataController = null
     const menuSelector = '[role="menu"], [data-testid="Dropdown"], [data-testid="sheetDialog"], [role="dialog"]'
@@ -892,9 +894,10 @@ function startVideoTools(options) {
                 const variantId = variants.map(variant => new URL(variant.url).pathname.match(/^\/(?:amplify_video|ext_tw_video)\/(\d+)\//)?.[1]).find(Boolean)
                 const key = String(value.id_str || value.media_key || variantId || value.media_url_https || mp4[0]?.url || '')
                 if (variants.length && key) {
-                    const record = { id: key, post: owner, poster: value.media_url_https || '', duration: value.video_info.duration_millis || 0, allowDownload: value.allow_download_status?.allow_download ?? value.additional_media_info?.downloadable ?? null, mp4, hls: variants.find(variant => variant.type === 'application/x-mpegURL')?.url || null, source }
+                    const previous = posts.get(owner)?.get(key)
+                    const sourcePostId = postId(value.expanded_url) || (typeof value.source_status_id_str === 'string' && /^\d+$/.test(value.source_status_id_str) ? value.source_status_id_str : previous?.sourcePostId || null)
+                    const record = { id: key, post: owner, sourcePostId, poster: value.media_url_https || previous?.poster || '', duration: value.video_info.duration_millis || 0, allowDownload: value.allow_download_status?.allow_download ?? value.additional_media_info?.downloadable ?? null, mp4, hls: variants.find(variant => variant.type === 'application/x-mpegURL')?.url || null, source }
                     if (!posts.has(owner)) posts.set(owner, new Map())
-                    const previous = posts.get(owner).get(key)
                     if (JSON.stringify(previous) !== JSON.stringify(record)) {
                         posts.get(owner).set(key, record)
                         changed = true
@@ -982,19 +985,97 @@ function startVideoTools(options) {
     listen(document, 'pointerdown', () => { keyboardFocus = false }, true)
     listen(document, 'touchstart', () => { keyboardFocus = false }, { capture: true, passive: true })
 
-    function identify(scope) {
-        const direct = postId(scope.getAttribute('href'))
-        if (direct) return direct
+    function mediaPermalink(url) {
+        try { return /\/(?:video|photo)\/\d+(?:\/|$)/.test(new URL(url, location.href).pathname) } catch (_) { return false }
+    }
+
+    function posterKey(url) {
+        try {
+            const parsed = new URL(url)
+            return parsed.hostname === 'pbs.twimg.com' && /^\/(?:amplify_video_thumb|ext_tw_video_thumb|tweet_video_thumb)\//.test(parsed.pathname) ? parsed.pathname.replace(/\.(?:jpe?g|png|webp)$/i, '') : null
+        } catch (_) { return null }
+    }
+
+    function identifyContext(scope) {
+        // Quote frames keep their display permalink here even when a nested
+        // article also links to the original source of a reused video.
+        for (const attribute of ['data-href', 'href']) {
+            const url = scope.getAttribute(attribute)
+            const id = postId(url)
+            if (id) return { id, method: mediaPermalink(url) ? 'media-permalink' : attribute }
+        }
         const links = Array.from(scope.querySelectorAll('a[href]')).filter(link => {
-            const quote = link.parentElement.closest('[data-testid="quoteTweet"], [role="link"]')
+            const quote = link.parentElement.closest(`${quoteSelector}, [role="link"]`)
             return (!quote || quote === scope || !scope.contains(quote)) && (scope.tagName !== 'ARTICLE' || link.closest('article') === scope)
         })
-        for (const link of links.filter(link => link.querySelector('time'))) { const id = postId(link.href); if (id) return id }
-        for (const link of links.filter(link => /\/status\/\d+\/(?:video|photo)\//.test(link.getAttribute('href')))) { const id = postId(link.href); if (id) return id }
-        // New X SSR uses ordinary spans for timestamps. Only accept an
-        // unambiguous own permalink, excluding nested tweets and quote cards.
-        const candidates = new Set(links.map(link => postId(link.href)).filter(Boolean))
-        return candidates.size === 1 ? candidates.values().next().value : null
+        const permalinks = links.filter(link => !mediaPermalink(link.href))
+        for (const link of permalinks.filter(link => link.querySelector('time'))) {
+            const id = postId(link.href)
+            if (id) return { id, method: 'timestamp' }
+        }
+        // A media permalink can name a third-party source. It must not take
+        // precedence over the quote's own ordinary (span-based) timestamp link.
+        const candidates = new Set(permalinks.map(link => postId(link.href)).filter(Boolean))
+        if (candidates.size === 1) return { id: candidates.values().next().value, method: 'permalink' }
+        if (candidates.size > 1) {
+            // New SSR can give both the display post and its media source
+            // ordinary links. Require a matching poster AND a reuse relation
+            // to another candidate. A cached source with the same poster alone
+            // cannot establish which post is displaying it.
+            const posters = new Set()
+            for (const player of players(scope)) {
+                const quote = player.closest(quoteSelector)
+                if ((quote && quote !== scope && scope.contains(quote)) || (scope.tagName === 'ARTICLE' && player.closest('article') !== scope)) continue
+                const nodes = player.tagName === 'VIDEO' ? [player] : player.querySelectorAll('video[poster], img')
+                for (const node of nodes) {
+                    const key = posterKey(node.getAttribute('poster') || node.currentSrc || node.src)
+                    if (key) posters.add(key)
+                }
+            }
+            const matches = Array.from(candidates).filter(id => Array.from(posts.get(id)?.values() || []).some(record =>
+                posters.has(posterKey(record.poster)) && record.sourcePostId !== id && candidates.has(record.sourcePostId)))
+            return matches.length === 1 ? { id: matches[0], method: 'media-match' } : null
+        }
+        const media = new Set(links.map(link => postId(link.href)).filter(Boolean))
+        return media.size === 1 ? { id: media.values().next().value, method: 'media-permalink' } : null
+    }
+
+    function identify(scope) { return identifyContext(scope)?.id || null }
+
+    function resolveMediaContext(node) {
+        const quote = node.closest(quoteSelector)
+        if (quote) {
+            const identity = identifyContext(quote)
+            // An unidentified quote is not the outer article's own media.
+            return identity && identity.method !== 'media-permalink' ? { scope: quote, ...identity } : null
+        }
+        const article = node.closest('article')
+        const frame = article?.parentElement?.closest('[role="link"]')
+        const boundary = frame || article
+        const scopes = []
+        for (let scope = node; scope; scope = scope.parentElement) {
+            if (scope.matches('[role="link"]')) scopes.unshift(scope)
+            if (scope === boundary) break
+        }
+        let media = null
+        // Legacy unmarked quote frames can contain extra role=link wrappers,
+        // or wrap the nearest article. Prefer the enclosing display frame.
+        for (const scope of scopes) {
+            const identity = identifyContext(scope)
+            if (!identity) {
+                const candidates = new Set(Array.from(scope.querySelectorAll('a[href]')).filter(link => !mediaPermalink(link.href)).map(link => postId(link.href)).filter(Boolean))
+                if (candidates.size > 1) return null
+                continue
+            }
+            const context = { scope, ...identity }
+            if (identity.method !== 'media-permalink') return context
+            media = context
+        }
+        // A frame wrapping a nested article is still a quote boundary, even
+        // when none of its links establish the display owner.
+        if (frame) return null
+        const identity = article && identifyContext(article)
+        return identity ? { scope: article, ...identity } : media
     }
 
     function clearShareRow() {
@@ -1153,7 +1234,7 @@ function startVideoTools(options) {
         const scope = share ? trigger.closest('article') : null
         const id = scope && identify(scope)
         if (trigger?.closest('article')) Object.assign(shareDiagnostics, { lastEvent: event.type, lastAttempt: !share ? 'unrecognized-trigger' : !id ? 'unidentified-post' : 'no-own-video' })
-        if (id && (posts.has(id) || players(scope).some(player => player.closest('article') === scope && !player.closest('[data-testid="quoteTweet"], [role="link"]')))) {
+        if (id && (posts.has(id) || players(scope).some(player => player.closest('article') === scope && !player.closest(quoteSelector) && resolveMediaContext(player)?.id === id))) {
             // A touch may open the menu before its compatibility click. Keep
             // the original pre-menu snapshot through that same activation.
             if (validShareContext() && shareContext.trigger === trigger && (!shareContext.menu || (shareContext.menu.isConnected && visibleMenu(shareContext.menu)))) {
@@ -1213,10 +1294,10 @@ function startVideoTools(options) {
         const groups = new Map()
         for (const node of document.querySelectorAll('[data-testid="tweetPhoto"], a[href*="/photo/"]')) {
             if (node.closest(marker)) continue
-            const scope = node.closest('[data-testid="quoteTweet"], div[role="link"]') || node.closest('article')
-            if (!scope) continue
-            const id = identify(scope)
-            if (!id || (node.tagName === 'A' && postId(node.href) !== id)) continue
+            const context = resolveMediaContext(node)
+            if (!context) continue
+            const { scope, id } = context
+            if (node.tagName === 'A' && postId(node.href) !== id) continue
             const container = node.querySelector('img') ? node : node.parentElement
             const image = container?.querySelector('img')
             const url = imageURL(image?.currentSrc || image?.src)
@@ -1263,8 +1344,14 @@ function startVideoTools(options) {
                 document.body.appendChild(imagePanel.host)
                 if (wasOpen) { imagePanel.dialog.close(); imagePanel.dialog.showModal() }
             }
+            const contexts = new Map()
+            if (options.enable_video_tools) for (const player of players(document)) {
+                if (player.closest(marker)) continue
+                const context = resolveMediaContext(player)
+                if (context && !contexts.has(context.scope)) contexts.set(context.scope, { ...context, player })
+            }
             for (const [scope, entry] of entries) {
-                if (!scope.isConnected || !entry.host.isConnected || identify(scope) !== entry.post || !players(scope).length) {
+                if (!scope.isConnected || !entry.host.isConnected || contexts.get(scope)?.id !== entry.post) {
                     entry.host.remove()
                     entries.delete(scope)
                 } else {
@@ -1274,20 +1361,18 @@ function startVideoTools(options) {
                     entry.button.title = label
                 }
             }
-            if (options.enable_video_tools) players(document).forEach(player => {
-                if (player.closest(marker)) return
-                const quote = player.closest('[data-testid="quoteTweet"], [role="link"]')
-                const scope = quote && identify(quote) ? quote : player.closest('article')
-                if (!scope || scope.closest(marker)) return
-                const id = identify(scope)
-                if (!id || entries.has(scope)) return
+            for (const [scope, { id, player }] of contexts) {
+                if (entries.has(scope)) continue
                 const { host, root } = shadowHost()
                 const button = iconButton('download', `视频文件 · ${posts.get(id)?.size || 1}`)
                 button.className = 'entry'
                 button.addEventListener('click', event => {
                     event.preventDefault()
                     event.stopPropagation()
-                    if (identify(scope) === id) openPanel(id, button)
+                    // Hydration can replace the original player without replacing
+                    // its scope. Re-resolve live nodes rather than a stale ID.
+                    const context = players(scope).map(resolveMediaContext).find(context => context?.scope === scope)
+                    if (context?.id === id) openPanel(context, button)
                     else schedule()
                 })
                 // X's delegated click handlers must not treat this as a tweet tap.
@@ -1295,7 +1380,7 @@ function startVideoTools(options) {
                 root.appendChild(button)
                 mountMediaEntry(host, [player.closest('[data-testid="videoPlayer"]') || player], scope)
                 entries.set(scope, { host, button, post: id })
-            })
+            }
             scanImages()
             syncShareMenu()
         } finally { observe() }
@@ -1670,7 +1755,7 @@ function startVideoTools(options) {
         panel.quality.hidden = !url
         if (url) panel.open.href = openInSafari ? url.replace(/^https:/, 'x-safari-https:') : url
         else panel.open.removeAttribute('href')
-        panel.debug.textContent = JSON.stringify({ version: 1, postId: activePost, mediaId: record?.id || null, source: record?.source || null, allowDownload: record?.allowDownload ?? null, variants: record?.mp4 || [], hls: record?.hls || null, shareMenu: shareDiagnostics }, null, 2)
+        panel.debug.textContent = JSON.stringify({ version: 1, postId: activePost, resolution: activeResolution, mediaId: record?.id || null, sourcePostId: record?.sourcePostId || null, source: record?.source || null, allowDownload: record?.allowDownload ?? null, variants: record?.mp4 || [], hls: record?.hls || null, shareMenu: shareDiagnostics }, null, 2)
         panel.status.textContent = url ? '' : loading ? '正在读取视频地址…' : record?.hls ? '仅返回了 HLS 地址，可在调试信息中复制。' : '尚未收到视频地址，可播放视频后重新读取。'
     }
 
@@ -1710,15 +1795,16 @@ function startVideoTools(options) {
         }
     }
 
-    function openPanel(id, button) {
+    function openPanel(context, button) {
         closeImagePanel()
         if (!panel) makePanel()
-        activePost = id
+        activePost = context.id
+        activeResolution = { method: context.method, scope: context.scope.matches(quoteSelector) ? 'quote' : context.scope.tagName === 'ARTICLE' ? 'article' : 'link', pagePostId: postId(location.href) }
         focusBefore = button
         panel.media.replaceChildren()
         panel.dialog.showModal()
         renderMedia()
-        if (!records().length) loadPost(id)
+        if (!records().length) loadPost(activePost)
     }
 
     function closePanel() {
@@ -1726,6 +1812,7 @@ function startVideoTools(options) {
         panel.dialog.close()
         if (savePrompt && panel.dialog.contains(savePrompt.host)) clearSavePrompt()
         activePost = null
+        activeResolution = null
         metadataController?.abort()
         panel.downloadController?.abort()
         metadataController = null
@@ -1989,7 +2076,7 @@ function startVideoTools(options) {
         }
         if (changed) schedule()
     })
-    function observe() { observer.observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ['href', 'src', 'poster', 'data-testid'] }) }
+    function observe() { observer.observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ['href', 'data-href', 'data-slot', 'role', 'src', 'poster', 'data-testid'] }) }
     function readInitial() {
         if (destroyed) return
         if (window.__INITIAL_STATE__) ingest(window.__INITIAL_STATE__, '页面数据')
@@ -2019,10 +2106,7 @@ function startVideoTools(options) {
             postsWithImages: imagePosts.size,
             players: players(document).length,
             previews: document.querySelectorAll('[data-testid="previewInterstitial"]').length,
-            identifiedPlayers: players(document).filter(player => {
-                const scope = player.closest('[data-testid="quoteTweet"], [role="link"], article')
-                return scope && !!identify(scope)
-            }).length,
+            identifiedPlayers: players(document).filter(player => !!resolveMediaContext(player)).length,
             entries: Array.from(entries.values()).filter(entry => entry.host.isConnected).length,
             postsWithMedia: posts.size,
             share: { ...shareDiagnostics },
@@ -2091,7 +2175,7 @@ function removeAds(document, options, diagnosticSource = null) {
     if (options.enable_video_tools || options.enable_share_menu_download || options.enable_image_tools) {
         const video = document.createElement('script')
         video.setAttribute('data-stash-x-video', 'bootstrap')
-        video.textContent = `window.__stashXVideoStatus={version:"20261124.1",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download, video_save_method: options.video_save_method, enable_image_tools: options.enable_image_tools, image_save_method: options.image_save_method })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
+        video.textContent = `window.__stashXVideoStatus={version:"20261125.1",phase:"starting"};try{(${startVideoTools.toString()})(${JSON.stringify({ enable_video_tools: options.enable_video_tools, enable_share_menu_download: options.enable_share_menu_download, video_save_method: options.video_save_method, enable_image_tools: options.enable_image_tools, image_save_method: options.image_save_method })});window.__stashXVideoStatus.phase="ready"}catch(e){window.__stashXVideoStatus.phase="error";window.__stashXVideoStatus.errorName=e.name;}`
         const head = document.head || document.documentElement
         const firstScript = head.querySelector('script')
         if (firstScript) firstScript.before(video)
